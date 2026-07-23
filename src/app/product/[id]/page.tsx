@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Booking } from "@/lib/types";
+import AvailabilityCalendar from "@/components/booking/AvailabilityCalendar";
 import BookingForm from "@/components/booking/BookingForm";
 import BookingList from "@/components/booking/BookingList";
 
@@ -65,8 +66,12 @@ export default async function ProductDetailPage({
       </div>
 
       <section className="mb-10">
-        <h2 className="mb-3 text-lg font-semibold text-neutral-900">New booking</h2>
-        <BookingForm productId={id} bookedRanges={bookedRanges} />
+        <h2 className="mb-3 text-lg font-semibold text-neutral-900">Availability</h2>
+        {isOwner ? (
+          <BookingForm productId={id} bookedRanges={bookedRanges} />
+        ) : (
+          <AvailabilityCalendar bookedRanges={bookedRanges} />
+        )}
       </section>
 
       {isOwner && (

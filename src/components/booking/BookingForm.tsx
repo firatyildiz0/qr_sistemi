@@ -3,8 +3,11 @@
 import { useActionState, useState } from "react";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 import "react-day-picker/style.css";
 import { createBooking, type BookingFormState } from "@/app/product/[id]/actions";
+import { formatDateRange } from "@/lib/bookings";
+import { IconCheckCircle } from "@/components/icons";
 
 const initialState: BookingFormState = { error: null };
 
@@ -34,12 +37,11 @@ export default function BookingForm({
       <input type="hidden" name="end_date" value={endStr} />
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-neutral-700">
-          Rental dates
-        </label>
-        <div className="rounded-lg border border-neutral-200 bg-white p-3">
+        <label className="field-label">Kiralama tarihleri</label>
+        <div className="rdp-theme rounded-lg border border-border bg-card p-3">
           <DayPicker
             mode="range"
+            locale={tr}
             excludeDisabled
             selected={range}
             onSelect={setRange}
@@ -48,61 +50,46 @@ export default function BookingForm({
             modifiersClassNames={{ booked: "rdp-booked" }}
             numberOfMonths={1}
           />
-          <div className="mt-3 flex items-center gap-4 text-xs text-neutral-500">
+          <div className="mt-3 flex items-center gap-4 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-3 w-3 rounded-sm bg-red-200" /> Booked
+              <span className="diagonal-stripes inline-block h-3 w-3 rounded-sm border border-border" /> Dolu
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-3 w-3 rounded-sm border border-neutral-300" /> Free
+              <span className="inline-block h-3 w-3 rounded-sm border border-border" /> Müsait
             </span>
           </div>
-          <style>{`.rdp-booked { background-color: #fecaca; color: #7f1d1d; }`}</style>
+          <style>{`.rdp-booked { background-color: #ffe3d4; color: #852400; text-decoration: line-through; }`}</style>
         </div>
         {startStr && (
-          <p className="mt-2 text-sm text-neutral-600">
-            {startStr} → {endStr}
+          <p className="mt-2 count-up text-sm font-medium text-ink">
+            {formatDateRange(startStr, endStr)}
           </p>
         )}
       </div>
 
       <div>
-        <label htmlFor="customer_name" className="block text-sm font-medium text-neutral-700">
-          Your name
+        <label htmlFor="customer_name" className="field-label">
+          Adınız
         </label>
-        <input
-          id="customer_name"
-          name="customer_name"
-          required
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-base focus:border-neutral-900 focus:outline-none"
-        />
+        <input id="customer_name" name="customer_name" required className="input" />
       </div>
 
       <div>
-        <label
-          htmlFor="customer_phone"
-          className="block text-sm font-medium text-neutral-700"
-        >
-          Phone (optional)
+        <label htmlFor="customer_phone" className="field-label">
+          Telefon (opsiyonel)
         </label>
-        <input
-          id="customer_phone"
-          name="customer_phone"
-          type="tel"
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-base focus:border-neutral-900 focus:outline-none"
-        />
+        <input id="customer_phone" name="customer_phone" type="tel" className="input" />
       </div>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className="text-sm text-danger">{state.error}</p>}
       {state.success && (
-        <p className="text-sm text-green-700">Booking confirmed. See you then!</p>
+        <p className="flex items-center gap-1.5 text-sm text-success">
+          <IconCheckCircle className="h-4 w-4" /> Rezervasyon onaylandı. O zaman görüşürüz!
+        </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending || !startStr}
-        className="w-full rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:opacity-60 sm:w-auto"
-      >
-        {pending ? "Booking…" : "Request booking"}
+      <button type="submit" disabled={pending || !startStr} className="btn btn-primary w-full sm:w-auto">
+        {pending ? "Rezervasyon yapılıyor…" : "Rezervasyon ekle"}
       </button>
     </form>
   );

@@ -14,14 +14,14 @@ export async function signIn(
   const next = String(formData.get("next") ?? "/admin");
 
   if (!email || !password) {
-    return { error: "Email and password are required." };
+    return { error: "E-posta ve şifre gereklidir." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: "Invalid email or password." };
+    return { error: "E-posta veya şifre hatalı." };
   }
 
   redirect(next.startsWith("/") ? next : "/admin");

@@ -14,7 +14,7 @@ async function assertProductOwner(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return "You must be signed in to do that.";
+  if (!user) return "Bunu yapmak için giriş yapmalısınız.";
 
   const { data: product } = await supabase
     .from("products")
@@ -23,7 +23,7 @@ async function assertProductOwner(
     .single();
 
   if (!product || product.owner_id !== user.id) {
-    return "You do not have permission to modify this booking.";
+    return "Bu rezervasyonu değiştirme yetkiniz yok.";
   }
 
   return null;
@@ -55,8 +55,8 @@ async function hasOverlap(
 }
 
 function validateDates(startDate: string, endDate: string): string | null {
-  if (!startDate || !endDate) return "Start and end date are required.";
-  if (endDate < startDate) return "End date must be on or after the start date.";
+  if (!startDate || !endDate) return "Başlangıç ve bitiş tarihi gereklidir.";
+  if (endDate < startDate) return "Bitiş tarihi başlangıç tarihiyle aynı veya sonrasında olmalıdır.";
   return null;
 }
 
@@ -71,7 +71,7 @@ export async function createBooking(
   const end_date = String(formData.get("end_date") ?? "");
 
   if (!customer_name) {
-    return { error: "Customer name is required." };
+    return { error: "Müşteri adı gereklidir." };
   }
 
   const dateError = validateDates(start_date, end_date);
@@ -81,7 +81,7 @@ export async function createBooking(
 
   try {
     if (await hasOverlap(supabase, productId, start_date, end_date)) {
-      return { error: "Those dates overlap with an existing booking." };
+      return { error: "Bu tarihler mevcut bir rezervasyonla çakışıyor." };
     }
   } catch (err) {
     return { error: (err as Error).message };
@@ -115,7 +115,7 @@ export async function editBooking(
   const end_date = String(formData.get("end_date") ?? "");
 
   if (!customer_name) {
-    return { error: "Customer name is required." };
+    return { error: "Müşteri adı gereklidir." };
   }
 
   const dateError = validateDates(start_date, end_date);
@@ -128,7 +128,7 @@ export async function editBooking(
 
   try {
     if (await hasOverlap(supabase, productId, start_date, end_date, bookingId)) {
-      return { error: "Those dates overlap with an existing booking." };
+      return { error: "Bu tarihler mevcut bir rezervasyonla çakışıyor." };
     }
   } catch (err) {
     return { error: (err as Error).message };

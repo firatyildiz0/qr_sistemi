@@ -1,28 +1,36 @@
 import { productQrDataUrl, productUrl } from "@/lib/qr";
+import { IconDownload } from "@/components/icons";
 
 export default async function QRCodeCard({ productId }: { productId: string }) {
   const dataUrl = await productQrDataUrl(productId);
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-6">
-      <h2 className="mb-3 text-sm font-medium text-neutral-700">QR code</h2>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={dataUrl} alt="Product QR code" className="h-40 w-40" />
-      <p className="mt-3 break-all text-xs text-neutral-400">{productUrl(productId)}</p>
-      <div className="mt-4 flex gap-3">
+    <div className="card">
+      <h2 className="eyebrow mb-4 text-ink-muted">QR kod</h2>
+      <div className="relative mx-auto flex h-40 w-40 items-center justify-center">
+        <span className="qr-pulse-ring" />
+        <div className="relative flex h-full w-full items-center justify-center rounded-md border border-border bg-white p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={dataUrl} alt="Ürün QR kodu" className="h-full w-full" />
+        </div>
+      </div>
+      <p className="mt-4 break-all text-center text-xs text-ink-muted">{productUrl(productId)}</p>
+      <div className="mt-5 flex gap-3">
         <a
           href={`/api/products/${productId}/qr?format=png`}
           download
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+          className="btn btn-secondary flex-1 text-xs"
         >
-          Download PNG
+          <IconDownload className="h-3.5 w-3.5" />
+          PNG
         </a>
         <a
           href={`/api/products/${productId}/qr?format=svg`}
           download
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+          className="btn btn-secondary flex-1 text-xs"
         >
-          Download SVG
+          <IconDownload className="h-3.5 w-3.5" />
+          SVG
         </a>
       </div>
     </div>

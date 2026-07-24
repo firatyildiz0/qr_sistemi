@@ -1,6 +1,7 @@
 import type { Booking } from "@/lib/types";
 import { displayStatus } from "@/lib/bookings";
 import BookingRow from "@/components/booking/BookingRow";
+import { IconCalendar } from "@/components/icons";
 
 export default function BookingList({
   bookings,
@@ -11,8 +12,9 @@ export default function BookingList({
 }) {
   if (bookings.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">
-        No bookings yet.
+      <div className="card flex flex-col items-center gap-2 border-dashed py-10 text-center">
+        <IconCalendar className="h-6 w-6 text-ink-muted" />
+        <p className="text-sm text-ink-muted">Henüz rezervasyon yok.</p>
       </div>
     );
   }
@@ -20,35 +22,22 @@ export default function BookingList({
   const sorted = [...bookings].sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
-      <table className="w-full min-w-[640px] text-left">
-        <thead>
-          <tr className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-400">
-            <th className="px-4 py-3 font-medium">Customer</th>
-            <th className="px-4 py-3 font-medium">Phone</th>
-            <th className="px-4 py-3 font-medium">Start</th>
-            <th className="px-4 py-3 font-medium">End</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((b) => (
-            <BookingRow
-              key={b.id}
-              booking={b}
-              status={displayStatus(b)}
-              productId={productId}
-              otherBookedRanges={sorted
-                .filter((other) => other.id !== b.id && other.status !== "cancelled")
-                .map((other) => ({
-                  from: new Date(other.start_date + "T00:00:00"),
-                  to: new Date(other.end_date + "T00:00:00"),
-                }))}
-            />
-          ))}
-        </tbody>
-      </table>
+    <div className="flex flex-col gap-3">
+      {sorted.map((b, i) => (
+        <BookingRow
+          key={b.id}
+          booking={b}
+          status={displayStatus(b)}
+          productId={productId}
+          delay={i * 60}
+          otherBookedRanges={sorted
+            .filter((other) => other.id !== b.id && other.status !== "cancelled")
+            .map((other) => ({
+              from: new Date(other.start_date + "T00:00:00"),
+              to: new Date(other.end_date + "T00:00:00"),
+            }))}
+        />
+      ))}
     </div>
   );
 }

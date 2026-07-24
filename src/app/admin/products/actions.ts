@@ -14,7 +14,7 @@ async function assertOwner(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return "You must be signed in.";
+  if (!user) return "Giriş yapmalısınız.";
 
   const { data: product } = await supabase
     .from("products")
@@ -23,7 +23,7 @@ async function assertOwner(
     .single();
 
   if (!product || product.owner_id !== user.id) {
-    return "You do not have permission to modify this product.";
+    return "Bu ürünü değiştirme yetkiniz yok.";
   }
 
   return null;
@@ -46,7 +46,7 @@ export async function createProduct(
   const dailyPriceRaw = String(formData.get("daily_price") ?? "").trim();
 
   if (!name) {
-    return { error: "Product name is required." };
+    return { error: "Ürün adı gereklidir." };
   }
 
   const supabase = await createClient();
@@ -56,7 +56,7 @@ export async function createProduct(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: "You must be signed in to create a product." };
+    return { error: "Ürün oluşturmak için giriş yapmalısınız." };
   }
 
   const { data, error } = await supabase
@@ -72,7 +72,7 @@ export async function createProduct(
     .single();
 
   if (error || !data) {
-    return { error: error?.message ?? "Could not create product." };
+    return { error: error?.message ?? "Ürün oluşturulamadı." };
   }
 
   revalidatePath("/admin");
@@ -90,7 +90,7 @@ export async function updateProduct(
   const dailyPriceRaw = String(formData.get("daily_price") ?? "").trim();
 
   if (!name) {
-    return { error: "Product name is required." };
+    return { error: "Ürün adı gereklidir." };
   }
 
   const supabase = await createClient();

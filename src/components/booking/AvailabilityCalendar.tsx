@@ -1,6 +1,7 @@
 "use client";
 
 import { DayPicker } from "react-day-picker";
+import { tr } from "date-fns/locale";
 import "react-day-picker/style.css";
 
 export default function AvailabilityCalendar({
@@ -9,21 +10,22 @@ export default function AvailabilityCalendar({
   bookedRanges: { from: Date; to: Date }[];
 }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-3">
+    <div className="rdp-theme card">
       <DayPicker
+        locale={tr}
         modifiers={{ booked: bookedRanges }}
         modifiersClassNames={{ booked: "rdp-booked" }}
         numberOfMonths={1}
       />
-      <div className="mt-3 flex items-center gap-4 text-xs text-neutral-500">
+      <div className="mt-3 flex items-center gap-4 text-xs text-ink-muted">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm bg-red-200" /> Booked
+          <span className="diagonal-stripes inline-block h-3 w-3 rounded-sm border border-border" /> Dolu
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm border border-neutral-300" /> Free
+          <span className="inline-block h-3 w-3 rounded-sm border border-border" /> Müsait
         </span>
       </div>
-      <style>{`.rdp-booked { background-color: #fecaca; color: #7f1d1d; }`}</style>
+      <style>{`.rdp-booked { background-color: #ffe3d4; color: #852400; text-decoration: line-through; }`}</style>
     </div>
   );
 }

@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
   const rows = bookings.map((b) => ({
     booking_id: b.id,
     product_id: b.product_id,
-    message: `${b.customer_name}'s rental of "${
-      (b.products as unknown as { name: string } | null)?.name ?? "a product"
-    }" is due back tomorrow.`,
+    message: `${b.customer_name} adlı kiracının "${
+      (b.products as unknown as { name: string } | null)?.name ?? "bir ürün"
+    }" kiralaması yarın teslim edilmeli.`,
   }));
 
   // The unique index on notifications.booking_id de-dupes if the job re-runs.

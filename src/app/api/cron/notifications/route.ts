@@ -1,5 +1,29 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+/**
+ * Guards the only endpoint that reaches for the service-role key, so it has to
+ * fail closed.
+ *
+ * A plain `header !== \`Bearer ${process.env.CRON_SECRET}\`` compares against
+ * the literal "Bearer undefined" when the variable is missing, which would hand
+ * an RLS-bypassing client to anyone who guessed that. Here a missing secret is
+ * a configuration error, not an open door. The comparison itself is constant
+ * time; lengths are checked first because `timingSafeEqual` throws when the
+ * buffers differ in size.
+ */
+function isAuthorized(request: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const received = Buffer.from(request.headers.get("authorization") ?? "");
+
+  return (
+    received.length === expected.length && timingSafeEqual(received, expected)
+  );
+}
 
 function tomorrowDateString() {
   const d = new Date();
@@ -8,8 +32,14 @@ function tomorrowDateString() {
 }
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json(
+      { error: "CRON_SECRET is not configured." },
+      { status: 500 }
+    );
+  }
+
+  if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

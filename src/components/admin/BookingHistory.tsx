@@ -1,0 +1,137 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import type { BookingStatus } from "@/lib/types";
+import { bookingStatusLabel, bookingStatusPill, formatDateRange } from "@/lib/bookings";
+import { IconCalendar, IconChevronRight, IconPackage, IconPhone } from "@/components/icons";
+
+export type BookingHistoryRow = {
+  id: string;
+  productId: string;
+  productName: string;
+  customerName: string;
+  customerPhone: string | null;
+  startDate: string;
+  endDate: string;
+  status: BookingStatus;
+  createdAt: string;
+};
+
+type Filter = "all" | BookingStatus;
+
+const filters: { key: Filter; label: string }[] = [
+  { key: "all", label: "Tümü" },
+  { key: "active", label: "Aktif" },
+  { key: "upcoming", label: "Yaklaşan" },
+  { key: "completed", label: "Teslim edildi" },
+  { key: "cancelled", label: "İptal edildi" },
+];
+
+// Pinned to a fixed zone so the server render and the browser agree — the
+// server runs in UTC, the visitor does not.
+const createdFormat = new Intl.DateTimeFormat("tr-TR", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Istanbul",
+});
+
+export default function BookingHistory({ bookings }: { bookings: BookingHistoryRow[] }) {
+  const [filter, setFilter] = useState<Filter>("all");
+
+  const counts = useMemo(() => {
+    const map: Record<Filter, number> = {
+      all: bookings.length,
+      active: 0,
+      upcoming: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+    for (const b of bookings) map[b.status] += 1;
+    return map;
+  }, [bookings]);
+
+  const visible =
+    filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap gap-2">
+        {filters.map((f) => {
+          const selected = filter === f.key;
+          return (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              aria-pressed={selected}
+              className={`btn min-h-0 px-3.5 py-2 text-xs ${
+                selected ? "btn-primary" : "btn-secondary"
+              }`}
+            >
+              {f.label}
+              <span className={selected ? "text-white/70" : "text-ink-muted"}>
+                {counts[f.key]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {visible.length === 0 ? (
+        <div className="card flex flex-col items-center gap-2 border-dashed py-10 text-center">
+          <IconCalendar className="h-6 w-6 text-ink-muted" />
+          <p className="text-sm text-ink-muted">
+            {bookings.length === 0
+              ? "Henüz rezervasyon oluşturulmadı."
+              : "Bu filtreye uyan rezervasyon yok."}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {visible.map((b, i) => (
+            <Link
+              key={b.id}
+              href={`/admin/bookings/${b.id}`}
+              className="fade-slide-up card card-hover flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-ink">{b.customerName}</p>
+                  <span className={`pill ${bookingStatusPill[b.status]}`}>
+                    {bookingStatusLabel[b.status]}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
+                  <span className="flex items-center gap-1.5">
+                    <IconPackage className="h-3.5 w-3.5" />
+                    {b.productName}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <IconCalendar className="h-3.5 w-3.5" />
+                    {formatDateRange(b.startDate, b.endDate)}
+                  </span>
+                  {b.customerPhone && (
+                    <span className="flex items-center gap-1.5">
+                      <IconPhone className="h-3.5 w-3.5" />
+                      {b.customerPhone}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-3 self-start text-xs text-ink-muted sm:self-center">
+                <span>{createdFormat.format(new Date(b.createdAt))} tarihinde oluşturuldu</span>
+                <IconChevronRight className="h-4 w-4" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

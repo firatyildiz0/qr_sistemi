@@ -25,9 +25,12 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() verifies the token signature locally against a cached JWKS when
+  // the project uses asymmetric signing keys, which keeps this proxy off the
+  // critical path — it runs on every /admin request. It still goes through
+  // getSession(), so an expired token is refreshed exactly as before.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims ?? null;
 
   const { pathname } = request.nextUrl;
   const isAdminRoute = pathname.startsWith("/admin");

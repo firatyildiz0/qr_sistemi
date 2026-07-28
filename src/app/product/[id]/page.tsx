@@ -1,6 +1,9 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Booking } from "@/lib/types";
+import { formatPrice } from "@/lib/format";
+import { bookedCountByDate } from "@/lib/bookings";
 import AvailabilityCalendar from "@/components/booking/AvailabilityCalendar";
 import BookingForm from "@/components/booking/BookingForm";
 import BookingList from "@/components/booking/BookingList";
@@ -33,23 +36,43 @@ export default async function ProductDetailPage({
   if (!product) notFound();
 
   const isOwner = user?.id === product.owner_id;
+  const images: string[] = (product.images ?? []).slice(0, 2);
 
-  const activeBookings = (bookings ?? []).filter(
-    (b: Booking) => b.status !== "cancelled"
+  // Per-day counts rather than plain ranges: a day is unavailable only when
+  // as many bookings cover it as the product has units in stock.
+  const bookedCounts = bookedCountByDate(
+    (bookings ?? []).filter((b: Booking) => b.status !== "cancelled")
   );
-  const bookedRanges = activeBookings.map((b) => ({
-    from: new Date(b.start_date + "T00:00:00"),
-    to: new Date(b.end_date + "T00:00:00"),
-  }));
 
   return (
     <main className="min-h-screen bg-paper">
-      <div className="relative flex h-48 items-center justify-center overflow-hidden border-b border-border bg-surface sm:h-56">
-        <div className="diagonal-stripes absolute inset-0 opacity-40" />
+      <div className="relative h-64 overflow-hidden border-b border-border bg-surface sm:h-80">
+        {images.length > 0 ? (
+          <div className={`grid h-full ${images.length > 1 ? "grid-cols-2 gap-3" : "grid-cols-1"} p-3`}>
+            {images.map((src: string, i: number) => (
+              <div key={src} className="relative h-full">
+                {/* object-contain, not cover: the whole product has to be
+                    visible at its original proportions, never cropped. */}
+                <Image
+                  src={src}
+                  alt={`${product.name} görseli ${i + 1}`}
+                  fill
+                  sizes={images.length > 1 ? "(max-width: 640px) 50vw, 320px" : "(max-width: 640px) 100vw, 640px"}
+                  priority={i === 0}
+                  className="object-contain"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <div className="diagonal-stripes absolute inset-0 opacity-40" />
+            <IconQrCode className="h-20 w-20 text-ink-muted/30" strokeWidth={1} />
+          </div>
+        )}
         <div className="pill pill-accent absolute left-4 top-4">
           <IconQrCode className="h-3.5 w-3.5" /> QR ile tarandı
         </div>
-        <IconQrCode className="h-20 w-20 text-ink-muted/30" strokeWidth={1} />
       </div>
 
       <div className="mx-auto max-w-2xl px-4 py-8">
@@ -58,10 +81,15 @@ export default async function ProductDetailPage({
             <h1 className="text-[28px] font-bold text-ink">{product.name}</h1>
             {product.daily_price != null && (
               <span className="pill pill-accent shrink-0 text-sm!">
-                ${product.daily_price}/gün
+                {formatPrice(product.daily_price)}/gün
               </span>
             )}
           </div>
+          <p className="mt-2">
+            <span className={`pill ${product.stock > 0 ? "pill-success" : "pill-danger"}`}>
+              {product.stock > 0 ? `Stokta ${product.stock} adet` : "Stokta yok"}
+            </span>
+          </p>
           {product.description && (
             <p className="mt-3 text-ink-muted">{product.description}</p>
           )}
@@ -82,16 +110,16 @@ export default async function ProductDetailPage({
             {isOwner ? "Yeni rezervasyon" : "Müsaitlik"}
           </h2>
           {isOwner ? (
-            <BookingForm productId={id} bookedRanges={bookedRanges} />
+            <BookingForm productId={id} bookedCounts={bookedCounts} stock={product.stock} />
           ) : (
-            <AvailabilityCalendar bookedRanges={bookedRanges} />
+            <AvailabilityCalendar bookedCounts={bookedCounts} stock={product.stock} />
           )}
         </section>
 
         {isOwner && (
           <section className="mt-10">
             <h2 className="mb-3 text-lg font-semibold text-ink">Kiralamalar</h2>
-            <BookingList bookings={bookings ?? []} productId={id} />
+            <BookingList bookings={bookings ?? []} productId={id} stock={product.stock} />
           </section>
         )}
       </div>

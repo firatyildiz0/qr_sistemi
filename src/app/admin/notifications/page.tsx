@@ -1,14 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import NotificationRow from "@/components/admin/NotificationRow";
 import MarkAllReadButton from "@/components/admin/MarkAllReadButton";
 import { IconCheckCircle } from "@/components/icons";
 
 export default async function NotificationsPage() {
-  const supabase = await createClient();
+  const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
 
+  // `!inner` + the owner filter means a seller only ever sees notifications for
+  // products they own, independent of the RLS policy backing it up.
   const { data: rows } = await supabase
     .from("notifications")
-    .select("id, booking_id, product_id, message, is_read, created_at, products(name)")
+    .select(
+      "id, booking_id, product_id, message, is_read, created_at, products!inner(name, owner_id)"
+    )
+    .eq("products.owner_id", user?.id ?? "")
     .order("created_at", { ascending: false })
     .limit(50);
 

@@ -1,14 +1,16 @@
 import type { Booking } from "@/lib/types";
-import { displayStatus } from "@/lib/bookings";
+import { bookedCountByDate, displayStatus } from "@/lib/bookings";
 import BookingRow from "@/components/booking/BookingRow";
 import { IconCalendar } from "@/components/icons";
 
 export default function BookingList({
   bookings,
   productId,
+  stock,
 }: {
   bookings: Booking[];
   productId: string;
+  stock: number;
 }) {
   if (bookings.length === 0) {
     return (
@@ -20,6 +22,7 @@ export default function BookingList({
   }
 
   const sorted = [...bookings].sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
+  const active = sorted.filter((b) => b.status !== "cancelled");
 
   return (
     <div className="flex flex-col gap-3">
@@ -29,13 +32,11 @@ export default function BookingList({
           booking={b}
           status={displayStatus(b)}
           productId={productId}
+          stock={stock}
           delay={i * 60}
-          otherBookedRanges={sorted
-            .filter((other) => other.id !== b.id && other.status !== "cancelled")
-            .map((other) => ({
-              from: new Date(other.start_date + "T00:00:00"),
-              to: new Date(other.end_date + "T00:00:00"),
-            }))}
+          // The row being edited must not count itself as competition for its
+          // own dates, otherwise its current days look sold out.
+          otherBookedCounts={bookedCountByDate(active.filter((other) => other.id !== b.id))}
         />
       ))}
     </div>

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Light theme. Every colour below is a live custom property, never inlined, so
+   the [data-theme] / [data-accent] blocks further down can repaint the whole UI
+   at runtime without any utility class needing a `dark:` twin. */
 @theme {
   --color-paper: #f2f1ed;
   --color-surface: #faf9f5;
@@ -8,14 +11,28 @@
   --color-ink-muted: #5b4038;
   --color-accent: #ff5a1f;
   --color-accent-hover: #e14a12;
-  --color-accent-soft: #ffdbd0;
   --color-deep: #0f2a22;
   --color-deep-2: #17352c;
   --color-success: #1f8a5f;
   --color-warning: #b8790a;
   --color-danger: #ba1a1a;
   --color-border: #e1dfd9;
+  --color-border-strong: #d8d5cc;
   --color-border-dark: rgba(255, 255, 255, 0.12);
+  --color-placeholder: #9a968c;
+  /* Text sitting on --color-deep (sidebar, hero bands). Deliberately absent
+     from the dark block: those surfaces are dark in *both* themes, so this must
+     not flip to near-black the way --color-paper does. */
+  --color-on-deep: #f2f1ed;
+
+  /* Tints are mixed from the live accent rather than hard-coded, so picking a
+     custom accent in Ayarlar recolours pills, calendars and focus rings too. */
+  --color-accent-soft: color-mix(in oklab, var(--color-accent) 16%, var(--color-card));
+  --color-accent-muted: color-mix(in oklab, var(--color-accent) 30%, var(--color-card));
+  --color-accent-strong: color-mix(in oklab, var(--color-accent) 62%, #000000);
+  --color-partial-soft: color-mix(in oklab, var(--color-accent) 9%, var(--color-card));
+  --color-danger-soft: color-mix(in oklab, var(--color-danger) 7%, var(--color-card));
+  --color-danger-border: color-mix(in oklab, var(--color-danger) 22%, var(--color-card));
 
   --font-display: var(--font-display), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-eyebrow: var(--font-eyebrow), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
@@ -28,8 +45,201 @@
   --spacing-section: 64px;
 }
 
+/* Not in @theme: these are raw values for shadows and overlays, and putting
+   them there would generate meaningless `bg-app-shadow` style utilities. */
+:root {
+  color-scheme: light;
+  --app-shadow: rgba(27, 28, 26, 0.25);
+  --app-shadow-soft: rgba(20, 23, 26, 0.08);
+  --app-stripe: rgba(27, 28, 26, 0.06);
+  --app-backdrop: rgba(15, 42, 34, 0.45);
+}
+
+/* Dark theme. `:root[data-theme="dark"]` outranks the `:root` that @theme
+   emits, so these win regardless of source order. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #0c110f;
+  --color-surface: #121815;
+  --color-card: #171e1b;
+  --color-ink: #ecebe5;
+  --color-ink-muted: #a2a9a2;
+  --color-accent: #ff6a33;
+  --color-accent-hover: #ff8452;
+  /* Kept clearly lighter than --color-paper so the sidebar still reads as a
+     separate rail against the content area, which has no divider. */
+  --color-deep: #131b18;
+  --color-deep-2: #1b2521;
+  --color-success: #35c48d;
+  --color-warning: #e0a726;
+  --color-danger: #ff6b6b;
+  --color-border: #2a332e;
+  --color-border-strong: #3a453e;
+  --color-placeholder: #7d857e;
+
+  /* On a dark card a tint has to be lightened towards white, not blackened. */
+  --color-accent-soft: color-mix(in oklab, var(--color-accent) 22%, var(--color-card));
+  --color-accent-muted: color-mix(in oklab, var(--color-accent) 34%, var(--color-card));
+  --color-accent-strong: color-mix(in oklab, var(--color-accent) 55%, #ffffff);
+  --color-partial-soft: color-mix(in oklab, var(--color-accent) 12%, var(--color-card));
+  --color-danger-soft: color-mix(in oklab, var(--color-danger) 12%, var(--color-card));
+  --color-danger-border: color-mix(in oklab, var(--color-danger) 30%, var(--color-card));
+
+  --app-shadow: rgba(0, 0, 0, 0.65);
+  --app-shadow-soft: rgba(0, 0, 0, 0.5);
+  --app-stripe: rgba(236, 235, 229, 0.14);
+  --app-backdrop: rgba(0, 0, 0, 0.6);
+}
+
+/* Accent presets.
+   Each preset is written twice: once for <html> itself, once for any
+   descendant carrying the attribute. The descendant form lets the swatches in
+   Ayarlar preview a preset by simply wearing `data-accent` + `bg-accent`, with
+   no second copy of the palette in JS.
+   Both attributes are always present on <html> (the layout renders defaults,
+   the pre-hydration script rewrites them), so qualifying every preset on the
+   theme keeps it from fighting the dark block on equal specificity. */
+:root[data-theme="light"][data-accent="ember"],
+:root[data-theme="light"] [data-accent="ember"] {
+  --color-accent: #ff5a1f;
+  --color-accent-hover: #e14a12;
+}
+:root[data-theme="dark"][data-accent="ember"],
+:root[data-theme="dark"] [data-accent="ember"] {
+  --color-accent: #ff6a33;
+  --color-accent-hover: #ff8452;
+}
+
+:root[data-theme="light"][data-accent="forest"],
+:root[data-theme="light"] [data-accent="forest"] {
+  --color-accent: #10855c;
+  --color-accent-hover: #0c6d4a;
+}
+:root[data-theme="dark"][data-accent="forest"],
+:root[data-theme="dark"] [data-accent="forest"] {
+  --color-accent: #2fbe89;
+  --color-accent-hover: #57d3a4;
+}
+
+:root[data-theme="light"][data-accent="ocean"],
+:root[data-theme="light"] [data-accent="ocean"] {
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+}
+:root[data-theme="dark"][data-accent="ocean"],
+:root[data-theme="dark"] [data-accent="ocean"] {
+  --color-accent: #5b8cff;
+  --color-accent-hover: #7ea6ff;
+}
+
+:root[data-theme="light"][data-accent="violet"],
+:root[data-theme="light"] [data-accent="violet"] {
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6a2bd4;
+}
+:root[data-theme="dark"][data-accent="violet"],
+:root[data-theme="dark"] [data-accent="violet"] {
+  --color-accent: #a888ff;
+  --color-accent-hover: #bda3ff;
+}
+
+:root[data-theme="light"][data-accent="rose"],
+:root[data-theme="light"] [data-accent="rose"] {
+  --color-accent: #e11d48;
+  --color-accent-hover: #be123c;
+}
+:root[data-theme="dark"][data-accent="rose"],
+:root[data-theme="dark"] [data-accent="rose"] {
+  --color-accent: #ff6b8b;
+  --color-accent-hover: #ff8ba4;
+}
+
+/* Panel customisation. The attributes live on <html> so the pre-hydration
+   script can set them, but the variables are scoped to `.panel-scope` (the
+   admin shell) — the public pages keep their designed spacing and corners. */
+:root[data-density="compact"] .panel-scope {
+  --spacing: 0.205rem;
+}
+:root[data-density="comfortable"] .panel-scope {
+  --spacing: 0.295rem;
+}
+
+:root[data-radius="sharp"] .panel-scope {
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+:root[data-radius="round"] .panel-scope {
+  --radius-sm: 0.625rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+}
+
+/* Collapsed sidebar (the icon rail).
+   Desktop only: below md the sidebar is an off-canvas drawer, where a narrow
+   rail would just sit on top of the content. Everything here is driven by the
+   [data-sidebar] attribute the pre-hydration script restores, so the rail is
+   already the right width on first paint. */
+@media (min-width: 768px) {
+  :root[data-sidebar="collapsed"] .sidebar {
+    width: 4.5rem;
+  }
+
+  /* Labels, the wordmark and the account text all collapse away together. */
+  :root[data-sidebar="collapsed"] .sidebar-label {
+    display: none;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar-head,
+  :root[data-sidebar="collapsed"] .sidebar-item,
+  :root[data-sidebar="collapsed"] .sidebar-account {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar-account {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar-signout {
+    margin-left: 0;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar-foot {
+    padding: 0.75rem;
+  }
+
+  /* The count no longer fits beside the icon, so it rides on top of it. */
+  :root[data-sidebar="collapsed"] .sidebar-badge {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    margin-left: 0;
+    padding: 0 0.25rem;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar-toggle-icon {
+    transform: rotate(180deg);
+  }
+}
+
 body {
   font-feature-settings: "tnum" 0;
+}
+
+/* Mobil tarayıcılarda çift dokunuşla yakınlaştırmayı kapatır. Sayfa hâlâ
+   parmakla yakınlaştırılabilir; sadece dokunulabilir öğelerde istemsiz zoom
+   ve 300ms gecikme ortadan kalkar. */
+a,
+button,
+label,
+summary,
+[role="button"] {
+  touch-action: manipulation;
 }
 
 @layer components {
@@ -48,7 +258,9 @@ body {
     justify-content: center;
     gap: 0.5rem;
     min-height: 44px;
-    padding: 0 20px;
+    /* Derived from --spacing so the density setting reaches button padding,
+       while min-height keeps the tap target legal at every density. */
+    padding: 0 calc(var(--spacing) * 5);
     border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 14px;
@@ -63,12 +275,12 @@ body {
   .btn-primary {
     background: var(--color-accent);
     color: #ffffff;
-    box-shadow: 0 1px 2px rgba(20, 23, 26, 0.08);
+    box-shadow: 0 1px 2px var(--app-shadow-soft);
   }
   .btn-primary:hover {
     background: var(--color-accent-hover);
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px -8px rgba(255, 90, 31, 0.45);
+    box-shadow: 0 12px 24px -8px color-mix(in oklab, var(--color-accent) 45%, transparent);
   }
   .btn-primary:disabled {
     opacity: 0.6;
@@ -85,7 +297,7 @@ body {
   .btn-secondary:hover {
     border-color: var(--color-ink-muted);
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px -12px rgba(27, 28, 26, 0.25);
+    box-shadow: 0 10px 20px -12px var(--app-shadow);
   }
 
   .btn-ghost {
@@ -100,24 +312,41 @@ body {
   .btn-danger-ghost {
     background: transparent;
     color: var(--color-danger);
-    border: 1px solid #f3d2ce;
+    border: 1px solid var(--color-danger-border);
   }
   .btn-danger-ghost:hover {
-    background: #fff2f0;
+    background: var(--color-danger-soft);
     transform: translateY(-2px);
+  }
+
+  .btn-danger {
+    background: var(--color-danger);
+    color: #ffffff;
+    box-shadow: 0 1px 2px var(--app-shadow-soft);
+  }
+  .btn-danger:hover {
+    background: color-mix(in oklab, var(--color-danger) 82%, #000000);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -8px color-mix(in oklab, var(--color-danger) 45%, transparent);
+  }
+  .btn-danger:disabled {
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
+    cursor: not-allowed;
   }
 
   .card {
     background: var(--color-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    padding: 24px;
+    padding: calc(var(--spacing) * 6);
     transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
   }
   .card-hover:hover {
     transform: translateY(-4px);
-    box-shadow: 0 20px 40px -20px rgba(27, 28, 26, 0.25);
-    border-color: #d8d5cc;
+    box-shadow: 0 20px 40px -20px var(--app-shadow);
+    border-color: var(--color-border-strong);
   }
 
   .field-label {
@@ -134,17 +363,19 @@ body {
     background: var(--color-card);
     border-radius: var(--radius-sm);
     padding: 10px 14px;
-    font-size: 15px;
+    /* 16px'in altında kalan her form alanı iOS Safari'de odaklanınca sayfayı
+       otomatik olarak yakınlaştırır — bu yüzden tam 16px. */
+    font-size: 16px;
     color: var(--color-ink);
     transition: border-color 150ms ease, box-shadow 150ms ease;
   }
   .input::placeholder {
-    color: #9a968c;
+    color: var(--color-placeholder);
   }
   .input:focus {
     outline: none;
     border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.16);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 16%, transparent);
   }
 
   .link-underline {
@@ -177,11 +408,11 @@ body {
     border-radius: 999px;
   }
   .pill-success {
-    background: rgba(31, 138, 95, 0.14);
+    background: color-mix(in oklab, var(--color-success) 14%, transparent);
     color: var(--color-success);
   }
   .pill-warning {
-    background: rgba(184, 121, 10, 0.14);
+    background: color-mix(in oklab, var(--color-warning) 14%, transparent);
     color: var(--color-warning);
   }
   .pill-muted {
@@ -189,12 +420,12 @@ body {
     color: var(--color-ink-muted);
   }
   .pill-danger {
-    background: rgba(186, 26, 26, 0.12);
+    background: color-mix(in oklab, var(--color-danger) 12%, transparent);
     color: var(--color-danger);
   }
   .pill-accent {
     background: var(--color-accent-soft);
-    color: #852400;
+    color: var(--color-accent-strong);
   }
 
   .icon-btn {
@@ -213,30 +444,77 @@ body {
   }
 }
 
-@layer components {
-  .rdp-theme {
-    --rdp-accent-color: var(--color-accent);
-    --rdp-accent-background-color: #ffe3d4;
-    --rdp-day-height: 40px;
-    --rdp-day-width: 40px;
-    --rdp-day_button-border-radius: 8px;
-    --rdp-selected-border: 2px solid var(--color-accent);
-    --rdp-today-color: var(--color-accent-hover);
-    --rdp-outline: 2px solid var(--color-accent);
-    --rdp-outline-selected: 2px solid var(--color-accent);
-    font-family: inherit;
-  }
-  .rdp-theme .rdp-day_button:hover:not([disabled]) {
-    background-color: var(--color-accent-soft);
-  }
+/* Deliberately NOT inside `@layer components`.
+   react-day-picker's own stylesheet is unlayered, and unlayered rules beat
+   layered ones no matter how specific the layered one is — so as long as these
+   lived in a layer they lost every conflict. It also declares its defaults
+   (`--rdp-accent-color: blue`) on `.rdp-root` itself, so setting the variables
+   on an ancestor was overridden by proximity too. Targeting `.rdp-root`
+   directly, unlayered, wins on specificity (0,2,0 vs 0,1,0). */
+.rdp-theme .rdp-root {
+  --rdp-accent-color: var(--color-accent);
+  --rdp-accent-background-color: var(--color-accent-muted);
+  --rdp-day-height: 40px;
+  --rdp-day-width: 40px;
+  --rdp-day_button-border-radius: 8px;
+  --rdp-selected-border: 2px solid var(--color-accent);
+  --rdp-today-color: var(--color-accent-hover);
+  --rdp-outline: 2px solid var(--color-accent);
+  --rdp-outline-selected: 2px solid var(--color-accent);
+  font-family: inherit;
+}
+.rdp-theme .rdp-day_button:hover:not([disabled]) {
+  background-color: var(--color-accent-soft);
+}
+
+/* Availability modifiers. These used to be duplicated in a <style> tag inside
+   each of the three calendars, which meant they were also hard-coded to the
+   light palette. Unlayered for the same reason as the block above. */
+.rdp-booked {
+  background-color: var(--color-accent-muted);
+  color: var(--color-accent-strong);
+  text-decoration: line-through;
+}
+.rdp-partly {
+  background-color: var(--color-partial-soft);
+  color: var(--color-accent-strong);
+}
+
+/* Days a booking covers, on the single-booking calendar. */
+.rdp-rented {
+  background-color: var(--color-accent-muted);
+  color: var(--color-accent-strong);
+  font-weight: 600;
+}
+
+/* Status colouring for the customer calendar. Not nested under `.rdp-theme`
+   because the legend swatches reuse the same classes on plain spans. */
+.cal-active {
+  background-color: color-mix(in oklab, var(--color-success) 22%, var(--color-card));
+  color: var(--color-success);
+  font-weight: 600;
+}
+.cal-upcoming {
+  background-color: var(--color-accent-muted);
+  color: var(--color-accent-strong);
+  font-weight: 600;
+}
+.cal-completed {
+  background-color: var(--color-border);
+  color: var(--color-ink-muted);
+}
+.cal-cancelled {
+  background-color: color-mix(in oklab, var(--color-danger) 16%, var(--color-card));
+  color: var(--color-danger);
+  text-decoration: line-through;
 }
 
 @layer utilities {
   .diagonal-stripes {
     background-image: repeating-linear-gradient(
       45deg,
-      rgba(27, 28, 26, 0.06),
-      rgba(27, 28, 26, 0.06) 1px,
+      var(--app-stripe),
+      var(--app-stripe) 1px,
       transparent 1px,
       transparent 6px
     );
@@ -262,23 +540,32 @@ body {
     }
   }
 
+  /* Gizli başlangıç durumu bilerek elemanın kendisinde değil, keyframe'in
+     `from` adımında duruyor. Animasyon kapatıldığında (Ayarlar'daki "hareketi
+     azalt" ya da işletim sistemi tercihi) elemanda geriye opacity: 0 gibi bir
+     kalıntı kalmaz — içerik doğrudan son halinde görünür. `both` ise stagger
+     gecikmesi boyunca öğeyi gizli tutmayı sürdürür. */
   .check-draw {
     stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    animation: draw 0.6s ease-in-out forwards;
+    animation: draw 0.6s ease-in-out both;
   }
   @keyframes draw {
+    from {
+      stroke-dashoffset: 100;
+    }
     to {
       stroke-dashoffset: 0;
     }
   }
 
   .fade-slide-up {
-    opacity: 0;
-    transform: translateY(10px);
-    animation: fade-slide-up 0.45s ease-out forwards;
+    animation: fade-slide-up 0.45s ease-out both;
   }
   @keyframes fade-slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
     to {
       opacity: 1;
       transform: translateY(0);
@@ -322,13 +609,86 @@ body {
     font-variant-numeric: tabular-nums;
   }
 
+  .modal-backdrop {
+    background: var(--app-backdrop);
+    backdrop-filter: blur(4px);
+    animation: modal-fade-in 160ms ease-out both;
+  }
+  @keyframes modal-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .modal-panel {
+    box-shadow: 0 32px 64px -24px var(--app-backdrop);
+    animation: modal-pop-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  }
+  @keyframes modal-pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Pending-navigation spinner. Starts invisible with a delay so it only ever
+     appears when a transition is genuinely slow — a fast navigation finishes
+     before the animation begins and the user sees no flicker. */
+  .nav-spinner {
+    opacity: 0;
+    animation: nav-spin 700ms linear 150ms infinite,
+      nav-spinner-in 1ms linear 150ms forwards;
+  }
+  @keyframes nav-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes nav-spinner-in {
+    to {
+      opacity: 1;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .fade-slide-up,
     .scan-line,
     .drift,
     .qr-pulse-ring,
-    .check-draw {
+    .check-draw,
+    .modal-backdrop,
+    .modal-panel {
       animation: none !important;
     }
+    .nav-spinner {
+      animation: nav-spinner-in 1ms linear 150ms forwards;
+    }
+    .btn:hover,
+    .card-hover:hover {
+      transform: none;
+    }
+  }
+
+  /* Same rules, opted into from Ayarlar rather than from the OS. The spinner
+     keeps turning either way: it is a loading indicator, not decoration. */
+  :root[data-motion="reduced"] .fade-slide-up,
+  :root[data-motion="reduced"] .scan-line,
+  :root[data-motion="reduced"] .drift,
+  :root[data-motion="reduced"] .qr-pulse-ring,
+  :root[data-motion="reduced"] .check-draw,
+  :root[data-motion="reduced"] .modal-backdrop,
+  :root[data-motion="reduced"] .modal-panel {
+    animation: none !important;
+  }
+  :root[data-motion="reduced"] .btn:hover,
+  :root[data-motion="reduced"] .card-hover:hover {
+    transform: none;
   }
 }

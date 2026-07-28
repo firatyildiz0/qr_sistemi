@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getCurrentUser } from "@/lib/auth";
 import Reveal from "@/components/marketing/Reveal";
 import Counter from "@/components/marketing/Counter";
 import {
@@ -64,7 +65,11 @@ const features = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const user = await getCurrentUser();
+  const ctaHref = user ? "/admin" : "/login";
+  const ctaLabel = user ? "Panele git" : "Hemen başla";
+
   return (
     <>
       <nav className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-border bg-surface/95 px-6 backdrop-blur-sm">
@@ -78,11 +83,13 @@ export default function Home() {
           </a>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/login" className="hidden text-sm font-medium text-ink-muted hover:text-accent md:block">
-            Giriş yap
-          </Link>
-          <Link href="/login" className="btn btn-primary">
-            Hemen başla
+          {!user && (
+            <Link href="/login" className="hidden text-sm font-medium text-ink-muted hover:text-accent md:block">
+              Giriş yap
+            </Link>
+          )}
+          <Link href={ctaHref} className="btn btn-primary">
+            {ctaLabel}
           </Link>
         </div>
       </nav>
@@ -99,8 +106,8 @@ export default function Home() {
               Basılı QR kodlarıyla fiziksel ekipmanlar için basit ve pratik kiralama takibi.
             </p>
             <div className="mt-2 flex flex-col items-start gap-6 sm:flex-row sm:items-center">
-              <Link href="/login" className="btn btn-primary px-8 text-base">
-                Hemen başla
+              <Link href={ctaHref} className="btn btn-primary px-8 text-base">
+                {ctaLabel}
               </Link>
               <a href="#how-it-works" className="link-underline flex items-center gap-2 text-sm font-semibold text-ink">
                 Nasıl çalıştığını gör <IconArrowRight className="h-4 w-4 rotate-90" />
@@ -185,28 +192,28 @@ export default function Home() {
           />
           <div className="relative mx-auto grid max-w-7xl grid-cols-2 gap-8 px-6 text-center md:grid-cols-4">
             <Reveal className="flex flex-col items-center">
-              <span className="text-4xl font-bold text-paper sm:text-5xl">
+              <span className="text-4xl font-bold text-on-deep sm:text-5xl">
                 <Counter target={1240} />
               </span>
-              <span className="eyebrow mt-2 text-paper/60">Listelenen ürün</span>
+              <span className="eyebrow mt-2 text-on-deep/60">Listelenen ürün</span>
             </Reveal>
             <Reveal delay={100} className="flex flex-col items-center">
-              <span className="text-4xl font-bold text-paper sm:text-5xl">
+              <span className="text-4xl font-bold text-on-deep sm:text-5xl">
                 <Counter target={38600} />
               </span>
-              <span className="eyebrow mt-2 text-paper/60">QR taraması</span>
+              <span className="eyebrow mt-2 text-on-deep/60">QR taraması</span>
             </Reveal>
             <Reveal delay={200} className="flex flex-col items-center">
-              <span className="text-4xl font-bold text-paper sm:text-5xl">
-                4.9<span className="text-xl text-paper/50">/5</span>
+              <span className="text-4xl font-bold text-on-deep sm:text-5xl">
+                4.9<span className="text-xl text-on-deep/50">/5</span>
               </span>
-              <span className="eyebrow mt-2 text-paper/60">Ortalama puan</span>
+              <span className="eyebrow mt-2 text-on-deep/60">Ortalama puan</span>
             </Reveal>
             <Reveal delay={300} className="flex flex-col items-center">
-              <span className="text-4xl font-bold text-paper sm:text-5xl">
+              <span className="text-4xl font-bold text-on-deep sm:text-5xl">
                 <Counter target={92} suffix="%" />
               </span>
-              <span className="eyebrow mt-2 text-paper/60">Onaylanma oranı</span>
+              <span className="eyebrow mt-2 text-on-deep/60">Onaylanma oranı</span>
             </Reveal>
           </div>
         </section>
@@ -219,8 +226,8 @@ export default function Home() {
           <h2 className="mb-8 text-[32px] font-bold leading-tight text-ink sm:text-[48px]">
             İlk ürününüzü listelemeye hazır mısınız?
           </h2>
-          <Link href="/login" className="btn btn-primary px-10 text-base">
-            Sahip olarak giriş yap
+          <Link href={ctaHref} className="btn btn-primary px-10 text-base">
+            {user ? "Panele git" : "Sahip olarak giriş yap"}
           </Link>
         </Reveal>
       </main>
@@ -228,8 +235,8 @@ export default function Home() {
       <footer className="flex flex-col items-center gap-6 border-t border-border bg-surface px-6 py-12 md:flex-row md:justify-between">
         <span className="font-display text-lg font-extrabold text-ink">RentQR</span>
         <div className="flex flex-wrap justify-center gap-6">
-          <Link href="/login" className="link-underline text-sm text-ink-muted hover:text-accent">
-            Giriş yap
+          <Link href={ctaHref} className="link-underline text-sm text-ink-muted hover:text-accent">
+            {user ? "Panel" : "Giriş yap"}
           </Link>
           <a href="#features" className="link-underline text-sm text-ink-muted hover:text-accent">
             Ürün

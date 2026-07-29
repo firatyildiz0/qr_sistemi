@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import Reveal from "@/components/marketing/Reveal";
+import Wordmark from "@/components/Wordmark";
 import Counter from "@/components/marketing/Counter";
 import {
   IconArrowRight,
@@ -73,7 +74,7 @@ export default async function Home() {
   return (
     <>
       <nav className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-border bg-surface/95 px-6 backdrop-blur-sm">
-        <span className="font-display text-xl font-extrabold text-ink">RentQR</span>
+        <Wordmark className="font-display text-xl font-extrabold text-ink" />
         <div className="hidden items-center gap-8 md:flex">
           <a href="#how-it-works" className="link-underline text-sm font-medium text-ink-muted hover:text-accent">
             Nasıl çalışır

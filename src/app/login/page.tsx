@@ -1,6 +1,7 @@
 import Link from "next/link";
 import LoginForm from "./LoginForm";
 import { IconCalendar, IconQrCode } from "@/components/icons";
+import Wordmark from "@/components/Wordmark";
 
 export default async function LoginPage({
   searchParams,
@@ -21,7 +22,7 @@ export default async function LoginPage({
         />
         <div className="relative z-10 max-w-md">
           <Link href="/" className="font-display text-xl font-extrabold">
-            RentQR
+            <Wordmark />
           </Link>
           <h1 className="mt-8 text-3xl font-bold leading-tight sm:text-4xl">
             Kiralamalarınızı tek bir yerden yönetin

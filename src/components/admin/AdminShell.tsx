@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, use, useState } from "react";
 import AdminSidebarNav from "@/components/admin/AdminSidebarNav";
+import Wordmark from "@/components/Wordmark";
 import { IconChevronLeft, IconLogOut, IconMenu, IconX } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
 
@@ -36,7 +37,7 @@ export default function AdminShell({
           <IconMenu className="h-5 w-5" />
         </button>
         <Link href="/" className="font-display text-lg font-bold tracking-tight text-white">
-          RentQR
+          <Wordmark />
         </Link>
         <Suspense fallback={<AvatarShell className="h-8 w-8 text-sm" />}>
           <Avatar promise={identityPromise} className="h-8 w-8 text-sm" />
@@ -64,7 +65,7 @@ export default function AdminShell({
               href="/"
               className="sidebar-label font-display text-xl font-bold tracking-tight text-white"
             >
-              RentQR
+              <Wordmark />
             </Link>
             <button
               type="button"

@@ -257,6 +257,12 @@ nav,
 .panel-scope {
   --app-bar-h: 3.5rem;
   --tab-bar-h: 4rem;
+  /* Sekme çubuğunun altındaki pay. Jest çubuğu olan telefonlarda işletim
+     sisteminin bildirdiği güvenli alan zaten yeterli; olmayanlarda ekranın
+     yuvarlatılmış alt köşeleri çubuğun uçlarını kırpıyordu, o yüzden en az
+     12px. `max()` ikisinden büyüğünü seçiyor, yani jest çubuğunda fazladan
+     boşluk birikmiyor. */
+  --bottom-inset: max(env(safe-area-inset-bottom), 0.75rem);
 }
 
 /* Çentikli / ada düğmeli telefonlar: üst çubuğun içeriği çentiğin altından,
@@ -270,18 +276,19 @@ nav,
 }
 
 .tab-bar {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--bottom-inset);
 }
 
-/* Ekranın altından açılan katmanlar (QR tarayıcı, menü) için aynı pay. */
+/* Ekranın altından açılan katmanlar (QR tarayıcı, menü) da ekranın alt
+   köşelerine dayanıyor; onlar için de aynı pay. */
 .safe-b {
-  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  padding-bottom: var(--bottom-inset, 0.75rem);
 }
 
 @media (max-width: 767px) {
   .app-main {
     padding-top: calc(var(--app-bar-h) + env(safe-area-inset-top));
-    padding-bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--tab-bar-h) + var(--bottom-inset));
   }
 }
 

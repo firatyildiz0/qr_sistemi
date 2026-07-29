@@ -103,7 +103,11 @@ export default function AdminShell({
 
       {/* Üst ve alt boşluğu `.app-main` veriyor (globals.css): iki sabit çubuğun
           yüksekliği tek yerde tanımlı, burada tekrarlanmıyor. */}
-      <main className="app-main flex flex-1 flex-col md:h-screen md:overflow-y-auto">
+      {/* `min-w-0` şart: bir flex öğesinin varsayılan `min-width: auto` değeri,
+          içeriğinin en dar hâlinden daha ince olmasını engelliyor. Ayarlar'daki
+          yatay kaydırmalı kategori şeridi gibi kendi içinde kayan bir öğe bunu
+          718px'e kadar şişirip tüm paneli ekrandan taşırıyordu. */}
+      <main className="app-main flex min-w-0 flex-1 flex-col md:h-screen md:overflow-y-auto">
         {children}
       </main>
 

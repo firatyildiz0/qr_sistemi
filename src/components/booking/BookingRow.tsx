@@ -377,30 +377,6 @@ export default function BookingRow({
             </span>
           )}
         </div>
-
-        {/* Toplu alım: müşterinin aynı anda kiraladığı öbür ürünler başka
-            ürünlerin sayfalarında duruyor, o yüzden siparişin tamamı burada
-            özetleniyor. */}
-        {mixedOrder && (
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-muted">
-            <IconPackage className="h-3.5 w-3.5 shrink-0" />
-            <span className="pill pill-muted">toplu · {groupUnits} adet</span>
-            {/* Adet her ürünün başında ve hep aynı biçimde: tek adetlik ürünü
-                çıplak isim olarak bırakmak listeyi düzensiz gösteriyordu.
-                Her kalem ayrı bir esnek öğe ve kendi içinde bölünmüyor —
-                satır sonu kalemin ortasından değil, kalemler arasından geçiyor.
-                Ayraç kalemin sonunda duruyor ki alt satır adetle başlasın. */}
-            {groupMembers!.map((member, index) => (
-              <span key={member.productId} className="max-w-full truncate">
-                <span className="font-semibold tabular-nums text-ink">
-                  {member.quantity} ×
-                </span>{" "}
-                {member.name}
-                {index < groupMembers!.length - 1 && " ·"}
-              </span>
-            ))}
-          </p>
-        )}
       </div>
 
       {/* Silme, düzenlemenin aksine bitmiş ve iptal edilmiş kayıtlarda da açık:
@@ -457,6 +433,34 @@ export default function BookingRow({
         />
       </div>
       </div>
+
+      {/* Toplu alım: müşterinin aynı anda kiraladığı öbür ürünler başka
+          ürünlerin sayfalarında duruyor, o yüzden siparişin tamamı burada
+          özetleniyor.
+
+          Satır düğmelerin yanında değil, kartın tam genişliğinde duruyor:
+          sol sütuna sıkışınca üç kalem üç satıra dağılıyordu, oysa kartın
+          bütününde çoğu sipariş tek satıra sığıyor. */}
+      {mixedOrder && (
+        <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-muted">
+          <IconPackage className="h-3.5 w-3.5 shrink-0" />
+          <span className="pill pill-muted">toplu · {groupUnits} adet</span>
+          {/* Adet her ürünün başında ve hep aynı biçimde: tek adetlik ürünü
+              çıplak isim olarak bırakmak listeyi düzensiz gösteriyordu.
+              Her kalem ayrı bir esnek öğe ve kendi içinde bölünmüyor —
+              satır sonu kalemin ortasından değil, kalemler arasından geçiyor.
+              Ayraç kalemin sonunda duruyor ki alt satır adetle başlasın. */}
+          {groupMembers!.map((member, index) => (
+            <span key={member.productId} className="max-w-full truncate">
+              <span className="font-semibold tabular-nums text-ink">
+                {member.quantity} ×
+              </span>{" "}
+              {member.name}
+              {index < groupMembers!.length - 1 && " ·"}
+            </span>
+          ))}
+        </p>
+      )}
 
       {/* Aynı müşteri, aynı tarihler: eklenen ürün mevcut kaydın bilgilerini
           devralıyor, satıcı yalnızca ürünü seçiyor. */}

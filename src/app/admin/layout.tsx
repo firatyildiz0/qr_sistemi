@@ -1,12 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getProfile } from "@/lib/profile";
+import { greetingFor } from "@/lib/greeting";
 import { signOut } from "@/app/login/actions";
 import AdminShell, { type Identity } from "@/components/admin/AdminShell";
 
 async function loadIdentity(): Promise<Identity> {
-  const user = await getCurrentUser();
+  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
   const email = user?.email ?? "Giriş yapıldı";
-  return { email, initial: email.charAt(0).toUpperCase() };
+  // Kullanıcı adı yoksa e-postanın yerel kısmı: selamlamada "@..." görünmesin.
+  const name = profile?.username ?? email.split("@")[0];
+  return {
+    email,
+    initial: email.charAt(0).toUpperCase(),
+    name,
+    greeting: greetingFor(),
+  };
 }
 
 async function loadUnreadCount(): Promise<number> {

@@ -8,7 +8,7 @@ import Wordmark from "@/components/Wordmark";
 import { IconChevronLeft, IconLogOut, IconMenu, IconX } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
 
-export type Identity = { email: string; initial: string };
+export type Identity = { email: string; initial: string; name: string; greeting: string };
 
 export default function AdminShell({
   identityPromise,
@@ -78,6 +78,16 @@ export default function AdminShell({
             </button>
             <SidebarToggle />
           </div>
+
+          {/* Logonun hemen altı. `sidebar-label` sayesinde rail daraldığında
+              wordmark ve hesap yazısıyla birlikte kaybolur. */}
+          {/* Alt boşluğu nav'ın kendi `mt-8`'i veriyor. */}
+          <div className="sidebar-label px-6">
+            <Suspense fallback={<GreetingFallback />}>
+              <Greeting promise={identityPromise} />
+            </Suspense>
+          </div>
+
           <div onClick={() => setOpen(false)}>
             {/* The links are in the fallback too, so navigation is available
                 immediately — only the unread badge waits on its query. */}
@@ -142,6 +152,19 @@ function SidebarToggle() {
     >
       <IconChevronLeft className="sidebar-toggle-icon h-4 w-4 transition-transform duration-200" />
     </button>
+  );
+}
+
+function GreetingFallback() {
+  return <span className="block h-4 w-32 animate-pulse rounded bg-white/10" />;
+}
+
+function Greeting({ promise }: { promise: Promise<Identity> }) {
+  const { greeting, name } = use(promise);
+  return (
+    <p className="truncate text-sm text-white/70">
+      {greeting}, <span className="font-semibold text-white">{name}</span>
+    </p>
   );
 }
 

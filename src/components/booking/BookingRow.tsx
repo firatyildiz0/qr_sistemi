@@ -13,6 +13,7 @@ import {
   datesInRange,
   daysByState,
   formatDateRange,
+  occupancySpan,
   occupancySpanError,
   sameSpan,
   unavailableDays,
@@ -20,7 +21,13 @@ import {
   type Availability,
   type DateSpan,
 } from "@/lib/bookings";
-import { cancelBooking, editBooking, type BookingFormState } from "@/app/product/[id]/actions";
+import {
+  addBookingItems,
+  cancelBooking,
+  editBooking,
+  type BookingFormState,
+} from "@/app/product/[id]/actions";
+import type { CatalogProduct, GroupMember } from "@/lib/catalog";
 import {
   DELIVERY_MODE_LABEL,
   deliveryModeForCity,
@@ -31,8 +38,22 @@ import { formatAddress, formatRegion } from "@/lib/turkiye";
 import AddressFields from "@/components/booking/AddressFields";
 import AvailabilityLegend from "@/components/booking/AvailabilityLegend";
 import DeliveryPlan from "@/components/booking/DeliveryPlan";
+import ProductPicker, {
+  basketError,
+  itemsPayload,
+  type PickedItem,
+} from "@/components/booking/ProductPicker";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { IconCalendar, IconMapPin, IconPencil, IconPhone, IconTruck, IconX } from "@/components/icons";
+import {
+  IconCalendar,
+  IconMapPin,
+  IconPackage,
+  IconPencil,
+  IconPhone,
+  IconPlus,
+  IconTruck,
+  IconX,
+} from "@/components/icons";
 
 const initialState: BookingFormState = { error: null };
 
@@ -46,6 +67,8 @@ export default function BookingRow({
   otherAvailability,
   stock,
   turnaround,
+  catalog,
+  groupMembers,
   delay = 0,
 }: {
   booking: Booking;
@@ -55,6 +78,10 @@ export default function BookingRow({
   otherAvailability: Availability;
   stock: number;
   turnaround: Turnaround;
+  /** Satıcının bütün ürünleri: rezervasyona sonradan ürün eklemek için. */
+  catalog: CatalogProduct[];
+  /** Bu rezervasyon toplu bir alımın parçasıysa grubun tamamı. */
+  groupMembers?: GroupMember[];
   delay?: number;
 }) {
   /**
@@ -79,6 +106,24 @@ export default function BookingRow({
 
   const [editing, setEditing] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  // Kayıtlı rezervasyona sonradan eklenen ürünler. Müşteri bilgileri ve
+  // tarihler mevcut kayıttan devralındığı için sepetten başka alan yok.
+  const [adding, setAdding] = useState(false);
+  const [extra, setExtra] = useState<PickedItem[]>([]);
+  const [addState, addFormAction, addPending] = useActionState(
+    addBookingItems.bind(null, booking.id),
+    initialState
+  );
+  const [prevAddState, setPrevAddState] = useState(addState);
+
+  if (addState !== prevAddState) {
+    setPrevAddState(addState);
+    if (addState.success) {
+      setAdding(false);
+      setExtra([]);
+    }
+  }
+
   const editAction = editBooking.bind(null, productId, booking.id);
   const [state, formAction, pending] = useActionState(editAction, initialState);
   const [range, setRange] = useState<DateRange | undefined>({
@@ -135,6 +180,16 @@ export default function BookingRow({
     ...datesInRange(startStr, endStr).map((day) =>
       unitsLeftOn(otherAvailability.occupied, stock, day)
     )
+  );
+
+  // Sonradan eklenen ürünler bu rezervasyonun meşguliyet aralığını devralıyor,
+  // müsaitlikleri de ona göre ölçülüyor.
+  const bookedSpan = occupancySpan(booking, turnaround);
+  const extraProblem = extra.length > 0 ? basketError(catalog, extra, bookedSpan) : null;
+  // Toplu alımın kaç kalemi olduğu: tek satırlık rezervasyonda rozet çıkmasın.
+  const groupUnits = (groupMembers ?? []).reduce(
+    (sum, member) => sum + member.quantity,
+    0
   );
 
   function openEditor() {
@@ -257,10 +312,8 @@ export default function BookingRow({
   }
 
   return (
-    <div
-      className="fade-slide-up card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-      style={{ animationDelay: `${delay}ms` }}
-    >
+    <div className="fade-slide-up card" style={{ animationDelay: `${delay}ms` }}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-ink">{booking.customer_name}</p>
@@ -299,13 +352,40 @@ export default function BookingRow({
             </span>
           )}
         </div>
+
+        {/* Toplu alım: müşterinin aynı anda kiraladığı öbür ürünler başka
+            ürünlerin sayfalarında duruyor, o yüzden siparişin tamamı burada
+            özetleniyor. */}
+        {groupUnits > 1 && (
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-muted">
+            <IconPackage className="h-3.5 w-3.5 shrink-0" />
+            <span className="pill pill-muted">toplu · {groupUnits} adet</span>
+            <span className="min-w-0">
+              {groupMembers!
+                .map((member) =>
+                  member.quantity > 1
+                    ? `${member.name} ×${member.quantity}`
+                    : member.name
+                )
+                .join(", ")}
+            </span>
+          </p>
+        )}
       </div>
 
       {canModify && (
-        <div className="flex shrink-0 gap-2 self-start sm:self-center">
+        <div className="flex shrink-0 flex-wrap gap-2 self-start sm:self-center">
           <button type="button" onClick={openEditor} className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs">
             <IconPencil className="h-3.5 w-3.5" />
             Düzenle
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdding((open) => !open)}
+            className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs"
+          >
+            <IconPlus className="h-3.5 w-3.5" />
+            Ürün ekle
           </button>
           <button
             type="button"
@@ -334,6 +414,60 @@ export default function BookingRow({
             tone="danger"
           />
         </div>
+      )}
+      </div>
+
+      {/* Aynı müşteri, aynı tarihler: eklenen ürün mevcut kaydın bilgilerini
+          devralıyor, satıcı yalnızca ürünü seçiyor. */}
+      {adding && canModify && (
+        <form action={addFormAction} className="mt-4 border-t border-border pt-4">
+          <input
+            type="hidden"
+            name="items"
+            value={JSON.stringify(itemsPayload(extra))}
+          />
+
+          <p className="mb-2 text-xs text-ink-muted">
+            Eklenen ürünler {booking.customer_name} adına{" "}
+            {formatDateRange(booking.start_date, booking.end_date)} tarihleri için
+            rezerve edilir ve o günleri takvimde kapatır.
+          </p>
+
+          <ProductPicker
+            products={catalog}
+            items={extra}
+            onChange={setExtra}
+            span={bookedSpan}
+            emptyHint="Bu rezervasyona eklenecek ürünleri seçin ya da QR okutun."
+          />
+
+          {addState.error && (
+            <p className="mt-2 text-sm text-danger">{addState.error}</p>
+          )}
+          {!addState.error && extraProblem && (
+            <p className="mt-2 text-sm text-danger">{extraProblem}</p>
+          )}
+
+          <div className="mt-3 flex gap-2">
+            <button
+              type="submit"
+              disabled={addPending || extra.length === 0 || extraProblem !== null}
+              className="btn btn-primary min-h-0 py-2 text-xs"
+            >
+              {addPending ? "Ekleniyor…" : "Rezervasyona ekle"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAdding(false);
+                setExtra([]);
+              }}
+              className="btn btn-secondary min-h-0 py-2 text-xs"
+            >
+              Vazgeç
+            </button>
+          </div>
+        </form>
       )}
     </div>
   );

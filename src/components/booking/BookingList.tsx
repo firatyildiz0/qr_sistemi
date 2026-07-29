@@ -1,5 +1,6 @@
 import type { Booking } from "@/lib/types";
 import { availabilityOf, displayStatus } from "@/lib/bookings";
+import type { CatalogProduct, GroupMember } from "@/lib/catalog";
 import type { Turnaround } from "@/lib/turnaround";
 import BookingRow from "@/components/booking/BookingRow";
 import { IconCalendar } from "@/components/icons";
@@ -9,11 +10,17 @@ export default function BookingList({
   productId,
   stock,
   turnaround,
+  catalog,
+  groups,
 }: {
   bookings: Booking[];
   productId: string;
   stock: number;
   turnaround: Turnaround;
+  /** Satıcının ürünleri: satırdan toplu rezervasyona ürün eklemek için. */
+  catalog: CatalogProduct[];
+  /** Toplu rezervasyonların içeriği, grup kimliğine göre. */
+  groups: Record<string, GroupMember[]>;
 }) {
   if (bookings.length === 0) {
     return (
@@ -37,6 +44,8 @@ export default function BookingList({
           productId={productId}
           stock={stock}
           turnaround={turnaround}
+          catalog={catalog}
+          groupMembers={b.group_id ? groups[b.group_id] : undefined}
           delay={i * 60}
           // The row being edited must not count itself as competition for its
           // own dates, otherwise its current days look sold out.

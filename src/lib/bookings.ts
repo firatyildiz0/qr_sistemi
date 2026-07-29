@@ -72,20 +72,45 @@ export function unitsLeftOn(
 }
 
 /**
+ * Toplu rezervasyonun sınırları: kaç farklı ürün, ve tek üründen kaç adet.
+ * Sepet arayüzü ve sunucu doğrulaması aynı sayıya baksın diye burada.
+ */
+export const MAX_BOOKING_ITEMS = 25;
+export const MAX_ITEM_QUANTITY = 20;
+
+/** Aralığın en dar gününde kalan ünite sayısı — kaç adet kiralanabileceği. */
+export function unitsLeftInRange(
+  counts: Record<string, number>,
+  stock: number,
+  startDate: string,
+  endDate: string
+): number {
+  return Math.min(
+    ...datesInRange(startDate, endDate).map((day) =>
+      unitsLeftOn(counts, stock, day)
+    )
+  );
+}
+
+/**
  * First day of the requested range with nothing left, or null when the whole
  * range fits. Callers turn the returned day into the error message.
+ *
+ * `needed` aynı üründen kaç adet istendiğidir: toplu rezervasyonda üç adet
+ * isteyen satıcı için, o gün iki ünite boş kalmış olması da yetmez.
  */
 export function firstSoldOutDate(
   counts: Record<string, number>,
   stock: number,
   startDate: string,
-  endDate: string
+  endDate: string,
+  needed = 1
 ): string | null {
-  if (stock <= 0) return startDate;
+  if (stock < needed) return startDate;
 
   return (
     datesInRange(startDate, endDate).find(
-      (day) => unitsLeftOn(counts, stock, day) === 0
+      (day) => unitsLeftOn(counts, stock, day) < needed
     ) ?? null
   );
 }

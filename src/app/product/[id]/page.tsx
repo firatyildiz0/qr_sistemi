@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Booking } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { availabilityOf } from "@/lib/bookings";
+import { getBookingGroups, getOwnerCatalog } from "@/lib/catalog";
 import { getTurnaround } from "@/lib/settings";
 import AvailabilityCalendar from "@/components/booking/AvailabilityCalendar";
 import BookingForm from "@/components/booking/BookingForm";
@@ -44,6 +45,15 @@ export default async function ProductDetailPage({
 
   const isOwner = user?.id === product.owner_id;
   const images: string[] = (product.images ?? []).slice(0, 2);
+
+  // Toplu rezervasyon için satıcının bütün ürünleri ve grup içerikleri gerekiyor;
+  // ziyaretçiye rezervasyon formu hiç gösterilmediği için o sorgular da atılmıyor.
+  const [catalog, groups] = isOwner
+    ? await Promise.all([
+        getOwnerCatalog(supabase, product.owner_id, turnaround),
+        getBookingGroups(supabase, product.owner_id),
+      ])
+    : [[], {}];
 
   // Per-day counts rather than plain ranges: a day is unavailable only when
   // as many bookings cover it as the product has units in stock. Sayılan
@@ -124,6 +134,7 @@ export default async function ProductDetailPage({
               availability={availability}
               stock={product.stock}
               turnaround={turnaround}
+              catalog={catalog}
             />
           ) : (
             <AvailabilityCalendar availability={availability} stock={product.stock} />
@@ -138,6 +149,8 @@ export default async function ProductDetailPage({
               productId={id}
               stock={product.stock}
               turnaround={turnaround}
+              catalog={catalog}
+              groups={groups}
             />
           </section>
         )}

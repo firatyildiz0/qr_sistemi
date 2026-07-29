@@ -48,11 +48,18 @@ async function createDecoder(): Promise<
 export default function QrScanner({
   autoStart = false,
   onResolved,
+  onProduct,
 }: {
   /** Opens the camera as soon as the scanner mounts (used by the panel modal). */
   autoStart?: boolean;
   /** Fires once a scan has sent the owner somewhere, so a host modal can close. */
   onResolved?: () => void;
+  /**
+   * Verildiğinde okutulan ürüne *gidilmez*, çağırana bildirilir. Toplu
+   * rezervasyonun ürün seçicisi bunu kullanıyor: satıcı formu doldurmuşken
+   * başka bir sayfaya taşınmak girdiği her şeyi silerdi.
+   */
+  onProduct?: (product: { id: string; name: string }) => void;
 } = {}) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -85,6 +92,12 @@ export default function QrScanner({
       const scan = await resolveScannedCode(raw);
 
       if (scan.ok) {
+        if (onProduct) {
+          onProduct({ id: scan.productId, name: scan.productName });
+          onResolved?.();
+          return;
+        }
+
         // Straight to the same detail + booking screen the owner sees in the panel.
         router.push(scan.href);
         onResolved?.();
@@ -95,7 +108,7 @@ export default function QrScanner({
       setPhase("failed");
       busyRef.current = false;
     },
-    [onResolved, router, stopCamera]
+    [onProduct, onResolved, router, stopCamera]
   );
 
   const startCamera = useCallback(async () => {

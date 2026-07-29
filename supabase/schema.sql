@@ -57,6 +57,11 @@ create index if not exists products_owner_id_idx on products(owner_id);
 create table if not exists bookings (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references products(id) on delete cascade,
+  -- Toplu rezervasyonun kimliği: aynı müşteri, aynı tarihler, birden çok ürün.
+  -- Satır başına bir ürün ilkesi bozulmuyor — aynı üründen 3 adet 3 satır —
+  -- yalnızca birlikte oluşan satırlar bu kolonda birbirine bağlanıyor. Tek
+  -- ürünlü eski (ve yeni) rezervasyonlarda null.
+  group_id uuid,
   customer_name text not null,
   customer_phone text,
   -- Teslimat adresi: il ve ilçe seçim listesinden gelir, açık adres serbest metin.
@@ -86,6 +91,7 @@ create table if not exists bookings (
 );
 
 create index if not exists bookings_product_id_idx on bookings(product_id);
+create index if not exists bookings_group_id_idx on bookings(group_id);
 -- `end_date` bildirim cron'u için, `blocked_end` müsaitlik sorguları için.
 create index if not exists bookings_end_date_idx on bookings(end_date);
 create index if not exists bookings_blocked_end_idx on bookings(blocked_end);
@@ -165,6 +171,90 @@ create trigger bookings_enforce_stock
   before insert or update of product_id, start_date, end_date, blocked_start, blocked_end, status on bookings
   for each row
   execute function enforce_booking_stock();
+
+-- Toplu rezervasyonun satırlarını tek işlemde ekler: biri stok yüzünden
+-- reddedilirse hiçbiri kalmaz.
+--
+-- Neden uygulamadan tek tek insert değil: supabase-js her isteği ayrı işlemde
+-- çalıştırdığı için yarıda kalan bir grup temizlenemezdi. Neden tek çok satırlı
+-- insert değil: aynı komutta eklenen satırlar birbirini göremiyor, dolayısıyla
+-- aynı üründen 2 adet istendiğinde yukarıdaki trigger ikinci satırı ilkinden
+-- habersiz onaylardı. Buradaki döngüde her insert ayrı bir komut, sıradaki
+-- kendinden öncekini sayıyor.
+--
+-- `security invoker` (varsayılan): satırlar çağıran satıcının yetkisiyle
+-- ekleniyor, yani `bookings_insert_owner` politikası her satır için yine
+-- çalışıyor. Fonksiyon hiçbir kapıyı atlamıyor.
+create or replace function create_booking_group(
+  p_group_id uuid,
+  -- [{"product_id": "...", "quantity": 2}, ...]
+  p_items jsonb,
+  p_customer_name text,
+  p_customer_phone text,
+  p_customer_city text,
+  p_customer_district text,
+  p_customer_address text,
+  p_start_date date,
+  p_end_date date,
+  p_delivery_mode text,
+  p_blocked_start date,
+  p_blocked_end date
+)
+returns integer
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+  v_quantity integer;
+  v_inserted integer := 0;
+begin
+  for v_item in select * from jsonb_array_elements(p_items) loop
+    v_quantity := coalesce((v_item->>'quantity')::integer, 1);
+
+    if v_quantity < 1 then
+      raise exception 'Adet en az 1 olmalı.';
+    end if;
+
+    for i in 1..v_quantity loop
+      insert into bookings (
+        group_id,
+        product_id,
+        customer_name,
+        customer_phone,
+        customer_city,
+        customer_district,
+        customer_address,
+        start_date,
+        end_date,
+        delivery_mode,
+        blocked_start,
+        blocked_end
+      ) values (
+        p_group_id,
+        (v_item->>'product_id')::uuid,
+        p_customer_name,
+        p_customer_phone,
+        p_customer_city,
+        p_customer_district,
+        p_customer_address,
+        p_start_date,
+        p_end_date,
+        p_delivery_mode,
+        p_blocked_start,
+        p_blocked_end
+      );
+
+      v_inserted := v_inserted + 1;
+    end loop;
+  end loop;
+
+  if v_inserted = 0 then
+    raise exception 'Rezervasyona en az bir ürün eklemelisiniz.';
+  end if;
+
+  return v_inserted;
+end;
+$$;
 
 create table if not exists notifications (
   id uuid primary key default gen_random_uuid(),

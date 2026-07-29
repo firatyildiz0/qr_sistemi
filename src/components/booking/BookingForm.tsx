@@ -8,19 +8,24 @@ import "react-day-picker/style.css";
 import { createBooking, type BookingFormState } from "@/app/product/[id]/actions";
 import {
   computeOccupancySpan,
-  datesInRange,
   daysByState,
   formatDateRange,
   occupancySpanError,
   unavailableDays,
-  unitsLeftOn,
+  unitsLeftInRange,
   type Availability,
   type DateSpan,
 } from "@/lib/bookings";
+import type { CatalogProduct } from "@/lib/catalog";
 import { deliveryModeForCity, type DeliveryMode, type Turnaround } from "@/lib/turnaround";
 import AddressFields from "@/components/booking/AddressFields";
 import AvailabilityLegend from "@/components/booking/AvailabilityLegend";
 import DeliveryPlan from "@/components/booking/DeliveryPlan";
+import ProductPicker, {
+  basketError,
+  itemsPayload,
+  type PickedItem,
+} from "@/components/booking/ProductPicker";
 import { IconCheckCircle } from "@/components/icons";
 
 const initialState: BookingFormState = { error: null };
@@ -32,15 +37,26 @@ export default function BookingForm({
   availability,
   stock,
   turnaround,
+  catalog,
 }: {
   productId: string;
   availability: Availability;
   stock: number;
   turnaround: Turnaround;
+  /**
+   * Satıcının bütün ürünleri, müsaitlikleriyle. Toplu alımda aynı rezervasyona
+   * başka ürünler eklenebilsin diye burada; ziyaretçiye bu form hiç
+   * gösterilmediği için katalog da yalnızca satıcıya gidiyor.
+   */
+  catalog: CatalogProduct[];
 }) {
   const action = createBooking.bind(null, productId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const [range, setRange] = useState<DateRange | undefined>();
+  // Taranan ürün sepetin ilk kalemi ve çıkarılamaz; adedi değiştirilebilir.
+  const [items, setItems] = useState<PickedItem[]>([
+    { productId, quantity: 1 },
+  ]);
   const [city, setCity] = useState("");
   // null = ilden türetilen varsayılan geçerli. Satıcı elle seçtiği anda
   // dolar ve il değişse bile seçim korunur.
@@ -61,6 +77,7 @@ export default function BookingForm({
       setCity("");
       setModeOverride(null);
       setBlockedOverride(null);
+      setItems([{ productId, quantity: 1 }]);
       setResetKey((k) => k + 1);
     }
   }
@@ -99,17 +116,19 @@ export default function BookingForm({
 
   // The tightest day in the selection decides how many units are really free.
   const unitsLeft = startStr
-    ? Math.min(
-        ...datesInRange(startStr, endStr).map((day) =>
-          unitsLeftOn(availability.occupied, stock, day)
-        )
-      )
+    ? unitsLeftInRange(availability.occupied, stock, startStr, endStr)
     : stock;
+
+  // Sepetteki ürünler kiralama günlerini değil bloke aralığını kapatıyor,
+  // müsaitlik de ona göre sayılıyor.
+  const basketProblem = basketError(catalog, items, blocked);
+  const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="start_date" value={startStr} />
       <input type="hidden" name="end_date" value={endStr} />
+      <input type="hidden" name="items" value={JSON.stringify(itemsPayload(items))} />
 
       <div>
         {outOfStock && (
@@ -155,6 +174,14 @@ export default function BookingForm({
         )}
       </div>
 
+      <ProductPicker
+        products={catalog}
+        items={items}
+        onChange={setItems}
+        span={blocked}
+        anchorId={productId}
+      />
+
       <div>
         <label htmlFor="customer_name" className="field-label">
           Adınız
@@ -185,6 +212,9 @@ export default function BookingForm({
       />
 
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
+      {!state.error && basketProblem && (
+        <p className="text-sm text-danger">{basketProblem}</p>
+      )}
       {state.success && (
         <p className="flex items-center gap-1.5 text-sm text-success">
           <IconCheckCircle className="h-4 w-4" /> Rezervasyon onaylandı. O zaman görüşürüz!
@@ -193,10 +223,20 @@ export default function BookingForm({
 
       <button
         type="submit"
-        disabled={pending || !startStr || outOfStock || blockedError !== null}
+        disabled={
+          pending ||
+          !startStr ||
+          outOfStock ||
+          blockedError !== null ||
+          basketProblem !== null
+        }
         className="btn btn-primary w-full sm:w-auto"
       >
-        {pending ? "Rezervasyon yapılıyor…" : "Rezervasyon ekle"}
+        {pending
+          ? "Rezervasyon yapılıyor…"
+          : totalUnits > 1
+            ? `Rezervasyon ekle (${totalUnits} adet)`
+            : "Rezervasyon ekle"}
       </button>
     </form>
   );

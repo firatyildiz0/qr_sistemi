@@ -17,6 +17,13 @@ export type Product = {
 export type Booking = {
   id: string;
   product_id: string;
+  /**
+   * Toplu rezervasyonun kimliği. Bir müşteri tek seferde birden çok ürün
+   * kiraladığında (ya da aynı üründen birkaç adet aldığında) her ürün yine
+   * kendi satırında durur, hepsi bu kolonda birbirine bağlanır. Tek başına
+   * oluşturulmuş rezervasyonlarda null.
+   */
+  group_id: string | null;
   customer_name: string;
   customer_phone: string | null;
   customer_city: string | null;

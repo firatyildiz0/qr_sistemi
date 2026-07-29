@@ -8,6 +8,7 @@ import QRCodeCard from "@/components/admin/QRCodeCard";
 import DeleteProductButton from "@/components/admin/DeleteProductButton";
 import type { Booking } from "@/lib/types";
 import { availabilityOf } from "@/lib/bookings";
+import { getBookingGroups, getOwnerCatalog } from "@/lib/catalog";
 import { getTurnaround } from "@/lib/settings";
 import BookingForm from "@/components/booking/BookingForm";
 import BookingList from "@/components/booking/BookingList";
@@ -35,6 +36,13 @@ export default async function EditProductPage({
   ]);
 
   if (!product || product.owner_id !== user?.id) notFound();
+
+  // Toplu rezervasyonun ürün seçicisi satıcının bütün kataloğunu, satırlardaki
+  // grup özeti de kayıtlı grupların içeriğini istiyor.
+  const [catalog, groups] = await Promise.all([
+    getOwnerCatalog(supabase, product.owner_id, turnaround),
+    getBookingGroups(supabase, product.owner_id),
+  ]);
 
   // Per-day counts rather than plain ranges: a day is unavailable only when
   // as many bookings cover it as the product has units in stock. Sayılan
@@ -80,6 +88,7 @@ export default async function EditProductPage({
               availability={availability}
               stock={product.stock}
               turnaround={turnaround}
+              catalog={catalog}
             />
           </div>
           <div>
@@ -89,6 +98,8 @@ export default async function EditProductPage({
               productId={id}
               stock={product.stock}
               turnaround={turnaround}
+              catalog={catalog}
+              groups={groups}
             />
           </div>
         </div>

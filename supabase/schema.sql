@@ -222,6 +222,18 @@ create policy "bookings_update_owner" on bookings
     )
   );
 
+-- Deleting is the seller's too. The admin panel deletes bookings when a
+-- customer is removed — customers are derived from bookings, so there is
+-- nothing else to delete.
+create policy "bookings_delete_owner" on bookings
+  for delete to authenticated using (
+    exists (
+      select 1 from products
+      where products.id = bookings.product_id
+        and products.owner_id = (select auth.uid())
+    )
+  );
+
 -- notifications: restricted to the seller who owns the related product.
 -- There is deliberately no insert policy — only the cron job's service role key
 -- (which bypasses RLS) may create notifications.

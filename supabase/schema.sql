@@ -7,6 +7,37 @@ create extension if not exists pgcrypto;
 -- Tables
 -- ---------------------------------------------------------------------------
 
+-- Satıcının kullanıcı adı. Supabase Auth yalnızca e-posta + şifre ile oturum
+-- açtığı için kullanıcı adı burada tutulur; giriş sırasında sunucu bu tablodan
+-- kullanıcıyı bulup oturumu yine e-posta ile açar. Kayıt, aşağıdaki
+-- `handle_new_user` trigger'ı ile auth.users ile aynı işlemde oluşur.
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  username text not null unique,
+  created_at timestamptz not null default now(),
+  constraint profiles_username_format check (username ~ '^[a-z0-9_]{3,20}$')
+);
+
+create or replace function handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, username)
+  values (new.id, lower(trim(new.raw_user_meta_data->>'username')));
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row
+  execute function handle_new_user();
+
 create table if not exists products (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -164,6 +195,13 @@ alter table products enable row level security;
 alter table bookings enable row level security;
 alter table notifications enable row level security;
 alter table rental_settings enable row level security;
+alter table profiles enable row level security;
+
+-- profiles: satıcı yalnızca kendi kaydını görür. Kullanıcı adı → e-posta
+-- eşlemesi girişte service role anahtarıyla okunduğu için başka politika yok;
+-- kayıt trigger ile oluşur, kullanıcı adı sonradan değişmez.
+create policy "profiles_select_own" on profiles
+  for select to authenticated using (id = (select auth.uid()));
 
 -- rental_settings: satıcının kendi işletme ayarı. Ne başkası okur ne yazar.
 create policy "rental_settings_select_owner" on rental_settings

@@ -13,15 +13,17 @@ export default function LoginForm({ next }: { next: string }) {
       <input type="hidden" name="next" value={next} />
 
       <div>
-        <label htmlFor="email" className="field-label">
-          E-posta
+        <label htmlFor="username" className="field-label">
+          Kullanıcı adı veya e-posta
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
+          id="username"
+          name="username"
+          type="text"
           required
-          autoComplete="email"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
           className="input"
         />
       </div>

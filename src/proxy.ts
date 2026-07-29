@@ -34,7 +34,8 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isAdminRoute = pathname.startsWith("/admin");
-  const isLoginRoute = pathname === "/login";
+  // Giriş ve üye ol: oturum açıkken ikisinin de yapacağı bir şey yok.
+  const isAuthRoute = pathname === "/login" || pathname === "/signup";
 
   if (isAdminRoute && !user) {
     const redirectUrl = new URL("/login", request.url);
@@ -42,7 +43,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (isLoginRoute && user) {
+  if (isAuthRoute && user) {
     return NextResponse.redirect(new URL("/admin", request.url));
   }
 
@@ -50,5 +51,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/login"],
+  matcher: ["/admin/:path*", "/login", "/signup"],
 };

@@ -33,7 +33,9 @@ export async function proxy(request: NextRequest) {
   const user = claimsData?.claims ?? null;
 
   const { pathname } = request.nextUrl;
-  const isAdminRoute = pathname.startsWith("/admin");
+  // Rol ve onay durumu JWT'de değil veritabanında; onları layout'lardaki
+  // AccessGuard kontrol ediyor. Buradaki kapı yalnızca "oturum var mı".
+  const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/yonetim");
   // Giriş ve üye ol: oturum açıkken ikisinin de yapacağı bir şey yok.
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
 
@@ -43,13 +45,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Kök sayfa rolüne göre doğru panele dağıtıyor; burada /admin'e sabitlersek
+  // superuser önce satıcı paneline uğrayıp oradan geri sekerdi.
   if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL("/admin", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/login", "/signup"],
+  matcher: ["/admin/:path*", "/yonetim/:path*", "/login", "/signup"],
 };

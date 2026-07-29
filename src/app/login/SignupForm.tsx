@@ -6,13 +6,11 @@ import { USERNAME_RULE } from "@/lib/username";
 
 const initialState: SignupState = { error: null, notice: null };
 
-export default function SignupForm({ next }: { next: string }) {
+export default function SignupForm() {
   const [state, formAction, pending] = useActionState(signUp, initialState);
 
   return (
     <form action={formAction} className="space-y-4">
-      <input type="hidden" name="next" value={next} />
-
       <div>
         <label htmlFor="signup-email" className="field-label">
           E-posta

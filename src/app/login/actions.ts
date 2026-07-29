@@ -59,10 +59,34 @@ export async function signIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) {
+  if (error || !data.user) {
     return { error: "Kullanıcı adı veya şifre hatalı." };
+  }
+
+  // Şifre doğru olsa da hesabın onaylanmış olması gerekiyor. Oturum bu noktada
+  // açılmış durumda; onaysızsa hemen kapatılır ki panele hiç uğramasın.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, status")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  if (profile?.status !== "approved") {
+    await supabase.auth.signOut();
+    return {
+      error:
+        profile?.status === "rejected"
+          ? "Başvurunuz onaylanmadı. Ayrıntı için yöneticiyle görüşün."
+          : "Hesabınız henüz onaylanmadı. Onaylandığında giriş yapabilirsiniz.",
+    };
+  }
+
+  // Superuser'ın satıcı panelinde işi yok; `next` bir satıcı sayfasını
+  // gösteriyor olsa bile yönetim paneline iner.
+  if (profile.role === "superuser") {
+    redirect("/yonetim");
   }
 
   redirect(safeNextPath(next));
@@ -75,7 +99,6 @@ export async function signUp(
   const email = String(formData.get("email") ?? "").trim();
   const username = normalizeUsername(formData.get("username"));
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/admin");
 
   if (!email || !username || !password) {
     return { error: "E-posta, kullanıcı adı ve şifre gereklidir.", notice: null };
@@ -133,15 +156,19 @@ export async function signUp(
     return { error: "Bu e-posta ile bir hesap zaten var.", notice: null };
   }
 
-  if (!data.session) {
-    return {
-      error: null,
-      notice:
-        "Hesabınız oluşturuldu. Girişi tamamlamak için e-postanıza gönderilen doğrulama bağlantısına tıklayın.",
-    };
+  // Kayıt `pending` doğuyor (bkz. profiles.status). Supabase e-posta doğrulaması
+  // kapalıyken kayıtla birlikte oturum da açtığı için onu hemen kapatıyoruz:
+  // onay gelmeden panele girilmesin. Yazma yolları RLS'te de kapalı, bu sadece
+  // arayüzün doğru davranması için.
+  if (data.session) {
+    await supabase.auth.signOut();
   }
 
-  redirect(safeNextPath(next));
+  return {
+    error: null,
+    notice:
+      "Kaydınız alındı. Yönetici hesabınızı onayladıktan sonra kullanıcı adınız ve şifrenizle giriş yapabilirsiniz.",
+  };
 }
 
 export async function signOut() {

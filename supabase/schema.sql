@@ -14,9 +14,51 @@ create extension if not exists pgcrypto;
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text not null unique,
+  -- Kullanıcı adı sahibi tarafından seçilmedi, e-postasından türetildi (bkz.
+  -- 0009 backfill'i). Panel girişten sonra kendi adını belirlemesini ister.
+  username_auto boolean not null default false,
+  -- Satıcı mı, paneli yöneten superuser mı. İlk superuser elle belirlenir:
+  --   update profiles set role = 'superuser' where username = '...';
+  role text not null default 'seller' check (role in ('seller', 'superuser')),
+  -- Yeni kayıtlar onay bekler; superuser onaylayana kadar ne giriş yapılabilir
+  -- ne de veri yazılabilir (aşağıdaki is_approved() politikaları).
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected')),
   created_at timestamptz not null default now(),
   constraint profiles_username_format check (username ~ '^[a-z0-9_]{3,20}$')
 );
+
+create index if not exists profiles_status_idx on profiles(status);
+
+-- İkisi de `security definer`: `profiles` politikasının içinden yine `profiles`
+-- sorgulanırsa Postgres politikayı tekrar uygulayıp sonsuz döngüye girer.
+-- Definer olarak çalışan fonksiyon RLS'i atladığı için döngü kırılır — bu
+-- yüzden ikisi de yalnızca oturumun kendi satırına bakar, parametre almaz.
+create or replace function is_approved()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select status = 'approved' from profiles where id = auth.uid()),
+    false
+  );
+$$;
+
+create or replace function is_superuser()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select role = 'superuser' and status = 'approved' from profiles where id = auth.uid()),
+    false
+  );
+$$;
 
 create or replace function handle_new_user()
 returns trigger
@@ -293,30 +335,62 @@ alter table profiles enable row level security;
 create policy "profiles_select_own" on profiles
   for select to authenticated using (id = (select auth.uid()));
 
+-- Kullanıcı adını değiştirme hakkı tek seferlik: `using` yalnızca türetilmiş
+-- adı taşıyan satırı açar, `with check` de aynı update'in bayrağı düşürmesini
+-- zorunlu kılar. Satıcı adını bir kez belirler, sonra politika kapanır.
+create policy "profiles_update_own_pending_username" on profiles
+  for update to authenticated
+  using (id = (select auth.uid()) and username_auto)
+  with check (id = (select auth.uid()) and not username_auto);
+
+-- Superuser bütün profilleri görür ve durumlarını değiştirir. `with check`
+-- içinde de is_superuser(): yetkiyi devredip başkasını superuser yapmak yine
+-- superuser olmayı gerektirsin.
+create policy "profiles_select_superuser" on profiles
+  for select to authenticated using (is_superuser());
+
+create policy "profiles_update_superuser" on profiles
+  for update to authenticated
+  using (is_superuser())
+  with check (is_superuser());
+
 -- rental_settings: satıcının kendi işletme ayarı. Ne başkası okur ne yazar.
 create policy "rental_settings_select_owner" on rental_settings
   for select to authenticated using (owner_id = (select auth.uid()));
 
+-- is_approved(): onay bekleyen hesap veri yazamaz. Girişte oturumu kapatmak
+-- yalnızca bizim arayüzümüzü korur; onaylanmamış biri Supabase API'sine
+-- doğrudan token alıp istek atabilir, asıl kapı burası.
+--
+-- Şart her yazma politikasında, yalnızca insert'lerde değil: onaylıyken veri
+-- oluşturup sonra reddedilen bir hesabın satırları duruyor ve sahiplik şartı
+-- hâlâ sağlanıyor. `using` tarafındaki is_approved() o satırları onaysız
+-- hesap için tamamen görünmez kılıyor.
 create policy "rental_settings_insert_owner" on rental_settings
-  for insert to authenticated with check (owner_id = (select auth.uid()));
+  for insert to authenticated
+  with check (owner_id = (select auth.uid()) and is_approved());
 
 create policy "rental_settings_update_owner" on rental_settings
   for update to authenticated
-  using (owner_id = (select auth.uid()))
-  with check (owner_id = (select auth.uid()));
+  using (owner_id = (select auth.uid()) and is_approved())
+  with check (owner_id = (select auth.uid()) and is_approved());
 
 -- products: public read, owner-only write
 create policy "products_select_public" on products
   for select using (true);
 
 create policy "products_insert_authenticated" on products
-  for insert to authenticated with check (owner_id = auth.uid());
+  for insert to authenticated
+  with check (owner_id = (select auth.uid()) and is_approved());
 
 create policy "products_update_owner" on products
-  for update to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+  for update to authenticated
+  using (owner_id = (select auth.uid()) and is_approved())
+  with check (owner_id = (select auth.uid()) and is_approved());
 
 create policy "products_delete_owner" on products
-  for delete to authenticated using (owner_id = auth.uid());
+  for delete to authenticated
+  using (owner_id = (select auth.uid()) and is_approved());
 
 -- bookings: public read (no customer accounts, so anyone with the link can see
 -- what dates are taken), but every write — creating, editing, cancelling — is
@@ -328,7 +402,8 @@ create policy "bookings_select_public" on bookings
 
 create policy "bookings_insert_owner" on bookings
   for insert to authenticated with check (
-    exists (
+    is_approved()
+    and exists (
       select 1 from products
       where products.id = bookings.product_id
         and products.owner_id = (select auth.uid())
@@ -337,16 +412,18 @@ create policy "bookings_insert_owner" on bookings
 
 create policy "bookings_update_owner" on bookings
   for update to authenticated using (
-    exists (
+    is_approved()
+    and exists (
       select 1 from products
       where products.id = bookings.product_id
-        and products.owner_id = auth.uid()
+        and products.owner_id = (select auth.uid())
     )
   ) with check (
-    exists (
+    is_approved()
+    and exists (
       select 1 from products
       where products.id = bookings.product_id
-        and products.owner_id = auth.uid()
+        and products.owner_id = (select auth.uid())
     )
   );
 
@@ -355,7 +432,8 @@ create policy "bookings_update_owner" on bookings
 -- nothing else to delete.
 create policy "bookings_delete_owner" on bookings
   for delete to authenticated using (
-    exists (
+    is_approved()
+    and exists (
       select 1 from products
       where products.id = bookings.product_id
         and products.owner_id = (select auth.uid())

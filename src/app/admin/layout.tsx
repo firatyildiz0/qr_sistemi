@@ -1,9 +1,12 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profile";
 import { greetingFor } from "@/lib/greeting";
 import { signOut } from "@/app/login/actions";
 import AdminShell, { type Identity } from "@/components/admin/AdminShell";
+import UsernamePrompt from "@/components/admin/UsernamePrompt";
+import AccessGuard from "@/components/admin/AccessGuard";
 
 async function loadIdentity(): Promise<Identity> {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
@@ -44,12 +47,24 @@ export default function AdminLayout({
   // the promises to AdminShell lets the sidebar paint immediately and the
   // identity/badge stream in behind their own Suspense boundaries.
   return (
-    <AdminShell
-      identityPromise={loadIdentity()}
-      unreadCountPromise={loadUnreadCount()}
-      signOutAction={signOut}
-    >
-      {children}
-    </AdminShell>
+    <>
+      <AdminShell
+        identityPromise={loadIdentity()}
+        unreadCountPromise={loadUnreadCount()}
+        signOutAction={signOut}
+      >
+        {children}
+      </AdminShell>
+
+      {/* Aynı gerekçeyle beklenmiyor: profil sorgusu panelin boyanmasını
+          geciktirmesin, ikisi de arkadan gelsin. `getProfile` istek başına
+          önbellekli, yani iki bileşen tek sorguyu paylaşıyor. */}
+      <Suspense fallback={null}>
+        <AccessGuard expect="seller" />
+      </Suspense>
+      <Suspense fallback={null}>
+        <UsernamePrompt profilePromise={getProfile()} />
+      </Suspense>
+    </>
   );
 }

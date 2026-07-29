@@ -1,5 +1,7 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import LoginForm from "./LoginForm";
+import { getCurrentUser } from "@/lib/auth";
+import { safeNextPath } from "@/lib/redirects";
 import { IconCalendar, IconQrCode } from "@/components/icons";
 import Wordmark from "@/components/Wordmark";
 
@@ -8,7 +10,10 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ next?: string }>;
 }) {
-  const { next } = await searchParams;
+  const [{ next }, user] = await Promise.all([searchParams, getCurrentUser()]);
+
+  // Already signed in — there is nothing to log into, so go to the panel.
+  if (user) redirect(safeNextPath(next));
 
   return (
     <main className="flex min-h-screen flex-col lg:flex-row">
@@ -21,9 +26,10 @@ export default async function LoginPage({
           }}
         />
         <div className="relative z-10 max-w-md">
-          <Link href="/" className="font-display text-xl font-extrabold">
+          {/* Not a link: with the landing page parked, "/" only comes back here. */}
+          <span className="font-display text-xl font-extrabold">
             <Wordmark />
-          </Link>
+          </span>
           <h1 className="mt-8 text-3xl font-bold leading-tight sm:text-4xl">
             Kiralamalarınızı tek bir yerden yönetin
           </h1>
@@ -69,7 +75,7 @@ export default async function LoginPage({
           <p className="mb-6 text-sm text-ink-muted">
             Kiralama ürünlerinizi ve rezervasyonlarınızı yönetin.
           </p>
-          <LoginForm next={next ?? "/admin"} />
+          <LoginForm next={safeNextPath(next)} />
         </div>
       </div>
     </main>

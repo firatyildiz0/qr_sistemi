@@ -2,21 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/redirects";
 
 export type LoginState = { error: string | null };
-
-/**
- * `next` arrives from a query string, so it decides where a *successfully
- * authenticated* seller lands — exactly the redirect an attacker wants to own.
- *
- * A leading "/" is not enough to prove the target is ours: "//evil.com" and
- * "/\evil.com" are protocol-relative absolute URLs that browsers resolve to
- * another origin. Requiring a single "/" followed by something that is neither
- * a slash nor a backslash keeps the redirect inside this app.
- */
-function safeNextPath(next: string): string {
-  return /^\/(?![/\\])/.test(next) ? next : "/admin";
-}
 
 export async function signIn(
   _prevState: LoginState,

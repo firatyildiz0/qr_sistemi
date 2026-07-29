@@ -167,7 +167,7 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
         onClose={() => setPendingDelete(null)}
         onConfirm={() =>
           pendingDelete
-            ? deleteBooking(pendingDelete.productId, pendingDelete.id)
+            ? deleteBooking(pendingDelete.productId, [pendingDelete.id])
             : undefined
         }
         title="Rezervasyonu sil"

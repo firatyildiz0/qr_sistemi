@@ -1,5 +1,5 @@
 import type { Booking } from "@/lib/types";
-import { availabilityOf, displayStatus } from "@/lib/bookings";
+import { availabilityOf, displayStatus, groupBookingUnits } from "@/lib/bookings";
 import type { CatalogProduct, GroupMember } from "@/lib/catalog";
 import type { Turnaround } from "@/lib/turnaround";
 import BookingRow from "@/components/booking/BookingRow";
@@ -33,13 +33,17 @@ export default function BookingList({
 
   const sorted = [...bookings].sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
   const active = sorted.filter((b) => b.status !== "cancelled");
+  // Aynı siparişin aynı üründen aldığı adetler tek kart: dört özdeş satır dört
+  // ayrı müşteri gibi görünüyordu. Müsaitlik hâlâ satır satır sayılıyor.
+  const rows = groupBookingUnits(sorted);
 
   return (
     <div className="flex flex-col gap-3">
-      {sorted.map((b, i) => (
+      {rows.map(({ booking: b, ids }, i) => (
         <BookingRow
           key={b.id}
           booking={b}
+          unitIds={ids}
           status={displayStatus(b)}
           productId={productId}
           stock={stock}
@@ -50,7 +54,7 @@ export default function BookingList({
           // The row being edited must not count itself as competition for its
           // own dates, otherwise its current days look sold out.
           otherAvailability={availabilityOf(
-            active.filter((other) => other.id !== b.id),
+            active.filter((other) => !ids.includes(other.id)),
             turnaround
           )}
         />

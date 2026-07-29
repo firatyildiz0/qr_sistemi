@@ -189,7 +189,8 @@ async function stockConflict(
   supabase: Awaited<ReturnType<typeof createClient>>,
   items: ResolvedItem[],
   blocked: DateSpan,
-  excludeBookingId?: string
+  /** Düzenlenen satırlar: kendi günlerini kendilerine kapatmasınlar. */
+  excludeBookingIds: string[] = []
 ): Promise<string | null> {
   let bookingsQuery = supabase
     .from("bookings")
@@ -203,8 +204,12 @@ async function stockConflict(
     .gte("blocked_end", blocked.start_date)
     .lte("blocked_start", blocked.end_date);
 
-  if (excludeBookingId) {
-    bookingsQuery = bookingsQuery.neq("id", excludeBookingId);
+  if (excludeBookingIds.length > 0) {
+    bookingsQuery = bookingsQuery.not(
+      "id",
+      "in",
+      `(${excludeBookingIds.join(",")})`
+    );
   }
 
   const { data: existing, error } = await bookingsQuery;
@@ -598,12 +603,35 @@ export async function addBookingItems(
   return { error: null, success: true };
 }
 
+/**
+ * Kartın kapsadığı satır kimlikleri. İstemciden geldikleri için sorguya
+ * girmeden önce şekilleri doğrulanıyor; hangi satırlara dokunulabileceğini ise
+ * sorgudaki ürün ve sahiplik koşulu belirliyor.
+ */
+function readBookingIds(ids: string[]): { error: string } | { values: string[] } {
+  const values = [...new Set(ids)];
+
+  if (values.length === 0 || values.some((id) => !UUID_PATTERN.test(id))) {
+    return { error: "Geçersiz rezervasyon seçimi." };
+  }
+
+  return { values };
+}
+
+/**
+ * Bir kalemin düzenlenmesi. `bookingIds` aynı kartta toplanan satırların hepsi:
+ * aynı üründen dört adet alınmışsa dördü birden aynı tarihlere taşınır, çünkü
+ * satıcı listede tek bir kiralama görüyor.
+ */
 export async function editBooking(
   productId: string,
-  bookingId: string,
+  bookingIds: string[],
   _prevState: BookingFormState,
   formData: FormData
 ): Promise<BookingFormState> {
+  const ids = readBookingIds(bookingIds);
+  if ("error" in ids) return { error: ids.error };
+
   const customer_name = String(formData.get("customer_name") ?? "").trim();
   const customer_phone = String(formData.get("customer_phone") ?? "").trim();
   const start_date = String(formData.get("start_date") ?? "");
@@ -624,10 +652,11 @@ export async function editBooking(
   const owner = await assertProductOwner(supabase, productId);
   if ("error" in owner) return { error: owner.error };
 
-  // Düzenleme hep tek satıra ait: grup içindeki bir ürünün tarihleri
-  // değiştiğinde de kontrol edilmesi gereken yalnızca o ürünün stoğu.
+  // Düzenleme hep tek ürüne ait: grup içindeki bir kalemin tarihleri
+  // değiştiğinde de kontrol edilmesi gereken yalnızca o ürünün stoğu — ama
+  // kalem kaç adetse yeni tarihlerde o kadar ünite boş olmalı.
   const resolved = await resolveItems(supabase, owner.ownerId, [
-    { product_id: productId, quantity: 1 },
+    { product_id: productId, quantity: ids.values.length },
   ]);
   if ("error" in resolved) return { error: resolved.error };
 
@@ -648,7 +677,7 @@ export async function editBooking(
       supabase,
       resolved.values,
       { start_date: blocked.blocked_start, end_date: blocked.blocked_end },
-      bookingId
+      ids.values
     );
     if (conflict) return { error: conflict };
   } catch (err) {
@@ -666,7 +695,8 @@ export async function editBooking(
       delivery_mode,
       ...blocked,
     })
-    .eq("id", bookingId);
+    .in("id", ids.values)
+    .eq("product_id", productId);
 
   if (error) {
     return { error: error.message };
@@ -683,10 +713,14 @@ export async function editBooking(
  * iptal edilmiş kayıtları listede taşımak istemediği için artık siliniyor;
  * ürünün o günleri de kayıt ortadan kalktığı anda yeniden müsait oluyor.
  *
- * Toplu rezervasyonun tek satırı silinir, grubun tamamı değil: satıcı siparişten
- * yalnızca bir ürünü çıkarıyor olabilir.
+ * Silinen, listede görünen kalemin tamamı: aynı üründen dört adet alınmışsa
+ * dördü birden gider. Siparişin *öbür* ürünleri kalır — satıcı siparişten
+ * yalnızca bir kalemi çıkarıyor olabilir.
  */
-export async function deleteBooking(productId: string, bookingId: string) {
+export async function deleteBooking(productId: string, bookingIds: string[]) {
+  const ids = readBookingIds(bookingIds);
+  if ("error" in ids) throw new Error(ids.error);
+
   const supabase = await createClient();
 
   const owner = await assertProductOwner(
@@ -701,7 +735,7 @@ export async function deleteBooking(productId: string, bookingId: string) {
   const { data: deleted, error } = await supabase
     .from("bookings")
     .delete()
-    .eq("id", bookingId)
+    .in("id", ids.values)
     .eq("product_id", productId)
     .select("id");
 

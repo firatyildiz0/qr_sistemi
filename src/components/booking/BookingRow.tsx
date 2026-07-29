@@ -62,6 +62,7 @@ const todayString = () => format(new Date(), "yyyy-MM-dd");
 
 export default function BookingRow({
   booking,
+  unitIds,
   status,
   productId,
   otherAvailability,
@@ -72,6 +73,12 @@ export default function BookingRow({
   delay = 0,
 }: {
   booking: Booking;
+  /**
+   * Bu kartın kapsadığı satırlar. Aynı üründen birkaç adet alındığında her adet
+   * kendi satırında duruyor ama listede tek kalem görünüyor; düzenleme ve silme
+   * de o yüzden satırların hepsine birden uygulanıyor.
+   */
+  unitIds: string[];
   status: BookingStatus;
   productId: string;
   /** Availability from every *other* booking on this product. */
@@ -124,7 +131,8 @@ export default function BookingRow({
     }
   }
 
-  const editAction = editBooking.bind(null, productId, booking.id);
+  const units = unitIds.length;
+  const editAction = editBooking.bind(null, productId, unitIds);
   const [state, formAction, pending] = useActionState(editAction, initialState);
   const [range, setRange] = useState<DateRange | undefined>({
     from: toDate(booking.start_date),
@@ -181,6 +189,11 @@ export default function BookingRow({
       unitsLeftOn(otherAvailability.occupied, stock, day)
     )
   );
+  // Çok adetli bir kalem taşınıyorsa yeni tarihlerde bir ünite boş olması
+  // yetmez, adedin tamamı sığmalı. Sunucu zaten reddediyor; burada kaydetmeden
+  // önce söylenmesi için. Kiralama günleri bloke aralığının içinde kaldığı için
+  // bu sayı sunucununkinden gevşek — yanlışlıkla kaydı engellemez.
+  const unitsShort = range?.to != null && unitsLeft < units;
 
   // Sonradan eklenen ürünler bu rezervasyonun meşguliyet aralığını devralıyor,
   // müsaitlikleri de ona göre ölçülüyor.
@@ -244,9 +257,11 @@ export default function BookingRow({
             </div>
             <p className="count-up mt-2 text-sm font-medium text-ink">
               {formatDateRange(startStr, endStr)}
-              <span className="ml-2 font-normal text-ink-muted">
+              <span className={`ml-2 font-normal ${unitsShort ? "text-danger" : "text-ink-muted"}`}>
                 {range?.to
-                  ? `bu tarihlerde ${unitsLeft} / ${stock} adet müsait`
+                  ? `bu tarihlerde ${unitsLeft} / ${stock} adet müsait${
+                      units > 1 ? ` — ${units} adet gerekiyor` : ""
+                    }`
                   : "bitiş tarihini seçin"}
               </span>
             </p>
@@ -293,7 +308,7 @@ export default function BookingRow({
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={pending || blockedError !== null}
+              disabled={pending || blockedError !== null || unitsShort}
               className="btn btn-primary min-h-0 py-2 text-xs"
             >
               {pending ? "Kaydediliyor…" : "Değişiklikleri kaydet"}
@@ -318,6 +333,9 @@ export default function BookingRow({
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-ink">{booking.customer_name}</p>
           <span className={`pill ${bookingStatusPill[status]}`}>{bookingStatusLabel[status]}</span>
+          {/* Bu üründen kaç adet: kart tek kiralama gösteriyor, adet bilgisi
+              başka türlü kaybolurdu. */}
+          {units > 1 && <span className="pill pill-muted">{units} adet</span>}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
           <span className="count-up flex items-center gap-1.5">
@@ -404,13 +422,14 @@ export default function BookingRow({
         <ConfirmDialog
           open={deleteOpen}
           onClose={() => setDeleteOpen(false)}
-          onConfirm={() => deleteBooking(productId, booking.id)}
+          onConfirm={() => deleteBooking(productId, unitIds)}
           title="Rezervasyonu sil"
           message={
             <>
               <strong className="font-semibold text-ink">{booking.customer_name}</strong> adına{" "}
-              {formatDateRange(booking.start_date, booking.end_date)} tarihleri için oluşturulan rezervasyon
-              kalıcı olarak silinecek ve bu günler yeniden müsait olacak. Bu işlem geri alınamaz.
+              {formatDateRange(booking.start_date, booking.end_date)} tarihleri için oluşturulan
+              {units > 1 ? ` ${units} adetlik rezervasyonun tamamı` : " rezervasyon"} kalıcı olarak
+              silinecek ve bu günler yeniden müsait olacak. Bu işlem geri alınamaz.
             </>
           }
           confirmLabel="Evet, sil"

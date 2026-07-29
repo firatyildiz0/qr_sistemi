@@ -294,6 +294,59 @@ export function unavailableDays(
   return [...days.full, ...days.blocked];
 }
 
+// ---------------------------------------------------------------------------
+// Adetlerin tek satırda toplanması
+// ---------------------------------------------------------------------------
+// Aynı üründen dört adet alan müşteri veritabanında dört satır bırakıyor: stok
+// da müsaitlik de ünite başına sayıldığı için satırlar öyle duruyor. Ama satıcı
+// için bu dört ayrı rezervasyon değil, tek siparişin bir kalemi — listede dört
+// özdeş kart göstermek dört ayrı müşteri varmış izlenimi veriyordu.
+
+/** Listede tek kart: temsilci kayıt ve onun kapsadığı bütün satırlar. */
+export type BookingUnits = { booking: Booking; ids: string[] };
+
+/**
+ * Aynı gruba, aynı ürüne ve aynı tarihlere ait satırları tek kalemde toplar.
+ *
+ * Anahtara tarihler de giriyor: grubun bir satırı sonradan ayrı tarihlere
+ * çekilmişse (tek satır düzenlenebiliyor) o artık ayrı bir kalemdir, birlikte
+ * gösterilmesi yalan olurdu. Grubu olmayan kayıtlar hep tek başına durur.
+ */
+export function groupBookingUnits(bookings: Booking[]): BookingUnits[] {
+  const rows: BookingUnits[] = [];
+  const byKey = new Map<string, BookingUnits>();
+
+  for (const booking of bookings) {
+    if (!booking.group_id) {
+      rows.push({ booking, ids: [booking.id] });
+      continue;
+    }
+
+    const key = [
+      booking.group_id,
+      booking.product_id,
+      booking.start_date,
+      booking.end_date,
+      booking.blocked_start,
+      booking.blocked_end,
+      booking.delivery_mode,
+      booking.status,
+    ].join("|");
+
+    const existing = byKey.get(key);
+
+    if (existing) {
+      existing.ids.push(booking.id);
+    } else {
+      const row = { booking, ids: [booking.id] };
+      byKey.set(key, row);
+      rows.push(row);
+    }
+  }
+
+  return rows;
+}
+
 /**
  * The stored `status` column only tracks explicit cancellation; upcoming
  * vs. active vs. completed is derived from today's date so it never drifts

@@ -34,12 +34,30 @@ type CategoryId =
   | "accessibility"
   | "account";
 
-const CATEGORIES: { id: CategoryId; label: string; hint: string; icon: typeof IconPalette }[] = [
-  { id: "turnaround", label: "Teslimat süreleri", hint: "Kargo ve hazırlık", icon: IconTruck },
+/**
+ * Teslimat süreleri şimdilik kapalı: rezervasyon formundaki gün adımlayıcı
+ * aynı işi rezervasyon başına yaptığı için, satıcı başına varsayılanları
+ * değiştirmek henüz gerekmiyor. Kategori listeden silinmedi — açmak için
+ * `disabled` alanını kaldırmak yeterli, altındaki form olduğu gibi duruyor.
+ */
+const CATEGORIES: {
+  id: CategoryId;
+  label: string;
+  hint: string;
+  icon: typeof IconPalette;
+  disabled?: boolean;
+}[] = [
   { id: "appearance", label: "Görünüm", hint: "Tema ve renk", icon: IconPalette },
   { id: "layout", label: "Panel düzeni", hint: "Yoğunluk ve köşeler", icon: IconSliders },
   { id: "accessibility", label: "Erişilebilirlik", hint: "Hareket", icon: IconAccessibility },
   { id: "account", label: "Hesap", hint: "Oturum bilgisi", icon: IconUser },
+  {
+    id: "turnaround",
+    label: "Teslimat süreleri",
+    hint: "Şimdilik kapalı",
+    icon: IconTruck,
+    disabled: true,
+  },
 ];
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: typeof IconSun }[] = [
@@ -78,7 +96,7 @@ export default function SettingsPanel({
   email: string;
 }) {
   const [preferences, setPreferences] = useState(initial);
-  const [category, setCategory] = useState<CategoryId>("turnaround");
+  const [category, setCategory] = useState<CategoryId>("appearance");
   const [saved, setSaved] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -117,11 +135,15 @@ export default function SettingsPanel({
                 <button
                   type="button"
                   onClick={() => setCategory(item.id)}
+                  disabled={item.disabled}
                   aria-current={active ? "true" : undefined}
+                  title={item.disabled ? `${item.label} şimdilik kapalı` : undefined}
                   className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors ${
-                    active
-                      ? "border-accent bg-accent-soft text-accent-strong"
-                      : "border-transparent text-ink-muted hover:bg-card hover:text-ink"
+                    item.disabled
+                      ? "cursor-not-allowed border-transparent text-ink-muted opacity-45"
+                      : active
+                        ? "border-accent bg-accent-soft text-accent-strong"
+                        : "border-transparent text-ink-muted hover:bg-card hover:text-ink"
                   }`}
                 >
                   <item.icon className="h-4.5 w-4.5 shrink-0" />

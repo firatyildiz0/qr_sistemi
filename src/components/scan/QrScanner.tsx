@@ -45,7 +45,15 @@ async function createDecoder(): Promise<
   };
 }
 
-export default function QrScanner() {
+export default function QrScanner({
+  autoStart = false,
+  onResolved,
+}: {
+  /** Opens the camera as soon as the scanner mounts (used by the panel modal). */
+  autoStart?: boolean;
+  /** Fires once a scan has sent the owner somewhere, so a host modal can close. */
+  onResolved?: () => void;
+} = {}) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -79,6 +87,7 @@ export default function QrScanner() {
       if (scan.ok) {
         // Straight to the same detail + booking screen the owner sees in the panel.
         router.push(scan.href);
+        onResolved?.();
         return;
       }
 
@@ -86,7 +95,7 @@ export default function QrScanner() {
       setPhase("failed");
       busyRef.current = false;
     },
-    [router, stopCamera]
+    [onResolved, router, stopCamera]
   );
 
   const startCamera = useCallback(async () => {
@@ -161,6 +170,15 @@ export default function QrScanner() {
   }, [handleCode, stopCamera]);
 
   useEffect(() => stopCamera, [stopCamera]);
+
+  // Only ever fires on mount: `startCamera` is re-created on every state change,
+  // so without the ref the effect would restart the camera mid-scan.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoStarted.current) return;
+    autoStarted.current = true;
+    void startCamera();
+  }, [autoStart, startCamera]);
 
   const live = phase === "starting" || phase === "scanning";
 

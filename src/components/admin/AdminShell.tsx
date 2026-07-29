@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, use, useState } from "react";
 import AdminSidebarNav from "@/components/admin/AdminSidebarNav";
+import QrScanFab from "@/components/scan/QrScanFab";
 import Wordmark from "@/components/Wordmark";
 import { IconChevronLeft, IconLogOut, IconMenu, IconX } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
@@ -36,7 +37,7 @@ export default function AdminShell({
         >
           <IconMenu className="h-5 w-5" />
         </button>
-        <Link href="/" className="font-display text-lg font-bold tracking-tight text-white">
+        <Link href="/admin" className="font-display text-lg font-bold tracking-tight text-white">
           <Wordmark />
         </Link>
         <Suspense fallback={<AvatarShell className="h-8 w-8 text-sm" />}>
@@ -62,7 +63,7 @@ export default function AdminShell({
         <div>
           <div className="sidebar-head flex h-16 items-center justify-between px-6">
             <Link
-              href="/"
+              href="/admin"
               className="sidebar-label font-display text-xl font-bold tracking-tight text-white"
             >
               <Wordmark />
@@ -107,6 +108,8 @@ export default function AdminShell({
       <main className="flex flex-1 flex-col pt-14 md:h-screen md:overflow-y-auto md:pt-0">
         {children}
       </main>
+
+      <QrScanFab />
     </div>
   );
 }

@@ -204,6 +204,10 @@ export default function BookingRow({
     (sum, member) => sum + member.quantity,
     0
   );
+  // Sipariş birden çok ürün mü içeriyor. İki anlatım aynı anda çıkmasın diye
+  // ayırt ediliyor: tek üründen çok adet alınmışsa adet başlıktaki rozette,
+  // farklı ürünler varsa siparişin tamamı aşağıdaki özet satırında anlatılıyor.
+  const mixedOrder = (groupMembers ?? []).length > 1;
 
   function openEditor() {
     // Always reopen on the booking's own dates, month and delivery choice,
@@ -333,9 +337,12 @@ export default function BookingRow({
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-ink">{booking.customer_name}</p>
           <span className={`pill ${bookingStatusPill[status]}`}>{bookingStatusLabel[status]}</span>
-          {/* Adet burada ayrıca yazmıyor: çok adetli her kalemin bir grubu var,
-              dolayısıyla aşağıdaki "toplu · N adet" satırı zaten çıkıyor ve
-              hangi üründen kaç adet alındığını da söylüyor. */}
+          {/* Tek üründen çok adet: siparişte anlatacak başka bir şey yok,
+              adet burada duruyor. Farklı ürünler varsa aşağıdaki özet
+              satırı devralıyor. */}
+          {units > 1 && !mixedOrder && (
+            <span className="pill pill-muted">{units} adet</span>
+          )}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
           <span className="count-up flex items-center gap-1.5">
@@ -374,7 +381,7 @@ export default function BookingRow({
         {/* Toplu alım: müşterinin aynı anda kiraladığı öbür ürünler başka
             ürünlerin sayfalarında duruyor, o yüzden siparişin tamamı burada
             özetleniyor. */}
-        {groupUnits > 1 && (
+        {mixedOrder && (
           <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-muted">
             <IconPackage className="h-3.5 w-3.5 shrink-0" />
             <span className="pill pill-muted">toplu · {groupUnits} adet</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useActionState, useState } from "react";
+import { useActionState, useState } from "react";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -386,18 +386,19 @@ export default function BookingRow({
             <IconPackage className="h-3.5 w-3.5 shrink-0" />
             <span className="pill pill-muted">toplu · {groupUnits} adet</span>
             {/* Adet her ürünün başında ve hep aynı biçimde: tek adetlik ürünü
-                çıplak isim olarak bırakmak listeyi düzensiz gösteriyordu. */}
-            <span className="min-w-0">
-              {groupMembers!.map((member, index) => (
-                <Fragment key={member.productId}>
-                  {index > 0 && " · "}
-                  <span className="font-semibold tabular-nums text-ink">
-                    {member.quantity} ×
-                  </span>{" "}
-                  {member.name}
-                </Fragment>
-              ))}
-            </span>
+                çıplak isim olarak bırakmak listeyi düzensiz gösteriyordu.
+                Her kalem ayrı bir esnek öğe ve kendi içinde bölünmüyor —
+                satır sonu kalemin ortasından değil, kalemler arasından geçiyor.
+                Ayraç kalemin sonunda duruyor ki alt satır adetle başlasın. */}
+            {groupMembers!.map((member, index) => (
+              <span key={member.productId} className="max-w-full truncate">
+                <span className="font-semibold tabular-nums text-ink">
+                  {member.quantity} ×
+                </span>{" "}
+                {member.name}
+                {index < groupMembers!.length - 1 && " ·"}
+              </span>
+            ))}
           </p>
         )}
       </div>

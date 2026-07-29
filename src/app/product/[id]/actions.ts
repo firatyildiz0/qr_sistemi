@@ -717,9 +717,12 @@ export async function editBooking(
  * dördü birden gider. Siparişin *öbür* ürünleri kalır — satıcı siparişten
  * yalnızca bir kalemi çıkarıyor olabilir.
  */
-export async function deleteBooking(productId: string, bookingIds: string[]) {
+export async function deleteBooking(
+  productId: string,
+  bookingIds: string[]
+): Promise<{ error: string | null }> {
   const ids = readBookingIds(bookingIds);
-  if ("error" in ids) throw new Error(ids.error);
+  if ("error" in ids) return ids;
 
   const supabase = await createClient();
 
@@ -728,10 +731,10 @@ export async function deleteBooking(productId: string, bookingIds: string[]) {
     productId,
     "Bu rezervasyonu silme yetkiniz yok."
   );
-  if ("error" in owner) throw new Error(owner.error);
+  if ("error" in owner) return owner;
 
   // `select()` so a delete blocked by RLS — which reports no error, just no
-  // rows — fails loudly instead of looking like it worked.
+  // rows — is caught below instead of looking like it worked.
   const { data: deleted, error } = await supabase
     .from("bookings")
     .delete()
@@ -740,12 +743,18 @@ export async function deleteBooking(productId: string, bookingIds: string[]) {
     .select("id");
 
   if (error) {
-    throw new Error(error.message);
+    return { error: error.message };
   }
 
+  // Hata da yok, silinen satır da yok: RLS'in delete politikası devrede
+  // değilse silme sessiz bir no-op oluyor ve işlem başarılı görünüyordu.
   if ((deleted ?? []).length === 0) {
-    throw new Error("Rezervasyon bulunamadı ya da silme yetkiniz yok.");
+    return {
+      error:
+        "Rezervasyon silinemedi: kayıt bulunamadı ya da veritabanı silme izni vermiyor.",
+    };
   }
 
   revalidateBooking([productId]);
+  return { error: null };
 }

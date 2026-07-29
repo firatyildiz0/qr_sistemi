@@ -422,7 +422,13 @@ export default function BookingRow({
         <ConfirmDialog
           open={deleteOpen}
           onClose={() => setDeleteOpen(false)}
-          onConfirm={() => deleteBooking(productId, unitIds)}
+          // Sunucudan dönen hata burada atılıyor: doğrudan sunucuda atılan
+          // hatanın mesajını React production'da maskeliyor, satıcı da
+          // sebebi göremiyordu.
+          onConfirm={async () => {
+            const { error } = await deleteBooking(productId, unitIds);
+            if (error) throw new Error(error);
+          }}
           title="Rezervasyonu sil"
           message={
             <>

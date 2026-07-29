@@ -165,11 +165,13 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
       <ConfirmDialog
         open={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
-        onConfirm={() =>
-          pendingDelete
-            ? deleteBooking(pendingDelete.productId, [pendingDelete.id])
-            : undefined
-        }
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          const { error } = await deleteBooking(pendingDelete.productId, [
+            pendingDelete.id,
+          ]);
+          if (error) throw new Error(error);
+        }}
         title="Rezervasyonu sil"
         message={
           pendingDelete && (

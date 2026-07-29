@@ -333,9 +333,9 @@ export default function BookingRow({
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-ink">{booking.customer_name}</p>
           <span className={`pill ${bookingStatusPill[status]}`}>{bookingStatusLabel[status]}</span>
-          {/* Bu üründen kaç adet: kart tek kiralama gösteriyor, adet bilgisi
-              başka türlü kaybolurdu. */}
-          {units > 1 && <span className="pill pill-muted">{units} adet</span>}
+          {/* Adet burada ayrıca yazmıyor: çok adetli her kalemin bir grubu var,
+              dolayısıyla aşağıdaki "toplu · N adet" satırı zaten çıkıyor ve
+              hangi üründen kaç adet alındığını da söylüyor. */}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
           <span className="count-up flex items-center gap-1.5">

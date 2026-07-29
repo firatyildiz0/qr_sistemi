@@ -23,7 +23,7 @@ import {
 } from "@/lib/bookings";
 import {
   addBookingItems,
-  cancelBooking,
+  deleteBooking,
   editBooking,
   type BookingFormState,
 } from "@/app/product/[id]/actions";
@@ -51,8 +51,8 @@ import {
   IconPencil,
   IconPhone,
   IconPlus,
+  IconTrash,
   IconTruck,
-  IconX,
 } from "@/components/icons";
 
 const initialState: BookingFormState = { error: null };
@@ -105,7 +105,7 @@ export default function BookingRow({
   }
 
   const [editing, setEditing] = useState(false);
-  const [cancelOpen, setCancelOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   // Kayıtlı rezervasyona sonradan eklenen ürünler. Müşteri bilgileri ve
   // tarihler mevcut kayıttan devralındığı için sepetten başka alan yok.
   const [adding, setAdding] = useState(false);
@@ -373,48 +373,52 @@ export default function BookingRow({
         )}
       </div>
 
-      {canModify && (
-        <div className="flex shrink-0 flex-wrap gap-2 self-start sm:self-center">
-          <button type="button" onClick={openEditor} className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs">
-            <IconPencil className="h-3.5 w-3.5" />
-            Düzenle
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdding((open) => !open)}
-            className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs"
-          >
-            <IconPlus className="h-3.5 w-3.5" />
-            Ürün ekle
-          </button>
-          <button
-            type="button"
-            onClick={() => setCancelOpen(true)}
-            className="btn btn-danger-ghost min-h-0 px-3 py-1.5 text-xs"
-          >
-            <IconX className="h-3.5 w-3.5" />
-            İptal et
-          </button>
+      {/* Silme, düzenlemenin aksine bitmiş ve iptal edilmiş kayıtlarda da açık:
+          listeden temizlemek istenen kayıtlar zaten çoğunlukla onlar. */}
+      <div className="flex shrink-0 flex-wrap gap-2 self-start sm:self-center">
+        {canModify && (
+          <>
+            <button type="button" onClick={openEditor} className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs">
+              <IconPencil className="h-3.5 w-3.5" />
+              Düzenle
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdding((open) => !open)}
+              className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs"
+            >
+              <IconPlus className="h-3.5 w-3.5" />
+              Ürün ekle
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={() => setDeleteOpen(true)}
+          className="btn btn-danger-ghost min-h-0 px-3 py-1.5 text-xs"
+        >
+          <IconTrash className="h-3.5 w-3.5" />
+          Sil
+        </button>
 
-          <ConfirmDialog
-            open={cancelOpen}
-            onClose={() => setCancelOpen(false)}
-            onConfirm={() => cancelBooking(productId, booking.id)}
-            title="Rezervasyonu iptal et"
-            message={
-              <>
-                <strong className="font-semibold text-ink">{booking.customer_name}</strong> adına{" "}
-                {formatDateRange(booking.start_date, booking.end_date)} tarihleri için oluşturulan rezervasyon
-                iptal edilecek ve bu günler yeniden müsait olacak.
-              </>
-            }
-            confirmLabel="Evet, iptal et"
-            pendingLabel="İptal ediliyor…"
-            cancelLabel="Vazgeç"
-            tone="danger"
-          />
-        </div>
-      )}
+        <ConfirmDialog
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={() => deleteBooking(productId, booking.id)}
+          title="Rezervasyonu sil"
+          message={
+            <>
+              <strong className="font-semibold text-ink">{booking.customer_name}</strong> adına{" "}
+              {formatDateRange(booking.start_date, booking.end_date)} tarihleri için oluşturulan rezervasyon
+              kalıcı olarak silinecek ve bu günler yeniden müsait olacak. Bu işlem geri alınamaz.
+            </>
+          }
+          confirmLabel="Evet, sil"
+          pendingLabel="Siliniyor…"
+          cancelLabel="Vazgeç"
+          tone="danger"
+        />
+      </div>
       </div>
 
       {/* Aynı müşteri, aynı tarihler: eklenen ürün mevcut kaydın bilgilerini

@@ -4,7 +4,15 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { BookingStatus } from "@/lib/types";
 import { bookingStatusLabel, bookingStatusPill, formatDateRange } from "@/lib/bookings";
-import { IconCalendar, IconChevronRight, IconPackage, IconPhone } from "@/components/icons";
+import { deleteBooking } from "@/app/product/[id]/actions";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import {
+  IconCalendar,
+  IconChevronRight,
+  IconPackage,
+  IconPhone,
+  IconTrash,
+} from "@/components/icons";
 
 export type BookingHistoryRow = {
   id: string;
@@ -41,6 +49,9 @@ const createdFormat = new Intl.DateTimeFormat("tr-TR", {
 
 export default function BookingHistory({ bookings }: { bookings: BookingHistoryRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
+  // Tek bir onay penceresi bütün satırlara yetiyor: aynı anda yalnızca biri
+  // silinebilir, o yüzden açık olan satırı tutmak satır başına state'ten basit.
+  const [pendingDelete, setPendingDelete] = useState<BookingHistoryRow | null>(null);
 
   const counts = useMemo(() => {
     const map: Record<Filter, number> = {
@@ -93,12 +104,20 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
       ) : (
         <div className="flex flex-col gap-3">
           {visible.map((b, i) => (
-            <Link
+            // Satırın tamamı hâlâ bir bağlantı, ama sil düğmesi onun içine
+            // giremez: bağlantı kartı kaplayan bir katman olarak duruyor, düğme
+            // de onun üstünde kalıyor.
+            <div
               key={b.id}
-              href={`/admin/bookings/${b.id}`}
-              className="fade-slide-up card card-hover flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              className="fade-slide-up card card-hover relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
               style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
             >
+              <Link
+                href={`/admin/bookings/${b.id}`}
+                aria-label={`${b.customerName} rezervasyonunu aç`}
+                className="absolute inset-0 rounded-[inherit]"
+              />
+
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold text-ink">{b.customerName}</p>
@@ -124,14 +143,50 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-3 self-start text-xs text-ink-muted sm:self-center">
+              {/* pointer-events: üstteki katman tıklamayı yutmasın diye kolon
+                  geçirgen, yalnızca düğme tıklanabilir. */}
+              <div className="pointer-events-none relative flex shrink-0 flex-wrap items-center gap-3 self-start text-xs text-ink-muted sm:self-center">
                 <span>{createdFormat.format(new Date(b.createdAt))} tarihinde oluşturuldu</span>
+                <button
+                  type="button"
+                  onClick={() => setPendingDelete(b)}
+                  className="btn btn-danger-ghost pointer-events-auto min-h-0 px-3 py-1.5 text-xs"
+                >
+                  <IconTrash className="h-3.5 w-3.5" />
+                  Sil
+                </button>
                 <IconChevronRight className="h-4 w-4" />
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() =>
+          pendingDelete
+            ? deleteBooking(pendingDelete.productId, pendingDelete.id)
+            : undefined
+        }
+        title="Rezervasyonu sil"
+        message={
+          pendingDelete && (
+            <>
+              <strong className="font-semibold text-ink">{pendingDelete.customerName}</strong>{" "}
+              adına {pendingDelete.productName} için{" "}
+              {formatDateRange(pendingDelete.startDate, pendingDelete.endDate)} tarihlerinde
+              oluşturulan rezervasyon kalıcı olarak silinecek ve bu günler yeniden müsait
+              olacak. Bu işlem geri alınamaz.
+            </>
+          )
+        }
+        confirmLabel="Evet, sil"
+        pendingLabel="Siliniyor…"
+        cancelLabel="Vazgeç"
+        tone="danger"
+      />
     </div>
   );
 }

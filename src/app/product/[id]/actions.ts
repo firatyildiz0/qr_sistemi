@@ -676,19 +676,41 @@ export async function editBooking(
   return { error: null, success: true };
 }
 
-export async function cancelBooking(productId: string, bookingId: string) {
+/**
+ * Rezervasyonu kaydından tamamen siler.
+ *
+ * Eskiden iptal ediliyordu — satır kalıyor, yalnızca durumu değişiyordu. Satıcı
+ * iptal edilmiş kayıtları listede taşımak istemediği için artık siliniyor;
+ * ürünün o günleri de kayıt ortadan kalktığı anda yeniden müsait oluyor.
+ *
+ * Toplu rezervasyonun tek satırı silinir, grubun tamamı değil: satıcı siparişten
+ * yalnızca bir ürünü çıkarıyor olabilir.
+ */
+export async function deleteBooking(productId: string, bookingId: string) {
   const supabase = await createClient();
 
-  const owner = await assertProductOwner(supabase, productId);
+  const owner = await assertProductOwner(
+    supabase,
+    productId,
+    "Bu rezervasyonu silme yetkiniz yok."
+  );
   if ("error" in owner) throw new Error(owner.error);
 
-  const { error } = await supabase
+  // `select()` so a delete blocked by RLS — which reports no error, just no
+  // rows — fails loudly instead of looking like it worked.
+  const { data: deleted, error } = await supabase
     .from("bookings")
-    .update({ status: "cancelled" })
-    .eq("id", bookingId);
+    .delete()
+    .eq("id", bookingId)
+    .eq("product_id", productId)
+    .select("id");
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if ((deleted ?? []).length === 0) {
+    throw new Error("Rezervasyon bulunamadı ya da silme yetkiniz yok.");
   }
 
   revalidateBooking([productId]);

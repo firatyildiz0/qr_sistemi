@@ -229,6 +229,96 @@
 
 body {
   font-feature-settings: "tnum" 0;
+  /* Kaydırma sayfanın kendisinde bitsin: mobil tarayıcılarda listenin sonuna
+     gelince arkadaki belge lastik gibi esneyip "web sayfası" hissi verirdi.
+     Aynı özellik ana ekrandan açıldığında yanlışlıkla sayfa yenilemeyi de
+     (pull-to-refresh) engelliyor. */
+  overscroll-behavior-y: none;
+}
+
+/* Dokununca beliren mavi/gri kutu ve uzun basınca çıkan "bağlantıyı kopyala"
+   menüsü — ikisi de bir web sayfasında olduğunuzu hatırlatan işaretler.
+   Metin ve form alanları dışarıda: oralarda seçim ve kopyalama gerekli. */
+:where(a, button, label, summary, [role="button"], nav) {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+nav,
+.app-bar,
+.tab-bar {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Mobil paneldeki gezinme kabuğu.
+   Yükseklikler tek yerde duruyor ki sayfa başlıkları (`sticky top-14`) ve
+   içerik alt boşluğu onlarla aynı ölçüyü kullansın. */
+.panel-scope {
+  --app-bar-h: 3.5rem;
+  --tab-bar-h: 4rem;
+}
+
+/* Çentikli / ada düğmeli telefonlar: üst çubuğun içeriği çentiğin altından,
+   sekme çubuğununki ana ekran çizgisinin üstünden başlasın — ama çubukların
+   kendi zeminleri o alanları da kaplasın ki ekranın kenarında açık renkli bir
+   şerit kalmasın. Güvenli alanı olmayan cihazlarda `env(...)` sıfır döner ve
+   ölçüler `--app-bar-h` / `--tab-bar-h` neyse o kalır. */
+.app-bar {
+  height: calc(var(--app-bar-h, 3.5rem) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+}
+
+.tab-bar {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ekranın altından açılan katmanlar (QR tarayıcı, menü) için aynı pay. */
+.safe-b {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+@media (max-width: 767px) {
+  .app-main {
+    padding-top: calc(var(--app-bar-h) + env(safe-area-inset-top));
+    padding-bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
+  }
+}
+
+/* Panel sayfalarının kendi başlığı. Mobilde `top: 0` demek üst çubuğun altında
+   kaybolmak demekti; burada çubuğun tam altına yapışıyor ve kaydırırken ekranda
+   kalıyor — hangi ekranda olunduğu her an görünür durumda. Masaüstünde içerik
+   alanı kendi kendine kaydığı için 0'a dönüyor. */
+.page-header {
+  position: sticky;
+  top: calc(var(--app-bar-h, 3.5rem) + env(safe-area-inset-top));
+  z-index: 10;
+}
+
+@media (min-width: 768px) {
+  .page-header {
+    top: 0;
+  }
+}
+
+/* Dokunma geri bildirimi. Mobilde `:hover` diye bir şey yok; bir düğmenin
+   basıldığını gösteren tek şey bu ufak çökme — yerli uygulamalardaki
+   dokunma animasyonunun karşılığı. */
+.tab-press {
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+.tab-press:active {
+  transform: scale(0.92);
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-press:active {
+    transform: none;
+  }
+}
+:root[data-motion="reduced"] .tab-press:active {
+  transform: none;
 }
 
 /* Mobil tarayıcılarda çift dokunuşla yakınlaştırmayı kapatır. Sayfa hâlâ

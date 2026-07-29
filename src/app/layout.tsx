@@ -6,6 +6,19 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "RentQR",
   description: "Herhangi bir fiziksel ürünü tek bir taramayla kiralanabilir hale getirin.",
+  applicationName: "RentQR",
+  // iOS ana ekrandan açıldığında tam ekran davransın ve durum çubuğu panelin
+  // koyu üst çubuğuyla aynı renkte olsun. (Android'de bunu manifest hallediyor.)
+  appleWebApp: {
+    capable: true,
+    title: "RentQR",
+    statusBarStyle: "black-translucent",
+  },
+  // Telefon numaralarının otomatik olarak aranabilir bağlantıya çevrilmesi
+  // kapalı: tarih ve tutar gibi sayılar da yakalanıp mavi bağlantı hâline
+  // geliyordu, bu da arayüzü bir uygulamadan çok bir web sayfasına benzetiyor.
+  // Numaraya dokunarak arama, `tel:` bağlantısının olduğu yerlerde zaten var.
+  formatDetection: { telephone: false },
 };
 
 // Next zaten bu değerleri varsayılan olarak yazıyor; burada açıkça durmaları
@@ -14,6 +27,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Klavye açıldığında görünen alan küçülsün ki alta sabitlenmiş sekme çubuğu
+  // klavyenin arkasında kalmasın.
+  interactiveWidget: "resizes-content",
+  // Android'de durum çubuğunun rengi. Temaya göre değişmiyor, çünkü panelin üst
+  // çubuğu (--color-deep) her iki temada da koyu — tek renk ikisinde de sürekli
+  // bir yüzey gibi görünüyor.
+  themeColor: "#0f2a22",
 };
 
 export default function RootLayout({

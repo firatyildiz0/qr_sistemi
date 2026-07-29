@@ -32,7 +32,7 @@ export type Preferences = {
   density: Density;
   radius: Radius;
   reduceMotion: boolean;
-  /** Desktop rail state. Ignored on mobile, where the sidebar is a drawer. */
+  /** Desktop rail state. Ignored on mobile, which navigates from a tab bar. */
   sidebar: Sidebar;
 };
 

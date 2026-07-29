@@ -19,7 +19,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-10 flex h-auto items-center border-b border-border bg-paper px-4 py-4 sm:h-20 sm:px-8 sm:py-0">
+      <header className="page-header flex h-auto items-center border-b border-border bg-paper px-4 py-4 sm:h-20 sm:px-8 sm:py-0">
         <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Ayarlar</h1>
       </header>
 

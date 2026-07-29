@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, use, useState } from "react";
+import { Suspense, use } from "react";
 import AdminSidebarNav from "@/components/admin/AdminSidebarNav";
+import MobileTabBar from "@/components/admin/MobileTabBar";
 import QrScanFab from "@/components/scan/QrScanFab";
 import Wordmark from "@/components/Wordmark";
-import { IconChevronLeft, IconLogOut, IconMenu, IconX } from "@/components/icons";
+import { IconBell, IconChevronLeft, IconLogOut } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
 
 export type Identity = { email: string; initial: string; name: string; greeting: string };
@@ -21,45 +22,40 @@ export default function AdminShell({
   signOutAction: () => void;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-
   return (
     // `panel-scope` is where the density and corner-radius preferences take
     // effect (see globals.css). Scoping them here keeps the public pages on
     // their designed spacing while the panel follows the owner's choice.
     <div className="panel-scope flex min-h-screen bg-paper text-ink md:h-screen md:overflow-hidden">
-      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-deep px-4 md:hidden">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Menüyü aç"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-white/70 hover:bg-white/10 hover:text-white"
-        >
-          <IconMenu className="h-5 w-5" />
-        </button>
+      {/* Mobil üst çubuk. Artık bir hamburger taşımıyor — gezinme ekranın
+          altındaki sekme çubuğunda. Burada kalanlar bir uygulamanın üst
+          çubuğunda beklenen iki şey: kimlik ve bildirim zili. */}
+      <header className="app-bar fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-border bg-deep px-4 md:hidden">
         <Link href="/admin" className="font-display text-lg font-bold tracking-tight text-white">
           <Wordmark />
         </Link>
-        <Suspense fallback={<AvatarShell className="h-8 w-8 text-sm" />}>
-          <Avatar promise={identityPromise} className="h-8 w-8 text-sm" />
-        </Suspense>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/admin/notifications"
+            aria-label="Bildirimler"
+            className="tab-press relative flex h-10 w-10 items-center justify-center rounded-full text-white/80"
+          >
+            <IconBell className="h-5 w-5" />
+            <Suspense fallback={null}>
+              <UnreadDot promise={unreadCountPromise} />
+            </Suspense>
+          </Link>
+          <Link href="/admin/settings" aria-label="Ayarlar" className="tab-press">
+            <Suspense fallback={<AvatarShell className="h-8 w-8 text-sm" />}>
+              <Avatar promise={identityPromise} className="h-8 w-8 text-sm" />
+            </Suspense>
+          </Link>
+        </div>
       </header>
 
-      {open && (
-        <div
-          // Not `bg-ink/50`: --color-ink is near-white in the dark theme, which
-          // would turn this scrim into a white veil.
-          className="fixed inset-0 z-40 bg-(--app-backdrop) md:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      <aside
-        className={`sidebar fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col justify-between bg-deep transition-transform duration-200 ease-out md:relative md:z-auto md:translate-x-0 md:transition-[width,transform] ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
+      {/* Kenar çubuğu yalnızca masaüstünde. Mobilde onun yerini `MobileTabBar`
+          alıyor; ikisi aynı `NAV_ITEMS` listesinden besleniyor. */}
+      <aside className="sidebar relative z-auto hidden w-64 shrink-0 flex-col justify-between bg-deep transition-[width] duration-200 ease-out md:flex">
         <div>
           <div className="sidebar-head flex h-16 items-center justify-between px-6">
             <Link
@@ -68,14 +64,6 @@ export default function AdminShell({
             >
               <Wordmark />
             </Link>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Menüyü kapat"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-white/60 hover:bg-white/10 hover:text-white md:hidden"
-            >
-              <IconX className="h-4 w-4" />
-            </button>
             <SidebarToggle />
           </div>
 
@@ -88,13 +76,11 @@ export default function AdminShell({
             </Suspense>
           </div>
 
-          <div onClick={() => setOpen(false)}>
-            {/* The links are in the fallback too, so navigation is available
-                immediately — only the unread badge waits on its query. */}
-            <Suspense fallback={<AdminSidebarNav unreadCount={0} />}>
-              <SidebarNavWithBadge promise={unreadCountPromise} />
-            </Suspense>
-          </div>
+          {/* The links are in the fallback too, so navigation is available
+              immediately — only the unread badge waits on its query. */}
+          <Suspense fallback={<AdminSidebarNav unreadCount={0} />}>
+            <SidebarNavWithBadge promise={unreadCountPromise} />
+          </Suspense>
         </div>
 
         <div className="sidebar-foot mt-auto border-t border-white/10 p-6">
@@ -115,12 +101,31 @@ export default function AdminShell({
         </div>
       </aside>
 
-      <main className="flex flex-1 flex-col pt-14 md:h-screen md:overflow-y-auto md:pt-0">
+      {/* Üst ve alt boşluğu `.app-main` veriyor (globals.css): iki sabit çubuğun
+          yüksekliği tek yerde tanımlı, burada tekrarlanmıyor. */}
+      <main className="app-main flex flex-1 flex-col md:h-screen md:overflow-y-auto">
         {children}
       </main>
 
+      <MobileTabBar
+        identityPromise={identityPromise}
+        unreadCountPromise={unreadCountPromise}
+        signOutAction={signOutAction}
+      />
       <QrScanFab />
     </div>
+  );
+}
+
+function UnreadDot({ promise }: { promise: Promise<number> }) {
+  const count = use(promise);
+  if (!count) return null;
+
+  return (
+    <span
+      aria-label={`${count} okunmamış bildirim`}
+      className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-deep"
+    />
   );
 }
 

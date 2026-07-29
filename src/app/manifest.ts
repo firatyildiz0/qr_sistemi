@@ -1,0 +1,39 @@
+import type { MetadataRoute } from "next";
+
+/**
+ * Uygulamanın telefona kurulabilmesini sağlayan tanım. `display: standalone`
+ * olduğu için ana ekrandan açıldığında adres çubuğu ve tarayıcı sekmeleri
+ * görünmüyor — panel tam ekran, yerli bir uygulama gibi açılıyor.
+ *
+ * `start_url` panelin kendisi: simgeye dokunan satıcı tanıtım sayfasına değil,
+ * doğrudan işine gidiyor.
+ */
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "RentQR — Kiralama paneli",
+    short_name: "RentQR",
+    description: "Herhangi bir fiziksel ürünü tek bir taramayla kiralanabilir hale getirin.",
+    start_url: "/admin",
+    scope: "/",
+    display: "standalone",
+    orientation: "portrait",
+    lang: "tr",
+    dir: "ltr",
+    background_color: "#f2f1ed",
+    theme_color: "#0f2a22",
+    categories: ["business", "productivity"],
+    icons: [
+      { src: "/icons/192", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Maskeleme yapan başlatıcılar simgenin kenarlarını kırpar; işaret güvenli
+      // alanın içinde durduğu için aynı görsel ikisine de yetiyor.
+      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+    // Simgeye uzun basınca çıkan kısayollar — telefonun kendi menüsünden
+    // panelin iki ana işine doğrudan giriş.
+    shortcuts: [
+      { name: "QR okut", short_name: "QR okut", url: "/admin" },
+      { name: "Ürünler", short_name: "Ürünler", url: "/admin/products" },
+    ],
+  };
+}

@@ -2,35 +2,16 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconBell,
-  IconChart,
-  IconGrid,
-  IconHome,
-  IconLifebuoy,
-  IconSettings,
-  IconUsers,
-} from "@/components/icons";
+import { NAV_ITEMS, isActive } from "@/components/admin/nav";
 
 export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }) {
   const pathname = usePathname();
 
-  const items = [
-    // /admin is the panel home and holds the QR scanner, so the scanner needs
-    // no entry of its own.
-    { href: "/admin", label: "Ana sayfa", icon: IconHome, exact: true },
-    { href: "/admin/products", label: "Ürünler", icon: IconGrid },
-    { href: "/admin/customers", label: "Müşteriler", icon: IconUsers },
-    { href: "/admin/dashboard", label: "İstatistik", icon: IconChart },
-    { href: "/admin/notifications", label: "Bildirimler", icon: IconBell, badge: unreadCount },
-    { href: "/admin/support", label: "Destek", icon: IconLifebuoy },
-    { href: "/admin/settings", label: "Ayarlar", icon: IconSettings },
-  ];
-
   return (
     <nav className="mt-8 flex flex-col gap-2 px-4">
-      {items.map((item) => {
-        const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+      {NAV_ITEMS.map((item) => {
+        const active = isActive(item, pathname);
+        const badge = item.unread ? unreadCount : 0;
         return (
           <Link
             key={item.href}
@@ -47,12 +28,12 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
             )}
             <item.icon className="h-5 w-5 shrink-0" />
             <span className="sidebar-label text-sm font-semibold">{item.label}</span>
-            {!!item.badge && (
+            {!!badge && (
               <span className="sidebar-badge ml-auto rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-white">
-                {item.badge > 9 ? "9+" : item.badge}
+                {badge > 9 ? "9+" : badge}
               </span>
             )}
-            <NavPendingIndicator hasBadge={!!item.badge} />
+            <NavPendingIndicator hasBadge={!!badge} />
           </Link>
         );
       })}

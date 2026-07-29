@@ -58,7 +58,7 @@ export default async function AdminProductsPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-border bg-paper px-4 py-4 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-0">
+      <header className="page-header flex flex-col gap-3 border-b border-border bg-paper px-4 py-4 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-0">
         <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Ürünler</h1>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <form action="/admin/products" className="relative flex w-full items-center rounded-md border border-border bg-card sm:w-64">

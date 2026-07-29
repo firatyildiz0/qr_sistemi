@@ -9,9 +9,12 @@ import {
   IconPalette,
   IconSliders,
   IconSun,
+  IconTruck,
   IconUndo,
   IconUser,
 } from "@/components/icons";
+import TurnaroundSettings from "@/components/admin/TurnaroundSettings";
+import type { Turnaround } from "@/lib/turnaround";
 import {
   ACCENTS,
   DEFAULT_PREFERENCES,
@@ -24,9 +27,15 @@ import {
   type Theme,
 } from "@/lib/preferences";
 
-type CategoryId = "appearance" | "layout" | "accessibility" | "account";
+type CategoryId =
+  | "turnaround"
+  | "appearance"
+  | "layout"
+  | "accessibility"
+  | "account";
 
 const CATEGORIES: { id: CategoryId; label: string; hint: string; icon: typeof IconPalette }[] = [
+  { id: "turnaround", label: "Teslimat süreleri", hint: "Kargo ve hazırlık", icon: IconTruck },
   { id: "appearance", label: "Görünüm", hint: "Tema ve renk", icon: IconPalette },
   { id: "layout", label: "Panel düzeni", hint: "Yoğunluk ve köşeler", icon: IconSliders },
   { id: "accessibility", label: "Erişilebilirlik", hint: "Hareket", icon: IconAccessibility },
@@ -61,13 +70,15 @@ const RADIUS_OPTIONS: { value: Radius; label: string }[] = [
 
 export default function SettingsPanel({
   initial,
+  turnaround,
   email,
 }: {
   initial: Preferences;
+  turnaround: Turnaround;
   email: string;
 }) {
   const [preferences, setPreferences] = useState(initial);
-  const [category, setCategory] = useState<CategoryId>("appearance");
+  const [category, setCategory] = useState<CategoryId>("turnaround");
   const [saved, setSaved] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -136,6 +147,8 @@ export default function SettingsPanel({
             </span>
           )}
         </div>
+
+        {category === "turnaround" && <TurnaroundSettings initial={turnaround} />}
 
         {category === "appearance" && (
           <div className="flex flex-col gap-6">
@@ -272,9 +285,14 @@ export default function SettingsPanel({
           </div>
         )}
 
-        <p className="mt-6 text-xs text-ink-muted">
-          Bu ayarlar bu tarayıcıda saklanır ve yalnızca sizin görünümünüzü etkiler.
-        </p>
+        {/* Teslimat süreleri hesaba giren gerçek veri; görünüm ayarları ise
+            yalnızca bu tarayıcıda duruyor. İkisini aynı notla anlatmak
+            yanıltıcı olurdu. */}
+        {category !== "turnaround" && (
+          <p className="mt-6 text-xs text-ink-muted">
+            Bu ayarlar bu tarayıcıda saklanır ve yalnızca sizin görünümünüzü etkiler.
+          </p>
+        )}
       </div>
     </div>
   );

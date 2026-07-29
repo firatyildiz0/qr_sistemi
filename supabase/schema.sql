@@ -34,14 +34,43 @@ create table if not exists bookings (
   customer_address text,
   start_date date not null,
   end_date date not null,
+  -- Kargo mu elden mi. Müşterinin ilinden türetilir (Bursa → elden), ama
+  -- satıcı istisnai durumlar için elle değiştirebildiğinden saklanır.
+  delivery_mode text not null check (delivery_mode in ('kargo', 'elden')),
+  -- Ürünün gerçekte meşgul olduğu aralık: kiralamadan önce yola çıktığı
+  -- günden temizlenip tekrar kiralanabilir hale geldiği güne kadar. Kayıt
+  -- anında `rental_settings` sürelerinden hesaplanıp yazılır — müsaitlik
+  -- kontrolü kiralama tarihlerine değil buna bakar.
+  blocked_start date not null,
+  blocked_end date not null,
   status text not null default 'upcoming'
     check (status in ('upcoming', 'active', 'completed', 'cancelled')),
   created_at timestamptz not null default now(),
-  constraint bookings_date_range check (end_date >= start_date)
+  constraint bookings_date_range check (end_date >= start_date),
+  constraint bookings_blocked_range check (
+    blocked_end >= blocked_start
+    and blocked_start <= start_date
+    and blocked_end >= end_date
+  )
 );
 
 create index if not exists bookings_product_id_idx on bookings(product_id);
+-- `end_date` bildirim cron'u için, `blocked_end` müsaitlik sorguları için.
 create index if not exists bookings_end_date_idx on bookings(end_date);
+create index if not exists bookings_blocked_end_idx on bookings(blocked_end);
+
+-- Satıcı başına ürün dönüş süreleri: kargo ve elden teslim için ayrı ayrı
+-- gidiş, iade gecikmesi, dönüş ve hazırlık günleri. Rezervasyonun meşguliyet
+-- aralığı bunlardan hesaplanır. jsonb, çünkü yalnızca uygulama okuyor ve
+-- bozuk/eksik alanlar `parseTurnaround` içinde varsayılana düşüyor.
+create table if not exists rental_settings (
+  owner_id uuid primary key references auth.users(id) on delete cascade,
+  turnaround jsonb not null default '{
+    "kargo": {"outbound": 3, "returnLag": 1, "inbound": 2, "prep": 0},
+    "elden": {"outbound": 1, "returnLag": 1, "inbound": 1, "prep": 1}
+  }'::jsonb,
+  updated_at timestamptz not null default now()
+);
 
 -- Availability is limited by stock, not by the calendar: a product with stock
 -- 2 can carry two bookings on the same date, and a day only closes once as
@@ -49,6 +78,11 @@ create index if not exists bookings_end_date_idx on bookings(end_date);
 -- this before inserting, but that is a read-then-write; this trigger is the
 -- authority. The advisory lock serialises concurrent bookings for the same
 -- product so two requests can't both take the last unit.
+--
+-- Taranan aralık kiralama günleri değil `blocked_start`/`blocked_end`: ürün
+-- kına gününden önce yola çıkıyor, düğünden sonra da dönüp temizleniyor. O
+-- aralık kayıt anında hesaplanıp yazıldığı için burada ayar tablosunu okumak
+-- ya da teslimat şekline göre dallanmak gerekmiyor.
 create or replace function enforce_booking_stock()
 returns trigger
 language plpgsql
@@ -75,19 +109,19 @@ begin
   end if;
 
   select day::date into v_full_day
-  from generate_series(new.start_date::timestamp, new.end_date::timestamp, interval '1 day') as g(day)
+  from generate_series(new.blocked_start::timestamp, new.blocked_end::timestamp, interval '1 day') as g(day)
   where (
     select count(*)
     from bookings b
     where b.product_id = new.product_id
       and b.status <> 'cancelled'
       and b.id <> new.id
-      and g.day::date between b.start_date and b.end_date
+      and g.day::date between b.blocked_start and b.blocked_end
   ) >= v_stock
   limit 1;
 
   if v_full_day is not null then
-    raise exception 'Stok dolu: % tarihinde müsait ürün kalmadı.', to_char(v_full_day, 'DD.MM.YYYY');
+    raise exception 'Stok dolu: % tarihinde müsait ürün kalmadı (kargo ve hazırlık süreleri dahil).', to_char(v_full_day, 'DD.MM.YYYY');
   end if;
 
   return new;
@@ -97,7 +131,7 @@ $$;
 drop trigger if exists bookings_enforce_stock on bookings;
 
 create trigger bookings_enforce_stock
-  before insert or update of product_id, start_date, end_date, status on bookings
+  before insert or update of product_id, start_date, end_date, blocked_start, blocked_end, status on bookings
   for each row
   execute function enforce_booking_stock();
 
@@ -129,6 +163,19 @@ create unique index if not exists notifications_booking_id_unique on notificatio
 alter table products enable row level security;
 alter table bookings enable row level security;
 alter table notifications enable row level security;
+alter table rental_settings enable row level security;
+
+-- rental_settings: satıcının kendi işletme ayarı. Ne başkası okur ne yazar.
+create policy "rental_settings_select_owner" on rental_settings
+  for select to authenticated using (owner_id = (select auth.uid()));
+
+create policy "rental_settings_insert_owner" on rental_settings
+  for insert to authenticated with check (owner_id = (select auth.uid()));
+
+create policy "rental_settings_update_owner" on rental_settings
+  for update to authenticated
+  using (owner_id = (select auth.uid()))
+  with check (owner_id = (select auth.uid()));
 
 -- products: public read, owner-only write
 create policy "products_select_public" on products

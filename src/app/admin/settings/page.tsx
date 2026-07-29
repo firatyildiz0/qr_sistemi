@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { PREFERENCES_COOKIE, parsePreferences } from "@/lib/preferences";
+import { getTurnaround } from "@/lib/settings";
 import SettingsPanel from "@/components/admin/SettingsPanel";
 
 export const metadata = { title: "Ayarlar" };
@@ -9,7 +10,11 @@ export default async function SettingsPage() {
   // Reading the preferences here rather than in the client is what keeps the
   // form free of a hydration mismatch: the server renders the same values the
   // pre-hydration script already applied to <html>.
-  const [cookieStore, user] = await Promise.all([cookies(), getCurrentUser()]);
+  const [cookieStore, user, turnaround] = await Promise.all([
+    cookies(),
+    getCurrentUser(),
+    getTurnaround(),
+  ]);
   const preferences = parsePreferences(cookieStore.get(PREFERENCES_COOKIE)?.value);
 
   return (
@@ -19,7 +24,11 @@ export default async function SettingsPage() {
       </header>
 
       <div className="mx-auto w-full max-w-5xl flex-1 p-4 sm:p-8">
-        <SettingsPanel initial={preferences} email={user?.email ?? "—"} />
+        <SettingsPanel
+          initial={preferences}
+          turnaround={turnaround}
+          email={user?.email ?? "—"}
+        />
       </div>
     </div>
   );

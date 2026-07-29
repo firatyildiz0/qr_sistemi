@@ -7,19 +7,25 @@ import { PROVINCES, districtsOf } from "@/lib/turkiye";
  * İl → ilçe → açık adres. İlçe listesi seçili ile bağlı olduğu için ikisi de
  * kontrollü: il değişince eski ilçe artık geçerli değildir ve sıfırlanır.
  *
- * Alanlar opsiyoneldir; sunucu tarafı yine de ilçenin gerçekten seçilen ile
- * ait olduğunu doğrular.
+ * İl ve ilçe zorunludur: ürünün takvimde kaç gün bloke kalacağı teslimatın
+ * Bursa içinde mi dışında mı olduğuna bağlı, o yüzden il olmadan rezervasyon
+ * hesaplanamaz. Açık adres opsiyonel. Sunucu tarafı ikisini de tekrar doğrular.
+ *
+ * `onCityChange` ile seçilen il yukarı bildirilir; form teslimat şeklini ve
+ * bloke aralığı önizlemesini buna göre günceller.
  */
 export default function AddressFields({
   defaultCity = "",
   defaultDistrict = "",
   defaultAddress = "",
   showLabels = true,
+  onCityChange,
 }: {
   defaultCity?: string | null;
   defaultDistrict?: string | null;
   defaultAddress?: string | null;
   showLabels?: boolean;
+  onCityChange?: (city: string) => void;
 }) {
   const id = useId();
   const [city, setCity] = useState(defaultCity ?? "");
@@ -32,17 +38,19 @@ export default function AddressFields({
         <div>
           {showLabels && (
             <label htmlFor={`${id}-city`} className="field-label">
-              İl (opsiyonel)
+              İl
             </label>
           )}
           <select
             id={`${id}-city`}
             name="customer_city"
             aria-label="İl"
+            required
             value={city}
             onChange={(e) => {
               setCity(e.target.value);
               setDistrict("");
+              onCityChange?.(e.target.value);
             }}
             className="input"
           >
@@ -65,6 +73,7 @@ export default function AddressFields({
             id={`${id}-district`}
             name="customer_district"
             aria-label="İlçe"
+            required
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
             disabled={!city}
@@ -83,7 +92,7 @@ export default function AddressFields({
       <div>
         {showLabels && (
           <label htmlFor={`${id}-address`} className="field-label">
-            Açık adres
+            Açık adres (opsiyonel)
           </label>
         )}
         <textarea

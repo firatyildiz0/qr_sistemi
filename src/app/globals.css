@@ -428,6 +428,15 @@ summary,
     color: var(--color-accent-strong);
   }
 
+  /* Engellemeyen uyarı kutusu: kayıt yine de yapılabilir, ama satıcının
+     bilmesi gereken bir şey var (ör. gidiş kargosunun günü geçmiş). */
+  .notice-warning {
+    background: color-mix(in oklab, var(--color-warning) 12%, var(--color-card));
+    color: color-mix(in oklab, var(--color-warning) 75%, var(--color-ink));
+    border: 1px solid color-mix(in oklab, var(--color-warning) 30%, transparent);
+    border-radius: 8px;
+  }
+
   .icon-btn {
     display: inline-flex;
     align-items: center;
@@ -478,6 +487,19 @@ summary,
 .rdp-partly {
   background-color: var(--color-partial-soft);
   color: var(--color-accent-strong);
+}
+
+/* Kirada değil ama elde de değil: ürün ya kargoda ya temizlikte. Kiralamayla
+   karışmasın diye vurgu renginden değil `warning`ten türetiliyor — satıcı
+   takvimde "burada rezervasyon yok, neden kapalı?" diye takılmasın. */
+.rdp-blocked {
+  background-color: color-mix(in oklab, var(--color-warning) 24%, var(--color-card));
+  color: color-mix(in oklab, var(--color-warning) 70%, var(--color-ink));
+  text-decoration: line-through;
+}
+.rdp-blocked-partly {
+  background-color: color-mix(in oklab, var(--color-warning) 11%, var(--color-card));
+  color: color-mix(in oklab, var(--color-warning) 70%, var(--color-ink));
 }
 
 /* Days a booking covers, on the single-booking calendar. */

@@ -437,3 +437,24 @@ export function IconUndo(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconTruck(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M2.5 6.5A1.5 1.5 0 0 1 4 5h9.5v11H4a1.5 1.5 0 0 1-1.5-1.5z" />
+      <path d="M13.5 9H17l4 3.5V16h-7.5z" />
+      <circle cx="7" cy="18" r="2" />
+      <circle cx="17.5" cy="18" r="2" />
+    </svg>
+  );
+}
+
+export function IconAlertTriangle(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M10.3 3.9 2.5 17.4A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3.1L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4.5" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}

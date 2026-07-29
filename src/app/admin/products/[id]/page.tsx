@@ -7,7 +7,8 @@ import ProductForm from "@/components/admin/ProductForm";
 import QRCodeCard from "@/components/admin/QRCodeCard";
 import DeleteProductButton from "@/components/admin/DeleteProductButton";
 import type { Booking } from "@/lib/types";
-import { bookedCountByDate } from "@/lib/bookings";
+import { availabilityOf } from "@/lib/bookings";
+import { getTurnaround } from "@/lib/settings";
 import BookingForm from "@/components/booking/BookingForm";
 import BookingList from "@/components/booking/BookingList";
 import { IconChevronRight } from "@/components/icons";
@@ -22,7 +23,7 @@ export default async function EditProductPage({
   // Identity resolution and both queries go out together; previously the user
   // lookup blocked the queries even though nothing needed it until the
   // ownership check below.
-  const [user, { data: product }, { data: bookings }] = await Promise.all([
+  const [user, { data: product }, { data: bookings }, turnaround] = await Promise.all([
     getCurrentUser(),
     supabase.from("products").select("*").eq("id", id).single(),
     supabase
@@ -30,14 +31,17 @@ export default async function EditProductPage({
       .select("*")
       .eq("product_id", id)
       .order("start_date", { ascending: true }),
+    getTurnaround(),
   ]);
 
   if (!product || product.owner_id !== user?.id) notFound();
 
   // Per-day counts rather than plain ranges: a day is unavailable only when
-  // as many bookings cover it as the product has units in stock.
-  const bookedCounts = bookedCountByDate(
-    (bookings ?? []).filter((b: Booking) => b.status !== "cancelled")
+  // as many bookings cover it as the product has units in stock. Sayılan
+  // aralık kiralama günleri değil, ürünün elde olmadığı günler.
+  const availability = availabilityOf(
+    (bookings ?? []).filter((b: Booking) => b.status !== "cancelled"),
+    turnaround
   );
 
   return (
@@ -71,11 +75,21 @@ export default async function EditProductPage({
         <h2 className="mb-6 text-lg font-semibold text-ink">Müsaitlik</h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div>
-            <BookingForm productId={id} bookedCounts={bookedCounts} stock={product.stock} />
+            <BookingForm
+              productId={id}
+              availability={availability}
+              stock={product.stock}
+              turnaround={turnaround}
+            />
           </div>
           <div>
             <h3 className="field-label">Kiralamalar</h3>
-            <BookingList bookings={bookings ?? []} productId={id} stock={product.stock} />
+            <BookingList
+              bookings={bookings ?? []}
+              productId={id}
+              stock={product.stock}
+              turnaround={turnaround}
+            />
           </div>
         </div>
       </section>

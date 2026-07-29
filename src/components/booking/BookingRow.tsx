@@ -9,38 +9,74 @@ import type { Booking, BookingStatus } from "@/lib/types";
 import {
   bookingStatusLabel,
   bookingStatusPill,
+  computeOccupancySpan,
   datesInRange,
+  daysByState,
   formatDateRange,
-  partlyBookedDays,
-  soldOutDays,
+  occupancySpanError,
+  sameSpan,
+  unavailableDays,
   unitsLeftOn,
+  type Availability,
+  type DateSpan,
 } from "@/lib/bookings";
 import { cancelBooking, editBooking, type BookingFormState } from "@/app/product/[id]/actions";
+import {
+  DELIVERY_MODE_LABEL,
+  deliveryModeForCity,
+  type DeliveryMode,
+  type Turnaround,
+} from "@/lib/turnaround";
 import { formatAddress, formatRegion } from "@/lib/turkiye";
 import AddressFields from "@/components/booking/AddressFields";
+import AvailabilityLegend from "@/components/booking/AvailabilityLegend";
+import DeliveryPlan from "@/components/booking/DeliveryPlan";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { IconCalendar, IconMapPin, IconPencil, IconPhone, IconX } from "@/components/icons";
+import { IconCalendar, IconMapPin, IconPencil, IconPhone, IconTruck, IconX } from "@/components/icons";
 
 const initialState: BookingFormState = { error: null };
 
 const toDate = (day: string) => new Date(day + "T00:00:00");
+const todayString = () => format(new Date(), "yyyy-MM-dd");
 
 export default function BookingRow({
   booking,
   status,
   productId,
-  otherBookedCounts,
+  otherAvailability,
   stock,
+  turnaround,
   delay = 0,
 }: {
   booking: Booking;
   status: BookingStatus;
   productId: string;
-  /** Days-to-units-out for every *other* booking on this product. */
-  otherBookedCounts: Record<string, number>;
+  /** Availability from every *other* booking on this product. */
+  otherAvailability: Availability;
   stock: number;
+  turnaround: Turnaround;
   delay?: number;
 }) {
+  /**
+   * Kayıtlı aralık, ayarlardaki sürelerden hesaplanana eşit değilse satıcı onu
+   * elle girmiş demektir — düzenlemeye o tarihlerle açılmalı, yoksa forma
+   * girer girmez sessizce otomatik hesaba dönerdi.
+   */
+  function storedOverride(): DateSpan | null {
+    if (!booking.blocked_start || !booking.blocked_end) return null;
+    const stored = {
+      start_date: booking.blocked_start,
+      end_date: booking.blocked_end,
+    };
+    const auto = computeOccupancySpan(
+      booking.start_date,
+      booking.end_date,
+      booking.delivery_mode ?? deliveryModeForCity(booking.customer_city),
+      turnaround
+    );
+    return sameSpan(stored, auto) ? null : stored;
+  }
+
   const [editing, setEditing] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const editAction = editBooking.bind(null, productId, booking.id);
@@ -52,6 +88,11 @@ export default function BookingRow({
   // Controlled so the calendar opens on the month the booking actually falls
   // in — a booking in August must not open on today's month.
   const [month, setMonth] = useState(toDate(booking.start_date));
+  const [city, setCity] = useState(booking.customer_city ?? "");
+  const [modeOverride, setModeOverride] = useState<DeliveryMode | null>(
+    booking.delivery_mode
+  );
+  const [blockedOverride, setBlockedOverride] = useState<DateSpan | null>(storedOverride);
   const [prevState, setPrevState] = useState(state);
 
   // Saved successfully — collapse back to the summary row, which the
@@ -70,20 +111,40 @@ export default function BookingRow({
 
   // Only days where every other booking has taken the last unit are closed;
   // past days stay open because an active booking already starts in the past.
-  const soldOut = soldOutDays(otherBookedCounts, stock);
-  const partly = partlyBookedDays(otherBookedCounts, stock);
+  const days = daysByState(otherAvailability, stock);
+  const unavailable = unavailableDays(otherAvailability, stock);
+
+  const mode: DeliveryMode = modeOverride ?? deliveryModeForCity(city);
+  const rental = { start_date: startStr, end_date: endStr };
+  const blocked =
+    blockedOverride ?? computeOccupancySpan(startStr, endStr, mode, turnaround);
+  const blockedError = occupancySpanError(blocked, startStr, endStr);
+  const shipsLate = blocked.start_date <= todayString();
+
+  function selectRange(next: DateRange | undefined) {
+    setRange(next);
+    setBlockedOverride(null);
+  }
+
+  function selectMode(next: DeliveryMode) {
+    setModeOverride(next);
+    setBlockedOverride(null);
+  }
 
   const unitsLeft = Math.min(
     ...datesInRange(startStr, endStr).map((day) =>
-      unitsLeftOn(otherBookedCounts, stock, day)
+      unitsLeftOn(otherAvailability.occupied, stock, day)
     )
   );
 
   function openEditor() {
-    // Always reopen on the booking's own dates and month, even if a previous
-    // edit was abandoned halfway through.
+    // Always reopen on the booking's own dates, month and delivery choice,
+    // even if a previous edit was abandoned halfway through.
     setRange({ from: toDate(booking.start_date), to: toDate(booking.end_date) });
     setMonth(toDate(booking.start_date));
+    setCity(booking.customer_city ?? "");
+    setModeOverride(booking.delivery_mode);
+    setBlockedOverride(storedOverride());
     setEditing(true);
   }
 
@@ -103,17 +164,28 @@ export default function BookingRow({
                 month={month}
                 onMonthChange={setMonth}
                 selected={range}
-                onSelect={setRange}
+                onSelect={selectRange}
                 // Without this, clicking a day while a complete range is
                 // selected only trims that range — so the dates look stuck.
                 // With it, the click starts a fresh range from that day.
                 resetOnSelect
                 excludeDisabled
-                disabled={soldOut}
-                modifiers={{ booked: soldOut, partly }}
-                modifiersClassNames={{ booked: "rdp-booked", partly: "rdp-partly" }}
+                disabled={unavailable}
+                modifiers={{
+                  booked: days.full,
+                  blocked: days.blocked,
+                  partly: days.partly,
+                  blockedPartly: days["partly-blocked"],
+                }}
+                modifiersClassNames={{
+                  booked: "rdp-booked",
+                  blocked: "rdp-blocked",
+                  partly: "rdp-partly",
+                  blockedPartly: "rdp-blocked-partly",
+                }}
                 numberOfMonths={1}
               />
+              <AvailabilityLegend stock={stock} />
             </div>
             <p className="count-up mt-2 text-sm font-medium text-ink">
               {formatDateRange(startStr, endStr)}
@@ -146,10 +218,29 @@ export default function BookingRow({
             defaultDistrict={booking.customer_district}
             defaultAddress={booking.customer_address}
             showLabels={false}
+            onCityChange={setCity}
           />
+
+          <DeliveryPlan
+            city={city}
+            mode={mode}
+            onModeChange={selectMode}
+            rental={rental}
+            blocked={blocked}
+            manual={blockedOverride !== null}
+            onBlockedChange={setBlockedOverride}
+            error={blockedError}
+            turnaround={turnaround}
+            shipsLate={shipsLate}
+          />
+
           {state.error && <p className="text-sm text-danger">{state.error}</p>}
           <div className="flex gap-2">
-            <button type="submit" disabled={pending} className="btn btn-primary min-h-0 py-2 text-xs">
+            <button
+              type="submit"
+              disabled={pending || blockedError !== null}
+              className="btn btn-primary min-h-0 py-2 text-xs"
+            >
               {pending ? "Kaydediliyor…" : "Değişiklikleri kaydet"}
             </button>
             <button
@@ -190,6 +281,21 @@ export default function BookingRow({
             <span className="flex min-w-0 items-center gap-1.5" title={formatAddress(booking) ?? undefined}>
               <IconMapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{region}</span>
+            </span>
+          )}
+          {/* Kiralama tarihleri ürünün ne kadar süre meşgul olduğunu
+              anlatmıyor; takvimdeki kapalı günlerin karşılığı bu aralık. */}
+          {booking.delivery_mode && booking.blocked_start && booking.blocked_end && (
+            <span
+              className="flex items-center gap-1.5"
+              title={`Ürün ${formatDateRange(
+                booking.blocked_start,
+                booking.blocked_end
+              )} arasında elinizde değil.`}
+            >
+              <IconTruck className="h-3.5 w-3.5 shrink-0" />
+              {DELIVERY_MODE_LABEL[booking.delivery_mode]} ·{" "}
+              {formatDateRange(booking.blocked_start, booking.blocked_end)} bloke
             </span>
           )}
         </div>

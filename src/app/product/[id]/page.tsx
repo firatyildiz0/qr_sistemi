@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Booking } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
-import { bookedCountByDate } from "@/lib/bookings";
+import { availabilityOf } from "@/lib/bookings";
+import { getTurnaround } from "@/lib/settings";
 import AvailabilityCalendar from "@/components/booking/AvailabilityCalendar";
 import BookingForm from "@/components/booking/BookingForm";
 import BookingList from "@/components/booking/BookingList";
@@ -23,6 +24,11 @@ export default async function ProductDetailPage({
     },
     { data: product },
     { data: bookings },
+    // Ziyaretçi satıcı değilse RLS bunu okutmaz ve varsayılanlar döner — sorun
+    // değil, çünkü kayıtlı rezervasyonların bloke aralığı zaten kendi
+    // kolonlarında yazılı. Süreler yalnızca satıcının formundaki canlı
+    // önizleme için gerekiyor.
+    turnaround,
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("products").select("*").eq("id", id).single(),
@@ -31,6 +37,7 @@ export default async function ProductDetailPage({
       .select("*")
       .eq("product_id", id)
       .order("start_date", { ascending: true }),
+    getTurnaround(),
   ]);
 
   if (!product) notFound();
@@ -39,9 +46,11 @@ export default async function ProductDetailPage({
   const images: string[] = (product.images ?? []).slice(0, 2);
 
   // Per-day counts rather than plain ranges: a day is unavailable only when
-  // as many bookings cover it as the product has units in stock.
-  const bookedCounts = bookedCountByDate(
-    (bookings ?? []).filter((b: Booking) => b.status !== "cancelled")
+  // as many bookings cover it as the product has units in stock. Sayılan
+  // aralık kiralama günleri değil, ürünün elde olmadığı günler.
+  const availability = availabilityOf(
+    (bookings ?? []).filter((b: Booking) => b.status !== "cancelled"),
+    turnaround
   );
 
   return (
@@ -110,16 +119,26 @@ export default async function ProductDetailPage({
             {isOwner ? "Yeni rezervasyon" : "Müsaitlik"}
           </h2>
           {isOwner ? (
-            <BookingForm productId={id} bookedCounts={bookedCounts} stock={product.stock} />
+            <BookingForm
+              productId={id}
+              availability={availability}
+              stock={product.stock}
+              turnaround={turnaround}
+            />
           ) : (
-            <AvailabilityCalendar bookedCounts={bookedCounts} stock={product.stock} />
+            <AvailabilityCalendar availability={availability} stock={product.stock} />
           )}
         </section>
 
         {isOwner && (
           <section className="mt-10">
             <h2 className="mb-3 text-lg font-semibold text-ink">Kiralamalar</h2>
-            <BookingList bookings={bookings ?? []} productId={id} stock={product.stock} />
+            <BookingList
+              bookings={bookings ?? []}
+              productId={id}
+              stock={product.stock}
+              turnaround={turnaround}
+            />
           </section>
         )}
       </div>

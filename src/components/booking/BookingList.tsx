@@ -1,5 +1,6 @@
 import type { Booking } from "@/lib/types";
-import { bookedCountByDate, displayStatus } from "@/lib/bookings";
+import { availabilityOf, displayStatus } from "@/lib/bookings";
+import type { Turnaround } from "@/lib/turnaround";
 import BookingRow from "@/components/booking/BookingRow";
 import { IconCalendar } from "@/components/icons";
 
@@ -7,10 +8,12 @@ export default function BookingList({
   bookings,
   productId,
   stock,
+  turnaround,
 }: {
   bookings: Booking[];
   productId: string;
   stock: number;
+  turnaround: Turnaround;
 }) {
   if (bookings.length === 0) {
     return (
@@ -33,10 +36,14 @@ export default function BookingList({
           status={displayStatus(b)}
           productId={productId}
           stock={stock}
+          turnaround={turnaround}
           delay={i * 60}
           // The row being edited must not count itself as competition for its
           // own dates, otherwise its current days look sold out.
-          otherBookedCounts={bookedCountByDate(active.filter((other) => other.id !== b.id))}
+          otherAvailability={availabilityOf(
+            active.filter((other) => other.id !== b.id),
+            turnaround
+          )}
         />
       ))}
     </div>

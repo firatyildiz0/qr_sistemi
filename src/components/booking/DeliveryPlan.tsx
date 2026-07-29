@@ -1,15 +1,23 @@
 "use client";
 
-import { addDays, formatDateRange, type DateSpan } from "@/lib/bookings";
+import type { ReactNode } from "react";
+import { addDays, formatDateRange, nightsBetween, type DateSpan } from "@/lib/bookings";
 import {
   DELIVERY_MODES,
   DELIVERY_MODE_HINT,
   DELIVERY_MODE_LABEL,
   deliveryModeForCity,
+  MAX_TURNAROUND_DAYS,
   type DeliveryMode,
   type Turnaround,
 } from "@/lib/turnaround";
-import { IconAlertTriangle, IconTruck } from "@/components/icons";
+import {
+  IconAlertTriangle,
+  IconMinus,
+  IconPlus,
+  IconTruck,
+  IconUndo,
+} from "@/components/icons";
 
 const day = (date: string) => formatDateRange(date, date);
 
@@ -59,12 +67,21 @@ export default function DeliveryPlan({
   const automatic = deliveryModeForCity(city);
   const overridden = Boolean(city) && mode !== automatic;
 
-  const editable = Boolean(rental && blocked);
-
-  function setEdge(edge: "start_date" | "end_date", value: string) {
-    if (!blocked || !value) return;
-    onBlockedChange({ ...blocked, [edge]: value });
+  /**
+   * Tarihler gün gün kaydırılıyor, takvim açtırmak yerine: satıcının burada
+   * yaptığı düzeltme neredeyse her zaman "bir gün önce çıksın" ya da "iki gün
+   * geç dönecek" oluyor. Sınırlar da adımlayıcının kendisinde — kiralama
+   * günlerinin içine taşan ya da 60 günü aşan bir tarih hiç seçilemiyor.
+   */
+  function shift(edge: "start_date" | "end_date", days: number) {
+    if (!blocked) return;
+    onBlockedChange({ ...blocked, [edge]: addDays(blocked[edge], days) });
   }
+
+  // Meşguliyetin kiralama günlerinden önceye ve sonraya taşan gün sayısı; hem
+  // satır açıklamalarını hem adımlayıcıların sınırlarını bunlar belirliyor.
+  const head = rental && blocked ? nightsBetween(blocked.start_date, rental.start_date) : 0;
+  const tail = rental && blocked ? nightsBetween(rental.end_date, blocked.end_date) : 0;
 
   return (
     <div className="rounded-lg border border-border bg-surface p-3">
@@ -107,50 +124,57 @@ export default function DeliveryPlan({
         )}
       </p>
 
-      {blocked && (
+      {rental && blocked && (
         <>
           <input type="hidden" name="blocked_start" value={blocked.start_date} />
           <input type="hidden" name="blocked_end" value={blocked.end_date} />
 
-          <div className="mt-3 space-y-2 border-t border-border pt-3 text-xs">
-            <div className="flex items-center justify-between gap-3">
+          <div className="mt-3 border-t border-border pt-3">
+            <div className="mb-2 flex items-center justify-between gap-3 text-xs">
               <span className="text-ink-muted">
                 {manual
-                  ? "Tarihleri elle belirlediniz."
+                  ? "Tarihleri elle ayarladınız."
                   : "Tarihler teslimat süresine göre hesaplandı."}
               </span>
               {manual && (
                 <button
                   type="button"
                   onClick={() => onBlockedChange(null)}
-                  className="shrink-0 font-medium text-accent-strong underline underline-offset-2"
+                  className="-my-1 flex shrink-0 items-center gap-1 rounded px-1.5 py-1 font-medium text-accent-strong transition-colors hover:bg-accent-soft"
                 >
+                  <IconUndo className="h-3.5 w-3.5" />
                   Otomatiğe dön
                 </button>
               )}
             </div>
 
-            <EditableRow
-              label="Ürün elinizden çıkar"
-              value={blocked.start_date}
-              max={rental?.start_date}
-              disabled={!editable}
-              onChange={(value) => setEdge("start_date", value)}
-            />
-            <EditableRow
-              label="Ürün tekrar hazır olur"
-              value={blocked.end_date}
-              min={rental?.end_date}
-              disabled={!editable}
-              onChange={(value) => setEdge("end_date", value)}
-            />
+            <div className="space-y-1.5">
+              <DateStepper
+                label="Ürün elinizden çıkar"
+                value={blocked.start_date}
+                hint={offsetLabel(head, "kiralamanın ilk günü", "kiralamadan % gün önce")}
+                canDecrease={head < MAX_TURNAROUND_DAYS}
+                // Kiralamanın ilk gününde ürün müşteride olmak zorunda, o yüzden
+                // çıkış tarihi oradan ileri gidemez.
+                canIncrease={head > 0}
+                onShift={(days) => shift("start_date", days)}
+              />
+              <DateStepper
+                label="Ürün tekrar hazır olur"
+                value={blocked.end_date}
+                hint={offsetLabel(tail, "kiralamanın son günü", "bitişten % gün sonra")}
+                canDecrease={tail > 0}
+                canIncrease={tail < MAX_TURNAROUND_DAYS}
+                onShift={(days) => shift("end_date", days)}
+              />
+            </div>
 
-            <div className="flex items-baseline justify-between gap-3 pt-1">
+            <p className="mt-2.5 flex items-baseline justify-between gap-3 text-xs">
               <span className="text-ink-muted">Sıradaki rezervasyon en erken</span>
               <span className="font-semibold text-ink">
                 {day(addDays(blocked.end_date, 1 + turnaround[mode].outbound))}
               </span>
-            </div>
+            </p>
           </div>
         </>
       )}
@@ -172,40 +196,88 @@ export default function DeliveryPlan({
 }
 
 /**
- * Tarihi hem okunur biçimde gösterip hem düzenletmek gerekiyor: satıcı "12 Ağu
- * 2026"yı okuyor ama düzenlerken takvim bekliyor. Native `date` alanı ikisini
- * de veriyor, o yüzden okunur metin alanın yanında ayrıca yazılıyor.
+ * Kiralama tarihine göre kaç gün öteye düştüğünü anlatır: satıcı için asıl
+ * anlamlı olan "12 Ağustos" değil "bitişten 3 gün sonra". Çıplak "3 gün önce"
+ * neye göre olduğunu söylemediği için cümle her satırda tam yazılıyor.
  */
-function EditableRow({
+function offsetLabel(days: number, sameDay: string, template: string): string {
+  return days === 0 ? sameDay : template.replace("%", String(days));
+}
+
+/**
+ * Bir tarihi gün gün kaydıran satır. Tarihin kendisi ve kiralamaya olan
+ * uzaklığı birlikte görünüyor, çünkü satıcı ayarı ikincisine bakarak yapıp
+ * birincisini takvimle karşılaştırıyor.
+ */
+function DateStepper({
   label,
   value,
-  min,
-  max,
-  disabled,
-  onChange,
+  hint,
+  canDecrease,
+  canIncrease,
+  onShift,
 }: {
   label: string;
   value: string;
-  min?: string;
-  max?: string;
-  disabled: boolean;
-  onChange: (value: string) => void;
+  /** Tarihin kiralama gününe uzaklığını anlatan cümle. */
+  hint: string;
+  canDecrease: boolean;
+  canIncrease: boolean;
+  onShift: (days: number) => void;
 }) {
   return (
-    <label className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-      <span className="text-ink-muted">{label}</span>
-      <span className="flex items-center gap-2">
-        <span className="text-ink">{day(value)}</span>
-        <input
-          type="date"
-          value={value}
-          min={min}
-          max={max}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          className="input h-8 w-38 px-2 py-0 text-xs"
-        />
-      </span>
-    </label>
+    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card py-1.5 pl-2.5 pr-1.5">
+      <div className="min-w-0">
+        <p className="truncate text-xs font-medium text-ink">{label}</p>
+        <p className="text-[11px] text-ink-muted">{hint}</p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-0.5">
+        <StepButton
+          label={`${label}: bir gün geri al`}
+          disabled={!canDecrease}
+          onClick={() => onShift(-1)}
+        >
+          <IconMinus className="h-3.5 w-3.5" />
+        </StepButton>
+
+        <span className="w-26 text-center text-xs font-semibold tabular-nums text-ink">
+          {day(value)}
+        </span>
+
+        <StepButton
+          label={`${label}: bir gün ileri al`}
+          disabled={!canIncrease}
+          onClick={() => onShift(1)}
+        >
+          <IconPlus className="h-3.5 w-3.5" />
+        </StepButton>
+      </div>
+    </div>
+  );
+}
+
+function StepButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface text-ink-muted transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-border disabled:hover:text-ink-muted"
+    >
+      {children}
+    </button>
   );
 }

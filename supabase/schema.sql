@@ -87,10 +87,14 @@ create table if not exists products (
   description text,
   features text[],
   daily_price numeric,
+  -- Kiralamadan alınan depozito; girilmemişse teminat alınmıyor demektir.
+  deposit_price numeric,
   stock integer not null default 1,
   images text[] not null default '{}',
   created_at timestamptz not null default now(),
   constraint products_stock_non_negative check (stock >= 0),
+  constraint products_deposit_price_non_negative
+    check (deposit_price is null or deposit_price >= 0),
   constraint products_images_max_two check (coalesce(array_length(images, 1), 0) <= 2)
 );
 

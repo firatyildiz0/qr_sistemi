@@ -58,6 +58,18 @@ function parseImages(raw: FormDataEntryValue[]): string[] {
     .slice(0, MAX_PRODUCT_IMAGES);
 }
 
+/**
+ * Boş bırakılan fiyat null olur ("belirtilmemiş"), dolu olan sayıya çevrilir.
+ * Negatif ya da sayı olmayan değerler `undefined` döner — çağıran taraf bunu
+ * hata olarak bildirir.
+ */
+function parsePrice(raw: string): number | null | undefined {
+  if (!raw) return null;
+  const price = Number(raw);
+  if (!Number.isFinite(price) || price < 0) return undefined;
+  return price;
+}
+
 function parseStock(raw: string): number | null {
   if (!raw) return 1;
   const stock = Number(raw);
@@ -89,7 +101,8 @@ export async function createProduct(
 ): Promise<ProductFormState> {
   const name = String(formData.get("name") ?? "").trim();
   const featuresRaw = String(formData.get("features") ?? "");
-  const dailyPriceRaw = String(formData.get("daily_price") ?? "").trim();
+  const dailyPrice = parsePrice(String(formData.get("daily_price") ?? "").trim());
+  const depositPrice = parsePrice(String(formData.get("deposit_price") ?? "").trim());
   const stock = parseStock(String(formData.get("stock") ?? "").trim());
   const images = parseImages(formData.getAll("images"));
 
@@ -99,6 +112,14 @@ export async function createProduct(
 
   if (stock === null) {
     return { error: "Stok adedi 0 veya daha büyük bir sayı olmalıdır." };
+  }
+
+  if (dailyPrice === undefined) {
+    return { error: "Günlük kiralama fiyatı 0 veya daha büyük bir sayı olmalıdır." };
+  }
+
+  if (depositPrice === undefined) {
+    return { error: "Teminat fiyatı 0 veya daha büyük bir sayı olmalıdır." };
   }
 
   const supabase = await createClient();
@@ -117,7 +138,8 @@ export async function createProduct(
       owner_id: user.id,
       name,
       features: parseFeatures(featuresRaw),
-      daily_price: dailyPriceRaw ? Number(dailyPriceRaw) : null,
+      daily_price: dailyPrice,
+      deposit_price: depositPrice,
       stock,
       images,
     })
@@ -140,7 +162,8 @@ export async function updateProduct(
 ): Promise<ProductFormState> {
   const name = String(formData.get("name") ?? "").trim();
   const featuresRaw = String(formData.get("features") ?? "");
-  const dailyPriceRaw = String(formData.get("daily_price") ?? "").trim();
+  const dailyPrice = parsePrice(String(formData.get("daily_price") ?? "").trim());
+  const depositPrice = parsePrice(String(formData.get("deposit_price") ?? "").trim());
   const stock = parseStock(String(formData.get("stock") ?? "").trim());
   const images = parseImages(formData.getAll("images"));
 
@@ -150,6 +173,14 @@ export async function updateProduct(
 
   if (stock === null) {
     return { error: "Stok adedi 0 veya daha büyük bir sayı olmalıdır." };
+  }
+
+  if (dailyPrice === undefined) {
+    return { error: "Günlük kiralama fiyatı 0 veya daha büyük bir sayı olmalıdır." };
+  }
+
+  if (depositPrice === undefined) {
+    return { error: "Teminat fiyatı 0 veya daha büyük bir sayı olmalıdır." };
   }
 
   const supabase = await createClient();
@@ -162,7 +193,8 @@ export async function updateProduct(
     .update({
       name,
       features: parseFeatures(featuresRaw),
-      daily_price: dailyPriceRaw ? Number(dailyPriceRaw) : null,
+      daily_price: dailyPrice,
+      deposit_price: depositPrice,
       stock,
       images,
     })

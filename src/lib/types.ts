@@ -9,6 +9,7 @@ export type Product = {
   description: string | null;
   features: string[] | null;
   daily_price: number | null;
+  deposit_price: number | null;
   stock: number;
   images: string[] | null;
   created_at: string;

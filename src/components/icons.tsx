@@ -499,6 +499,15 @@ export function IconServer(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconRefresh(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M20 11.5a8 8 0 1 0-.6 4.5" />
+      <path d="M20 5v6.5h-6" />
+    </svg>
+  );
+}
+
 export function IconGauge(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base(props)}>

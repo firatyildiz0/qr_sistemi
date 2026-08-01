@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Kullanım ekranı kendini daha seyrek tazeliyor, yanına Yenile düğmesi geldi",
+  "aciklama": "Ekran on beş saniyede bir kendini yeniliyordu; açık bırakılan bir sekme Supabase'in aylık veri kotasından boşuna yiyordu. Artık sayfayı her açışınız taze bir ölçüm, açık kalan sekme ise günde bir iki kez kendini tazeliyor. Arada daha yeni bir sayı gerekirse Yenile düğmesi var; düğme iki basış arasında yarım dakika bekletiyor.",
+  "dikkat": null
+}

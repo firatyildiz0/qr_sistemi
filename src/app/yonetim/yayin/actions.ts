@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getProfile } from "@/lib/profile";
-import { canliyiIlerlet, yayinDurumu } from "@/lib/github";
+import { canliyaAl, yayinDurumu } from "@/lib/github";
 
 /**
  * Hata mesajı fırlatılmıyor, döndürülüyor.
@@ -14,8 +14,8 @@ import { canliyiIlerlet, yayinDurumu } from "@/lib/github";
  */
 export type YayinSonucu = { tamam: true } | { tamam: false; mesaj: string };
 
-/** Seçilen değişikliğe kadar olan her şeyi canlıya alır. */
-export async function yayinla(sha: string): Promise<YayinSonucu> {
+/** Bir işi canlıya alır. */
+export async function yayinla(dal: string): Promise<YayinSonucu> {
   // Sayfanın `/yonetim` altında olması yetki değildir — bu işlem herkesin
   // gönderebileceği bir POST ucu, kontrol burada yapılmak zorunda.
   const me = await getProfile();
@@ -23,24 +23,24 @@ export async function yayinla(sha: string): Promise<YayinSonucu> {
     return { tamam: false, mesaj: "Bu işlem için yetkiniz yok." };
   }
 
-  // Gelen sha'ya güvenmiyoruz. İstemci hangi değişikliği kastettiğini söyler,
-  // hangi commit'lerin gönderilebilir olduğuna sunucu karar verir: aksi halde
-  // bu uç, deponun herhangi bir commit'ini canlıya alan bir düğme olurdu.
+  // Gelen dal adına güvenmiyoruz. İstemci hangi işi kastettiğini söyler, hangi
+  // dalların canlıya alınabilir olduğuna sunucu karar verir: aksi halde bu uç,
+  // depodaki herhangi bir dalı canlıya birleştiren bir düğme olurdu.
   const durum = await yayinDurumu();
   if ("kurulum" in durum) return { tamam: false, mesaj: durum.kurulum };
-  if (!durum.degisiklikler.some((d) => d.sha === sha)) {
+  if (!durum.degisiklikler.some((d) => d.dal === dal)) {
     return {
       tamam: false,
-      mesaj: "Bu değişiklik yayın sırasında değil. Sayfayı yenileyin.",
+      mesaj: "Bu iş yayın listesinde değil. Sayfayı yenileyin.",
     };
   }
 
   try {
-    await canliyiIlerlet(sha);
+    await canliyaAl(dal);
   } catch (e) {
     return {
       tamam: false,
-      mesaj: e instanceof Error ? e.message : "Gönderilemedi.",
+      mesaj: e instanceof Error ? e.message : "Canlıya alınamadı.",
     };
   }
 

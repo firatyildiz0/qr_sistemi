@@ -5,20 +5,18 @@ import { yayinla } from "@/app/yonetim/yayin/actions";
 import { IconBolt, IconCheck, IconX } from "@/components/icons";
 
 /**
- * Canlıya alma düğmesi.
+ * Bir işi canlıya alma düğmesi.
  *
- * Onay iki adımlı: tek tıkla geri alınamaz bir iş yapılmıyor, ve ikinci adımda
- * tam olarak nelerin gideceği yazıyor — sıralı yapı yüzünden bu genellikle
- * tıklanan satırdan fazlası oluyor.
+ * Onay iki adımlı: tek tıkla geri alınamaz bir iş yapılmıyor. İşler birbirinden
+ * bağımsız olduğu için soru da tek bir işi soruyor — yanına başka bir şey
+ * takılmıyor.
  */
 export default function YayinActions({
-  sha,
-  adet,
-  basliklar,
+  dal,
+  baslik,
 }: {
-  sha: string;
-  adet: number;
-  basliklar: string[];
+  dal: string;
+  baslik: string;
 }) {
   const [soruluyor, setSoruluyor] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -28,7 +26,7 @@ export default function YayinActions({
     setError(null);
     startTransition(async () => {
       try {
-        const sonuc = await yayinla(sha);
+        const sonuc = await yayinla(dal);
         if (sonuc.tamam) setSoruluyor(false);
         else setError(sonuc.mesaj);
       } catch {
@@ -48,7 +46,7 @@ export default function YayinActions({
           className="btn btn-secondary h-10 min-h-10 self-start px-4 text-sm"
         >
           <IconBolt className="h-4 w-4" />
-          {adet === 1 ? "Canlıya al" : `Buraya kadar canlıya al (${adet})`}
+          Canlıya al
         </button>
         {error && (
           <p role="alert" className="text-xs text-danger">
@@ -61,18 +59,10 @@ export default function YayinActions({
 
   return (
     <div className="rounded-md border border-border bg-surface px-3 py-3">
-      <p className="text-sm font-semibold text-ink">
-        {adet === 1
-          ? "Bu değişiklik canlıya alınacak:"
-          : `Bu ${adet} değişiklik canlıya alınacak:`}
-      </p>
-      <ul className="mt-2 space-y-1 text-sm text-ink-muted">
-        {basliklar.map((b, i) => (
-          <li key={i}>• {b}</li>
-        ))}
-      </ul>
+      <p className="text-sm font-semibold text-ink">Bu iş canlıya alınacak:</p>
+      <p className="mt-1 text-sm text-ink-muted">{baslik}</p>
       <p className="mt-2 text-xs text-ink-muted">
-        Yayına alma birkaç dakika sürer.
+        Diğer bekleyen işler yerinde kalır. Yayına alma birkaç dakika sürer.
       </p>
 
       <div className="mt-3 flex gap-2">

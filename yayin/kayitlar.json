@@ -27,6 +27,13 @@
       "baslik": "Supabase kullanımını yönetim panelinden anlık görebiliyorsunuz",
       "aciklama": "Projenin kapasitesinin ne kadarının dolu olduğunu görmek için Supabase panelini açmak gerekiyordu. Artık Yönetim > Kullanım ekranında veritabanı, dosyalar, aylık aktif kullanıcı ve disk doluluk oranları yüzde halkalarıyla duruyor; sayfa açık kaldığı sürece kendini tazeliyor. Yüzdelerin hangi plana göre hesaplanacağını Free/Pro seçimiyle değiştirebilirsiniz.",
       "dikkat": "Göndermeden önce Supabase SQL düzenleyicisinde 0021_usage.sql çalıştırılmalı; yoksa dosya boyutu, aylık aktif kullanıcı ve tablo listesi boş görünür."
+    },
+    {
+      "id": "2026-08-01-her-is-artik-tek-basina-canliya-alinabiliyor",
+      "tip": "iyilestirme",
+      "baslik": "Her iş artık tek başına, istediğiniz sırada canlıya alınabiliyor",
+      "aciklama": "Yayın ekranındaki işler tek bir sıraya dizildiği için üçüncüyü canlıya almak istediğinizde ilk ikisi de gitmek zorunda kalıyordu. Artık her iş kendi başına duruyor: birini onaylarsanız diğerleri yerinde bekler. Bir iş gerçekten bir diğerinin üstüne kuruluysa ekran bunu açıkça söyleyecek.",
+      "dikkat": "Bunu canlıya aldıktan sonra ekran yeni düzene geçer; bu, eski sıralı listeyle onayladığınız son iş olacak."
     }
   ]
 }

@@ -4,41 +4,44 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# Yayın akışı — `main`'e asla dokunma
+# Yayın akışı — her iş kendi dalında, `main`'e asla dokunma
 
-İki dal var:
+`main` canlıdır. Ona commit atmaz, merge etmez, push etmezsin. Canlıya çıkarma
+kararı kullanıcınındır ve `/yonetim/yayin` ekranından verilir.
 
-- **`staging`** — bütün iş burada birikir. Buraya push etmek canlıya çıkmak
-  değildir; Vercel yalnızca bir önizleme dağıtımı üretir.
-- **`main`** — canlı. Yalnızca kullanıcı, `/yonetim/yayin` ekranından onaylayarak
-  ilerletir. Sen `main`'e commit atmazsın, merge etmezsin, push etmezsin.
+Her iş **kendi dalında** durur ve **`origin/main`'den** dallanır. Böylece
+birbirlerini beklemezler: kullanıcı üçüncü işi onaylarken ilk ikisi yerinde
+kalır. Bir işi başka bir işin dalının üstüne kurma — kurarsan ikisi ayrılamaz
+hale gelir.
 
-Her işi bitirdiğinde, `staging` üzerinde:
+Sırayla:
 
-1. Kaydı hazırla — commit'ten **önce**:
+1. Dalı aç. Ad `is/` ile başlamalı, kısa ve konuyu anlatmalı:
+
+   ```
+   git fetch origin && git checkout -b is/<kisa-ad> origin/main
+   ```
+
+2. İşi yap.
+
+3. Künyeyi yaz:
 
    ```
    npm run kaydet -- --tip <ozellik|hata|guvenlik|iyilestirme> \
      --baslik "..." --aciklama "..." [--dikkat "..."]
    ```
 
-   Betik `yayin/kayitlar.json` dosyasına ekler ve sana bir `Panel-Kaydi: <id>`
-   satırı yazdırır.
+   Dosya adını açık olan daldan türetir (`is/qr-kodu` → `yayin/kayitlar/qr-kodu.json`).
 
-2. Kod ile kayıt dosyasını **tek commit'te** at. Mesaj her zamanki gibi teknik ve
-   İngilizce, ama sonuna betiğin verdiği `Panel-Kaydi: <id>` satırını ekle. Panel
-   commit ile kaydı bu satırdan eşleştirir; unutursan değişiklik ekranda
-   "Açıklama yok" diye görünür.
+4. Kod ile künyeyi commit'le — mesaj her zamanki gibi teknik ve İngilizce — ve
+   `git push -u origin is/<kisa-ad>`.
 
-3. `git push origin staging`.
+5. Kullanıcıya panelde ne beklediğini söyle.
 
-4. Kullanıcıya panelde ne beklediğini söyle. Canlıya çıkarmak onun kararı.
+Kullanıcı onayladığında dal `main`'e birleşir ve silinir; panel onu bir daha
+göstermez.
 
-Birden çok iş yaptıysan her biri ayrı kayıt + ayrı commit olsun: ekranda tek tek
-onaylanabilmeleri buna bağlı. Sıra da önemli — kullanıcı bir değişikliği canlıya
-aldığında ondan öncekiler de gider, o yüzden bağımsız işleri karıştırma.
-
-## Başlık ve açıklama nasıl yazılır
+## Künye nasıl yazılır
 
 Panelin tek amacı, kullanıcının ne değiştiğini teknik bilgi olmadan anlaması.
 
@@ -46,6 +49,6 @@ Panelin tek amacı, kullanıcının ne değiştiğini teknik bilgi olmadan anlam
   takvimde günler dolu kalıyordu" — "Fix stale availability cache" değil.
 - **Açıklama:** 1-3 cümle. Belirti neydi, artık ne oluyor. Dosya adı, fonksiyon
   adı, kütüphane adı geçmesin.
-- **`--dikkat`:** yalnızca push'tan önce/sonra elle bir şey yapılması
+- **`--dikkat`:** yalnızca canlıya almadan önce/sonra elle bir şey yapılması
   gerekiyorsa. Migration çalıştırmak, Vercel'e ortam değişkeni eklemek gibi.
   Gerekmiyorsa hiç verme.

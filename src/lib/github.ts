@@ -1,38 +1,37 @@
 /**
  * Yayın panelinin arka ucu: GitHub'ın kendisi.
  *
- * Ayrı bir tablo tutmuyoruz, çünkü tutulacak veri zaten git'te var — hangi
- * commit'in canlıya çıktığı `main`'in nerede durduğudur, başka bir yerde
- * kopyasını tutmak iki kaynağın birbirinden kaymasına davetiye.
+ * Her iş kendi dalında durur ve `main`'den ayrılır, yani birbirlerinin arkasında
+ * sıra beklemezler — üçüncü işi canlıya almak için ilk ikisini göndermek
+ * gerekmiyor. Tek bir sırada dizilseler bunu yapmanın yolu git tarihini yeniden
+ * yazmaktan geçerdi; ayrı dallar aynı sonucu git'in kendi araçlarıyla veriyor.
  *
- * Değişikliklerin Türkçe başlık ve açıklamaları `yayin/kayitlar.json` içinde,
- * `staging` dalında duruyor; commit'lerle sha üzerinden eşleşiyor.
+ * Ayrı bir tablo yok: hangi işin canlıda olduğu, dalın `main`'e birleşmiş olup
+ * olmadığıdır. Bunun ikinci bir kopyasını tutmak yalnızca birbirinden kayan iki
+ * kaynak üretirdi.
  */
 
 const API = "https://api.github.com";
 
-/** İşin biriktiği dal. Buraya push etmek canlıya çıkmak değildir. */
-export const YAYIN_DALI = "staging";
+/** İş dallarının öneki. `is/qr-kodu` gibi. */
+export const IS_DALI_ONEKI = "is/";
 
-/** Canlı. Yalnızca bu paneldeki onayla ileri alınır. */
+/** Canlı. Yalnızca bu panelden, bir işi birleştirerek ilerletilir. */
 export const CANLI_DALI = "main";
 
-const KAYIT_YOLU = "yayin/kayitlar.json";
-
 /**
- * Kaydı commit'e bağlayan satır, commit mesajının sonunda durur:
+ * İşin Türkçe künyesi. Dosya adı dalın adından türüyor (`is/qr-kodu` →
+ * `yayin/kayitlar/qr-kodu.json`), o yüzden eşleştirmek için ayrıca bir kimlik
+ * taşımaya gerek yok.
  *
- *     Panel-Kaydi: 2026-08-01-yayin-ekrani
- *
- * sha ile eşleştirmek mümkün değil — bir commit'in sha'sı ancak o commit
- * atıldıktan sonra bilinir, kaydın kendisi ise o commit'in içinde.
+ * Her iş kendi dosyasını ekler; tek bir ortak listede toplansalardı iki dal
+ * aynı dosyaya satır eklediği için her birleştirme çakışırdı.
  */
-const KAYIT_ETIKETI = /^Panel-Kaydi:\s*(\S+)\s*$/m;
+const KAYIT_KLASORU = "yayin/kayitlar";
 
 export type DegisiklikTipi = "ozellik" | "hata" | "guvenlik" | "iyilestirme";
 
 export type Kayit = {
-  id: string;
   tip: DegisiklikTipi;
   baslik: string;
   aciklama: string;
@@ -40,14 +39,14 @@ export type Kayit = {
 };
 
 export type Degisiklik = {
-  sha: string;
-  kisaSha: string;
-  tarih: string;
-  /** Kaydı yoksa commit'in kendi özeti kullanılır. */
+  dal: string;
+  /** Kaydı yoksa son commit'in özeti kullanılır. */
   baslik: string;
   aciklama: string;
   dikkat: string | null;
   tip: DegisiklikTipi | null;
+  tarih: string;
+  commitAdedi: number;
 };
 
 export type YayinDurumu =
@@ -74,41 +73,55 @@ async function github(
       "x-github-api-version": "2022-11-28",
       ...init?.headers,
     },
-    // Panelin işi tam olarak "şu an ne bekliyor" sorusuna cevap vermek;
-    // burada bayat veri yanlış cevaptır.
+    // Panelin işi "şu an ne bekliyor" sorusuna cevap vermek; bayat veri burada
+    // yanlış cevaptır.
     cache: "no-store",
   });
 }
 
-type CompareYaniti = {
+/** GitHub'ın kendi açıklaması genelde asıl sebebi söyler; yutmuyoruz. */
+async function detayOku(yanit: Response): Promise<string> {
+  try {
+    const govde = (await yanit.json()) as { message?: string };
+    return govde.message ? ` GitHub şöyle diyor: “${govde.message}”` : "";
+  } catch {
+    return "";
+  }
+}
+
+type Ref = { ref: string };
+type Karsilastirma = {
+  ahead_by: number;
   commits: { sha: string; commit: { message: string; committer: { date: string } } }[];
 };
 
-/** `yayin/kayitlar.json` — dosya henüz yoksa boş liste. */
-async function kayitlariGetir(repo: string, token: string): Promise<Map<string, Kayit>> {
+async function kaydiGetir(
+  repo: string,
+  token: string,
+  dal: string,
+): Promise<Kayit | null> {
+  const slug = dal.slice(IS_DALI_ONEKI.length);
   const yanit = await github(
-    `/repos/${repo}/contents/${KAYIT_YOLU}?ref=${YAYIN_DALI}`,
+    `/repos/${repo}/contents/${KAYIT_KLASORU}/${slug}.json?ref=${encodeURIComponent(dal)}`,
     token,
   );
-  if (!yanit.ok) return new Map();
+  if (!yanit.ok) return null;
 
   try {
     const govde = (await yanit.json()) as { content?: string };
-    if (!govde.content) return new Map();
-    const metin = Buffer.from(govde.content, "base64").toString("utf8");
-    const veri = JSON.parse(metin) as { kayitlar?: Kayit[] };
-    return new Map((veri.kayitlar ?? []).map((k) => [k.id, k]));
+    if (!govde.content) return null;
+    return JSON.parse(Buffer.from(govde.content, "base64").toString("utf8")) as Kayit;
   } catch {
-    // Bozuk JSON panelin tamamını götürmesin: açıklamalar düşer, commit'ler kalır.
-    return new Map();
+    // Bozuk kayıt işin tamamını gizlemesin: açıklama düşer, iş listede kalır.
+    return null;
   }
 }
 
 /**
- * `main`'de olmayıp `staging`'de olan commit'ler — eskiden yeniye.
+ * Canlıda olmayan işler.
  *
- * Sıra GitHub'ın verdiği sıra, yani git'in kendi tarihi. Panel bunu bozmuyor:
- * canlı ancak bu listede bir noktaya kadar ilerletilebilir.
+ * Sıralama yalnızca sunum için: aralarında bağımlılık yok, hangisi önce
+ * onaylanırsa o gider.
  */
 export async function yayinDurumu(): Promise<YayinDurumu> {
   const yapilandirma = ayarlar();
@@ -120,74 +133,92 @@ export async function yayinDurumu(): Promise<YayinDurumu> {
   }
   const { repo, token } = yapilandirma;
 
-  const yanit = await github(
-    `/repos/${repo}/compare/${CANLI_DALI}...${YAYIN_DALI}`,
+  const dalYaniti = await github(
+    `/repos/${repo}/git/matching-refs/heads/${IS_DALI_ONEKI}`,
     token,
   );
-
-  if (yanit.status === 404) {
+  if (dalYaniti.status === 404) {
     return {
-      kurulum: `GitHub'da "${YAYIN_DALI}" dalı ya da "${repo}" deposu bulunamadı. Anahtarın bu depoya erişimi olduğundan emin ol.`,
+      kurulum: `"${repo}" deposu bulunamadı. Erişim anahtarının bu depoya erişimi olduğundan emin olun.`,
     };
   }
-  if (!yanit.ok) {
-    return { kurulum: `GitHub'a ulaşılamadı (HTTP ${yanit.status}).` };
+  if (!dalYaniti.ok) {
+    return {
+      kurulum: `GitHub'a ulaşılamadı (HTTP ${dalYaniti.status}).${await detayOku(dalYaniti)}`,
+    };
   }
 
-  const { commits } = (await yanit.json()) as CompareYaniti;
-  const kayitlar = await kayitlariGetir(repo, token);
+  const dallar = ((await dalYaniti.json()) as Ref[]).map((r) =>
+    r.ref.replace("refs/heads/", ""),
+  );
 
-  const degisiklikler = commits.map((c): Degisiklik => {
-    const id = c.commit.message.match(KAYIT_ETIKETI)?.[1];
-    const kayit = id ? kayitlar.get(id) : undefined;
-    return {
-      sha: c.sha,
-      kisaSha: c.sha.slice(0, 7),
-      tarih: c.commit.committer.date,
-      baslik: kayit?.baslik ?? c.commit.message.split("\n")[0],
-      aciklama: kayit?.aciklama ?? "",
-      dikkat: kayit?.dikkat ?? null,
-      tip: kayit?.tip ?? null,
-    };
-  });
+  // Dallar birbirinden bağımsız, o yüzden hepsi aynı anda sorulabilir.
+  const sonuclar = await Promise.all(
+    dallar.map(async (dal): Promise<Degisiklik | null> => {
+      const yanit = await github(
+        `/repos/${repo}/compare/${CANLI_DALI}...${encodeURIComponent(dal)}`,
+        token,
+      );
+      if (!yanit.ok) return null;
+
+      const { ahead_by, commits } = (await yanit.json()) as Karsilastirma;
+      // Birleşmiş ama silinmemiş dal: canlıda zaten var, listelemeye gerek yok.
+      if (ahead_by === 0) return null;
+
+      const kayit = await kaydiGetir(repo, token, dal);
+      const sonCommit = commits[commits.length - 1];
+
+      return {
+        dal,
+        baslik: kayit?.baslik ?? sonCommit.commit.message.split("\n")[0],
+        aciklama: kayit?.aciklama ?? "",
+        dikkat: kayit?.dikkat ?? null,
+        tip: kayit?.tip ?? null,
+        tarih: sonCommit.commit.committer.date,
+        commitAdedi: ahead_by,
+      };
+    }),
+  );
+
+  const degisiklikler = sonuclar
+    .filter((d): d is Degisiklik => d !== null)
+    .sort((a, b) => a.tarih.localeCompare(b.tarih));
 
   return { degisiklikler, repo };
 }
 
 /**
- * Canlıyı `sha`'ya ilerletir.
+ * Bir işi canlıya alır: dalı `main`'e birleştirir.
  *
- * `force` yok: GitHub yalnızca ileri sarmaya (fast-forward) izin verir, yani
- * canlıda olan bir şey bu yolla asla kaybolamaz. Reddedilen bir istek
- * "canlı beklediğim yerde değil" demektir ve okunması gereken bir uyarıdır.
+ * Birleşme başarılıysa dal silinir — canlıda olan bir iş listede beklemeye
+ * devam etmemeli. Silme başarısız olursa iş yine de canlıdadır, o yüzden bu
+ * adımın hatası yutuluyor: dal bir sonraki okumada zaten "ilerisi yok" diye
+ * listeden düşer.
  */
-export async function canliyiIlerlet(sha: string): Promise<void> {
+export async function canliyaAl(dal: string): Promise<void> {
   const yapilandirma = ayarlar();
   if (!yapilandirma) throw new Error("GitHub ayarları eksik.");
   const { repo, token } = yapilandirma;
 
-  const yanit = await github(`/repos/${repo}/git/refs/heads/${CANLI_DALI}`, token, {
-    method: "PATCH",
+  const yanit = await github(`/repos/${repo}/merges`, token, {
+    method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sha, force: false }),
+    body: JSON.stringify({ base: CANLI_DALI, head: dal }),
   });
 
-  if (yanit.ok) return;
-
-  // GitHub'ın kendi açıklaması genelde asıl sebebi söylüyor (korumalı dal, eksik
-  // izin, kayıp commit). Onu yutup yerine tahmin yazmak, hatayı log'dan okumak
-  // zorunda bırakıyor — nitekim ilk sürümde tam olarak bu oldu.
-  let detay = "";
-  try {
-    const govde = (await yanit.json()) as { message?: string };
-    if (govde.message) detay = ` GitHub şöyle diyor: “${govde.message}”`;
-  } catch {
-    // Gövde okunamadıysa HTTP kodu ile idare ederiz.
+  // 204: birleştirilecek bir şey kalmamış. Hedef zaten sağlanmış durumda.
+  if (yanit.status === 201 || yanit.status === 204) {
+    await github(`/repos/${repo}/git/refs/heads/${encodeURIComponent(dal)}`, token, {
+      method: "DELETE",
+    }).catch(() => {});
+    return;
   }
 
-  if (yanit.status === 422) {
+  const detay = await detayOku(yanit);
+
+  if (yanit.status === 409) {
     throw new Error(
-      `GitHub bu değişikliği ileri sarma olarak kabul etmedi. Canlı, beklenenden farklı bir noktada olabilir — sayfayı yenileyip tekrar bakın.${detay}`,
+      "Bu iş tek başına canlıya alınamıyor: canlıdaki kodla çakışıyor, yani araya giren başka bir değişiklikle aynı satırlara dokunuyor. Bana söyleyin, işi canlının güncel hali üzerine taşıyıp yeniden göndereyim.",
     );
   }
   if (yanit.status === 403 || yanit.status === 401) {
@@ -195,5 +226,10 @@ export async function canliyiIlerlet(sha: string): Promise<void> {
       `GitHub anahtarı bu depoya yazamıyor. Fine-grained token'da "Contents" izni "Read and write" olmalı; korumalı bir dal da aynı cevabı verir.${detay}`,
     );
   }
-  throw new Error(`Gönderilemedi (HTTP ${yanit.status}).${detay}`);
+  if (yanit.status === 404) {
+    throw new Error(
+      `"${dal}" dalı bulunamadı. Bu iş başka bir yerden canlıya alınmış olabilir — sayfayı yenileyin.${detay}`,
+    );
+  }
+  throw new Error(`Canlıya alınamadı (HTTP ${yanit.status}).${detay}`);
 }

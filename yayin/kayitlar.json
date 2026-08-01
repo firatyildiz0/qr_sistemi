@@ -1,0 +1,11 @@
+{
+  "kayitlar": [
+    {
+      "id": "2026-08-01-degisiklikler-artik-yonetim-panelinden-onaylaniy",
+      "tip": "ozellik",
+      "baslik": "Değişiklikler artık yönetim panelinden onaylanıyor",
+      "aciklama": "Yönetim paneline 'Yayın' sekmesi eklendi. Yaptığım her geliştirme ve düzeltme, canlıya çıkmadan önce burada listelenir; ne olduğunu okuyup onaylayana kadar hiçbiri canlıya gitmez. Onaylayınca birkaç dakika içinde yayına alınır.",
+      "dikkat": "Bu ekranın çalışması için Vercel'e GITHUB_REPO ve GITHUB_TOKEN eklemen gerekiyor; nasıl yapılacağı ekranın kendisinde yazıyor."
+    }
+  ]
+}

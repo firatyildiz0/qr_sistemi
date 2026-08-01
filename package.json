@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "kaydet": "node yayin/kaydet.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.69.0",

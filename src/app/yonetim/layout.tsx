@@ -3,7 +3,7 @@ import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import AccessGuard from "@/components/admin/AccessGuard";
 import Wordmark from "@/components/Wordmark";
-import { IconChart, IconLogOut, IconShield, IconUsers } from "@/components/icons";
+import { IconBolt, IconChart, IconLogOut, IconShield, IconUsers } from "@/components/icons";
 
 export default function YonetimLayout({ children }: { children: React.ReactNode }) {
   // Satıcı paneliyle aynı gerekçe: layout hiçbir şeyi beklemiyor, erişim
@@ -57,6 +57,13 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
           >
             <IconShield className="h-4 w-4" />
             Güvenlik
+          </Link>
+          <Link
+            href="/yonetim/yayin"
+            className="flex items-center gap-2 px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <IconBolt className="h-4 w-4" />
+            Yayın
           </Link>
         </div>
       </nav>

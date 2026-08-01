@@ -44,6 +44,8 @@ import ProductPicker, {
   type PickedItem,
 } from "@/components/booking/ProductPicker";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import PriceField from "@/components/PriceField";
+import { formatPrice } from "@/lib/format";
 import {
   IconCalendar,
   IconMapPin,
@@ -51,6 +53,7 @@ import {
   IconPencil,
   IconPhone,
   IconPlus,
+  IconShield,
   IconTrash,
   IconTruck,
 } from "@/components/icons";
@@ -295,6 +298,19 @@ export default function BookingRow({
             onCityChange={setCity}
           />
 
+          {/* Teminat siparişin tamamına ait: bu kalem toplu alımın parçasıysa
+              buradaki değişiklik grubun bütün satırlarına yazılır. */}
+          <PriceField
+            name="deposit_price"
+            label="Teminat (opsiyonel)"
+            defaultValue={booking.deposit_price}
+            hint={
+              mixedOrder
+                ? "Siparişin tamamı için geçerli — diğer ürünlere de işlenir."
+                : undefined
+            }
+          />
+
           <DeliveryPlan
             city={city}
             mode={mode}
@@ -359,6 +375,17 @@ export default function BookingRow({
             <span className="flex min-w-0 items-center gap-1.5" title={formatAddress(booking) ?? undefined}>
               <IconMapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{region}</span>
+            </span>
+          )}
+          {/* Teminat siparişin tamamı için tek tutar — grubun her satırında
+              aynısı duruyor, o yüzden kartta olduğu gibi gösteriliyor. */}
+          {booking.deposit_price != null && (
+            <span
+              className="flex items-center gap-1.5"
+              title="Bu sipariş için alınan teminat."
+            >
+              <IconShield className="h-3.5 w-3.5 shrink-0" />
+              {formatPrice(booking.deposit_price)} teminat
             </span>
           )}
           {/* Kiralama tarihleri ürünün ne kadar süre meşgul olduğunu

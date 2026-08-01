@@ -9,7 +9,6 @@ export type Product = {
   description: string | null;
   features: string[] | null;
   daily_price: number | null;
-  deposit_price: number | null;
   stock: number;
   images: string[] | null;
   created_at: string;
@@ -46,6 +45,12 @@ export type Booking = {
   blocked_start: string | null; // YYYY-MM-DD
   blocked_end: string | null; // YYYY-MM-DD
   status: BookingStatus;
+  /**
+   * Siparişin tamamı için alınan depozito. Tek tutardır ama grubun her satırına
+   * kopyalanır — bir siparişin teminatını bulmak için satırları toplamak değil,
+   * herhangi birine bakmak gerekir. Teminat alınmadığında null.
+   */
+  deposit_price: number | null;
   created_at: string;
 };
 

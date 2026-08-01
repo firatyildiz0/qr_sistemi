@@ -18,6 +18,7 @@ import {
   IconChevronRight,
   IconMapPin,
   IconPhone,
+  IconShield,
   IconTag,
 } from "@/components/icons";
 
@@ -166,6 +167,21 @@ export default async function BookingDetailPage({
                 <IconCalendar className="h-3.5 w-3.5 text-ink-muted" />
                 {formatDateRange(booking.start_date, booking.end_date)}
                 <span className="text-ink-muted">({days} gün)</span>
+              </dd>
+            </div>
+            {/* Teminat siparişin tamamı için tek tutar, ürün başına değil —
+                o yüzden kiralama kalemlerinin yanında değil burada. */}
+            <div>
+              <dt className="field-label">Teminat</dt>
+              <dd className="flex items-center gap-1.5 text-ink">
+                {booking.deposit_price != null ? (
+                  <>
+                    <IconShield className="h-3.5 w-3.5 text-ink-muted" />
+                    {formatPrice(booking.deposit_price)}
+                  </>
+                ) : (
+                  <span className="text-ink-muted">—</span>
+                )}
               </dd>
             </div>
             <div>

@@ -87,14 +87,10 @@ create table if not exists products (
   description text,
   features text[],
   daily_price numeric,
-  -- Kiralamadan alınan depozito; girilmemişse teminat alınmıyor demektir.
-  deposit_price numeric,
   stock integer not null default 1,
   images text[] not null default '{}',
   created_at timestamptz not null default now(),
   constraint products_stock_non_negative check (stock >= 0),
-  constraint products_deposit_price_non_negative
-    check (deposit_price is null or deposit_price >= 0),
   constraint products_images_max_two check (coalesce(array_length(images, 1), 0) <= 2)
 );
 
@@ -127,8 +123,13 @@ create table if not exists bookings (
   blocked_end date not null,
   status text not null default 'upcoming'
     check (status in ('upcoming', 'active', 'completed', 'cancelled')),
+  -- Siparişin tamamı için alınan depozito. Grubun her satırına aynı tutar
+  -- kopyalanır (müşteri bilgileri gibi), o yüzden okunurken toplanmaz.
+  deposit_price numeric,
   created_at timestamptz not null default now(),
   constraint bookings_date_range check (end_date >= start_date),
+  constraint bookings_deposit_price_non_negative
+    check (deposit_price is null or deposit_price >= 0),
   constraint bookings_blocked_range check (
     blocked_end >= blocked_start
     and blocked_start <= start_date

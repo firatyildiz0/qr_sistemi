@@ -26,6 +26,7 @@ import ProductPicker, {
   itemsPayload,
   type PickedItem,
 } from "@/components/booking/ProductPicker";
+import PriceField from "@/components/PriceField";
 import { IconCheckCircle } from "@/components/icons";
 
 const initialState: BookingFormState = { error: null };
@@ -180,6 +181,16 @@ export default function BookingForm({
         onChange={setItems}
         span={blocked}
         anchorId={productId}
+      />
+
+      {/* Kendi state'ini tuttuğu için formun kayıt sonrası sıfırlaması buraya
+          ulaşmıyor; alanı yeniden kurmak temizliyor. */}
+      <PriceField
+        key={resetKey}
+        name="deposit_price"
+        label="Teminat (opsiyonel)"
+        defaultValue={null}
+        hint="Siparişin tamamı için alınan depozito; iade sırasında geri verilir."
       />
 
       <div>

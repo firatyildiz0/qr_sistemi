@@ -4,7 +4,7 @@ import { useActionState, useCallback, useState } from "react";
 import type { Product } from "@/lib/types";
 import type { ProductFormState } from "@/app/admin/products/actions";
 import ImageUploader from "@/components/admin/ImageUploader";
-import PriceField from "@/components/admin/PriceField";
+import PriceField from "@/components/PriceField";
 import StockField from "@/components/admin/StockField";
 
 export default function ProductForm({
@@ -57,13 +57,6 @@ export default function ProductForm({
           name="daily_price"
           label="Günlük kiralama fiyatı (opsiyonel)"
           defaultValue={product?.daily_price}
-        />
-
-        <PriceField
-          name="deposit_price"
-          label="Teminat fiyatı (opsiyonel)"
-          defaultValue={product?.deposit_price}
-          hint="Kiralama sırasında alınıp iadede geri verilen tutar."
         />
       </div>
 

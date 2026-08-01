@@ -21,6 +21,19 @@ export function formatPriceInput(raw: string) {
   return `${grouped || "0"},${rest.join("").slice(0, 2)}`;
 }
 
+/**
+ * `PriceField`'in gönderdiği değeri sunucu tarafında okur. Boş bırakılan alan
+ * null olur ("belirtilmemiş"), dolu olan sayıya çevrilir. Negatif ya da sayı
+ * olmayan değerler `undefined` döner — çağıran taraf bunu hata olarak bildirir.
+ */
+export function readPriceField(raw: string): number | null | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const price = Number(trimmed);
+  if (!Number.isFinite(price) || price < 0) return undefined;
+  return price;
+}
+
 /** Ekrandaki biçimi sunucuya gidecek sayıya çevirir: "1.500,5" -> "1500.5". */
 export function parsePriceInput(display: string) {
   const cleaned = display.replace(/\./g, "").replace(",", ".").replace(/[^\d.]/g, "");

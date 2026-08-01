@@ -22,8 +22,11 @@ import {
   type Turnaround,
 } from "@/lib/turnaround";
 import { isDistrictOf, isProvince } from "@/lib/turkiye";
+import { readPriceField } from "@/lib/format";
 
 export type BookingFormState = { error: string | null; success?: boolean };
+
+const DEPOSIT_ERROR = "Teminat 0 veya daha büyük bir sayı olmalıdır.";
 
 /**
  * Ownership check that also hands back the owner id, because the turnaround
@@ -273,6 +276,8 @@ async function insertBookingGroup(
     delivery_mode: DeliveryMode;
     blocked_start: string;
     blocked_end: string;
+    /** Siparişin tamamı için tek tutar; grubun her satırına aynısı yazılır. */
+    deposit_price: number | null;
   }
 ): Promise<string | null> {
   const { error } = await supabase.rpc("create_booking_group", {
@@ -288,6 +293,7 @@ async function insertBookingGroup(
     p_delivery_mode: shared.delivery_mode,
     p_blocked_start: shared.blocked_start,
     p_blocked_end: shared.blocked_end,
+    p_deposit_price: shared.deposit_price,
   });
 
   return error ? error.message : null;
@@ -419,9 +425,14 @@ export async function createBooking(
   const customer_phone = String(formData.get("customer_phone") ?? "").trim();
   const start_date = String(formData.get("start_date") ?? "");
   const end_date = String(formData.get("end_date") ?? "");
+  const deposit_price = readPriceField(String(formData.get("deposit_price") ?? ""));
 
   if (!customer_name) {
     return { error: "Müşteri adı gereklidir." };
+  }
+
+  if (deposit_price === undefined) {
+    return { error: DEPOSIT_ERROR };
   }
 
   const address = readAddress(formData);
@@ -487,6 +498,7 @@ export async function createBooking(
       end_date,
       delivery_mode,
       ...blocked,
+      deposit_price,
     }
   );
 
@@ -579,6 +591,9 @@ export async function addBookingItems(
     delivery_mode,
     blocked_start: span.start_date,
     blocked_end: span.end_date,
+    // Teminat siparişin tamamına ait: sonradan eklenen satır da aynı tutarı
+    // taşımalı, yoksa gruptaki satırlar farklı teminatlar gösterirdi.
+    deposit_price: booking.deposit_price ?? null,
   });
 
   if (failure) return { error: failure };
@@ -636,9 +651,14 @@ export async function editBooking(
   const customer_phone = String(formData.get("customer_phone") ?? "").trim();
   const start_date = String(formData.get("start_date") ?? "");
   const end_date = String(formData.get("end_date") ?? "");
+  const deposit_price = readPriceField(String(formData.get("deposit_price") ?? ""));
 
   if (!customer_name) {
     return { error: "Müşteri adı gereklidir." };
+  }
+
+  if (deposit_price === undefined) {
+    return { error: DEPOSIT_ERROR };
   }
 
   const address = readAddress(formData);
@@ -684,7 +704,7 @@ export async function editBooking(
     return { error: (err as Error).message };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("bookings")
     .update({
       customer_name,
@@ -694,12 +714,30 @@ export async function editBooking(
       end_date,
       delivery_mode,
       ...blocked,
+      deposit_price,
     })
     .in("id", ids.values)
-    .eq("product_id", productId);
+    .eq("product_id", productId)
+    .select("group_id");
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Teminat siparişin tamamına ait, oysa düzenlenen kalem toplu alımın yalnızca
+  // bir parçası olabilir. Grubun geri kalanı da yeni tutara çekilmezse aynı
+  // siparişin satırları farklı teminatlar taşırdı.
+  const groupId = (updated ?? []).find((row) => row.group_id)?.group_id;
+
+  if (groupId) {
+    const { error: groupError } = await supabase
+      .from("bookings")
+      .update({ deposit_price })
+      .eq("group_id", groupId);
+
+    if (groupError) {
+      return { error: groupError.message };
+    }
   }
 
   revalidateBooking([productId]);

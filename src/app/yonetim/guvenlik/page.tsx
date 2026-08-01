@@ -25,8 +25,9 @@ const SUMMARY_HOURS = 24;
 
 const KIND_LABEL: Record<SecurityEventKind, string> = {
   login_failed: "Başarısız giriş",
-  login_ok: "Giriş yapıldı",
   signup: "Yeni kayıt",
+  two_factor_sent: "Telefona giriş kodu gönderildi",
+  two_factor_failed: "Giriş kodu hatalı girildi",
   rate_limited: "Hız sınırı devreye girdi",
   unauthorized: "Yetkisiz erişim denemesi",
   cron_unauthorized: "Cron ucuna geçersiz istek",
@@ -110,7 +111,8 @@ export default async function GuvenlikPage() {
       <span className="eyebrow text-accent">Yönetim</span>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Güvenlik</h1>
       <p className="mt-1 text-sm text-ink-muted">
-        Giriş denemeleri ve yetkisiz erişim girişimleri. Kayıtlar 90 gün saklanır.
+        Başarısız giriş denemeleri ve yetkisiz erişim girişimleri. Başarılı
+        girişler kaydedilmez. Kayıtlar 90 gün saklanır.
       </p>
 
       {/* Sayfaya girildiğinde ilk görülmesi gereken: son 24 saatte olağandışı

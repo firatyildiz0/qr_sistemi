@@ -27,6 +27,13 @@
       "baslik": "Supabase kullanımını yönetim panelinden anlık görebiliyorsunuz",
       "aciklama": "Projenin kapasitesinin ne kadarının dolu olduğunu görmek için Supabase panelini açmak gerekiyordu. Artık Yönetim > Kullanım ekranında veritabanı, dosyalar, aylık aktif kullanıcı ve disk doluluk oranları yüzde halkalarıyla duruyor; sayfa açık kaldığı sürece kendini tazeliyor. Yüzdelerin hangi plana göre hesaplanacağını Free/Pro seçimiyle değiştirebilirsiniz.",
       "dikkat": "Göndermeden önce Supabase SQL düzenleyicisinde 0021_usage.sql çalıştırılmalı; yoksa dosya boyutu, aylık aktif kullanıcı ve tablo listesi boş görünür."
+    },
+    {
+      "id": "2026-08-01-yonetim-paneline-girerken-telefona-dogrulama-kod",
+      "tip": "guvenlik",
+      "baslik": "Yönetim paneline girerken telefona doğrulama kodu geliyor",
+      "aciklama": "Yönetici hesabıyla giriş yaparken artık şifre tek başına yetmiyor: şifre doğruysa telefonunuza 6 haneli bir kod geliyor ve panel ancak o kod girilince açılıyor. Kod 5 dakika geçerli, beş kez yanlış girilirse yanıyor. Şifrenizi ele geçiren biri telefonunuza da erişemediği sürece panele giremiyor. Satıcı hesaplarının girişi değişmedi.",
+      "dikkat": "İki şey gerekiyor: (1) Supabase SQL düzenleyicisinde 0022_login_challenges.sql çalıştırılmalı; (2) Vercel'e TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID eklenmeli (kurulum adımları .env.local.example dosyasında yazıyor). Bu ikisi eklenmeden yayına alınırsa giriş eskisi gibi yalnızca şifreyle çalışmaya devam eder, kilitli kalmazsınız."
     }
   ]
 }

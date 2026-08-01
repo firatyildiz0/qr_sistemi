@@ -11,11 +11,21 @@ import {
   recordSecurityEvent,
 } from "@/lib/security";
 import { passwordError } from "@/lib/password";
+import { isTelegramConfigured } from "@/lib/telegram";
+import { startLoginChallenge, verifyLoginChallenge } from "@/lib/two-factor";
 
 // `awaitingApproval`, arayüzün "onay bekleniyor" penceresini açması için: aynı
 // durum hem kayıttan hemen sonra hem de onaysız hesapla giriş denendiğinde
 // doğuyor, ikisinde de aynı pencere çıkıyor (bkz. PendingApprovalDialog).
-export type LoginState = { error: string | null; awaitingApproval: boolean };
+//
+// `challengeId` doluysa şifre doğruydu ama oturum henüz açılmadı: form kod
+// adımına geçiyor ve o değeri `verifyLoginCode`'a geri veriyor. İçinde kullanıcı
+// bilgisi yok, yalnızca bilet numarası (bkz. lib/two-factor.ts).
+export type LoginState = {
+  error: string | null;
+  awaitingApproval: boolean;
+  challengeId: string | null;
+};
 export type SignupState = {
   error: string | null;
   notice: string | null;
@@ -55,7 +65,11 @@ export async function signIn(
   const next = String(formData.get("next") ?? "/admin");
 
   if (!identifier || !password) {
-    return { error: "Kullanıcı adı ve şifre gereklidir.", awaitingApproval: false };
+    return {
+      error: "Kullanıcı adı ve şifre gereklidir.",
+      awaitingApproval: false,
+      challengeId: null,
+    };
   }
 
   // Şifre denenmeden önce: son 15 dakikadaki başarısız denemeler eşiği aştıysa
@@ -63,7 +77,11 @@ export async function signIn(
   // iki ayrı saldırıyı yakalıyor (bkz. lib/security.ts).
   const limit = await checkLoginRateLimit(identifier);
   if (!limit.allowed) {
-    return { error: limit.message, awaitingApproval: false };
+    return {
+      error: limit.message,
+      awaitingApproval: false,
+      challengeId: null,
+    };
   }
 
   // Kullanıcı adı da e-posta da kabul edilir: kullanıcı adı zorunlu olalı
@@ -83,7 +101,11 @@ export async function signIn(
       identifier,
       detail: { reason: "unknown_identifier" },
     });
-    return { error: "Kullanıcı adı veya şifre hatalı.", awaitingApproval: false };
+    return {
+      error: "Kullanıcı adı veya şifre hatalı.",
+      awaitingApproval: false,
+      challengeId: null,
+    };
   }
 
   const supabase = await createClient();
@@ -96,7 +118,11 @@ export async function signIn(
       identifier,
       detail: { reason: "bad_password" },
     });
-    return { error: "Kullanıcı adı veya şifre hatalı.", awaitingApproval: false };
+    return {
+      error: "Kullanıcı adı veya şifre hatalı.",
+      awaitingApproval: false,
+      challengeId: null,
+    };
   }
 
   // Şifre doğru olsa da hesabın onaylanmış olması gerekiyor. Oturum bu noktada
@@ -123,24 +149,54 @@ export async function signIn(
       return {
         error: "Başvurunuz onaylanmadı. Ayrıntı için yöneticiyle görüşün.",
         awaitingApproval: false,
+        challengeId: null,
       };
     }
 
     return {
       error: "Hesabınız henüz onaylanmadı. Onaylandığında giriş yapabilirsiniz.",
       awaitingApproval: true,
+      challengeId: null,
     };
   }
 
-  // Başarılı girişler de kaydediliyor: başarısız denemelerin arasında hangi
-  // oturumların gerçekten açıldığını görmeden bir saldırının başarıya ulaşıp
-  // ulaşmadığı anlaşılmaz.
-  await recordSecurityEvent({
-    kind: "login_ok",
-    severity: "info",
-    identifier,
-    detail: { role: profile.role },
-  });
+  // Yönetim panelinin anahtarı tek bir şifreye bağlı kalmasın: superuser'ın
+  // şifresi doğru olsa bile oturum burada açılmıyor. Az önce açılan oturum
+  // kapatılıyor, telefona bir kod gidiyor ve giriş ikinci adıma devrediliyor
+  // (bkz. verifyLoginCode). Şifreyi ele geçiren birinin telefona da erişmesi
+  // gerekiyor artık.
+  //
+  // `scope: "local"`: yalnızca bu tarayıcının çerezleri siliniyor. Genel çıkış
+  // superuser'ın açık olan diğer oturumlarını da düşürürdü — her giriş denemesi
+  // kullanıcıyı öbür cihazlarından atmasın.
+  //
+  // Telegram hiç kurulmamışsa ikinci adım devreye girmiyor: ortam değişkenleri
+  // olmadan yayına alınan bir sürüm kullanıcıyı kendi panelinin dışında
+  // bırakmasın. Kurulu ama gönderim başarısızsa kapı kapanıyor — o zaman
+  // ortada gerçekten bir arıza var (bkz. lib/telegram.ts).
+  if (profile.role === "superuser" && isTelegramConfigured()) {
+    await supabase.auth.signOut({ scope: "local" });
+
+    const challenge = await startLoginChallenge(data.user.id);
+
+    if (!challenge.ok) {
+      return { error: challenge.message, awaitingApproval: false, challengeId: null };
+    }
+
+    await recordSecurityEvent({
+      kind: "two_factor_sent",
+      severity: "info",
+      identifier,
+      detail: { role: profile.role },
+    });
+
+    return { error: null, awaitingApproval: false, challengeId: challenge.challengeId };
+  }
+
+  // Başarılı giriş kaydedilmiyor: güvenlik ekranı olağandışı olanı göstermek
+  // için var, kimin ne zaman girdiğini tutmak için değil. Sıradan bir günün
+  // bütün girişlerini saklamak listeyi gürültüye boğuyor ve gereksiz yere
+  // kullanıcı adı + IP biriktiriyordu.
 
   // Superuser'ın satıcı panelinde işi yok; `next` bir satıcı sayfasını
   // gösteriyor olsa bile yönetim paneline iner.
@@ -149,6 +205,117 @@ export async function signIn(
   }
 
   redirect(safeNextPath(next));
+}
+
+/**
+ * Girişin ikinci adımı: telefona giden kod.
+ *
+ * Buraya gelen istekte ne kullanıcı adı ne şifre var — yalnızca bilet numarası
+ * ve kod. Şifre kontrolü `signIn`'de yapıldı; bileti açan da oydu, dolayısıyla
+ * geçerli bir bilet "şifre doğrulandı" belgesi yerine geçiyor. Bilet beş dakika
+ * yaşıyor, beş yanlış denemede yanıyor ve bir kez kullanılıyor.
+ *
+ * Oturum burada açılıyor: doğrulama geçince service role ile tek kullanımlık bir
+ * giriş jetonu üretiliyor ve çerezler onunla kuruluyor. Şifre bu adımda bir daha
+ * sorulmadığı için bekleyen bir oturumu saklamaya da gerek kalmıyor.
+ */
+export async function verifyLoginCode(
+  _prevState: LoginState,
+  formData: FormData
+): Promise<LoginState> {
+  const challengeId = String(formData.get("challengeId") ?? "");
+  const code = String(formData.get("code") ?? "").replace(/\D/g, "");
+
+  if (!challengeId) {
+    return {
+      error: "Doğrulama başlatılmadı. Baştan giriş yapın.",
+      awaitingApproval: false,
+      challengeId: null,
+    };
+  }
+
+  if (!code) {
+    return {
+      error: "Doğrulama kodunu girin.",
+      awaitingApproval: false,
+      challengeId,
+    };
+  }
+
+  const result = await verifyLoginChallenge(challengeId, code);
+
+  if (!result.ok) {
+    await recordSecurityEvent({
+      kind: "two_factor_failed",
+      severity: result.expired ? "warning" : "info",
+      detail: { reason: result.expired ? "expired_or_exhausted" : "wrong_code" },
+    });
+
+    // Bilet yandıysa forma kod alanını göstermeye devam etmenin anlamı yok:
+    // `challengeId` boş dönüyor ve form şifre adımına geri dönüyor.
+    return {
+      error: result.message,
+      awaitingApproval: false,
+      challengeId: result.expired ? null : challengeId,
+    };
+  }
+
+  const opened = await openSessionFor(result.userId);
+
+  if (!opened) {
+    return {
+      error: "Oturum açılamadı. Baştan giriş yapın.",
+      awaitingApproval: false,
+      challengeId: null,
+    };
+  }
+
+  redirect("/yonetim");
+}
+
+/**
+ * Şifresiz oturum açma — yalnızca kod doğrulandıktan sonra.
+ *
+ * Service role ile tek kullanımlık bir bağlantı jetonu üretiliyor ve hemen
+ * tüketiliyor. Bağlantının kendisi hiçbir yere gitmiyor, e-posta gönderilmiyor;
+ * `generateLink` yalnızca jetonu üretir. Jeton `verifyOtp`'ye verilince çerezler
+ * kuruluyor ve oturum normal bir giriş gibi başlıyor.
+ */
+async function openSessionFor(userId: string): Promise<boolean> {
+  const admin = createAdminClient();
+
+  const { data: userData } = await admin.auth.admin.getUserById(userId);
+  const email = userData?.user?.email;
+
+  if (!email) {
+    console.error("[2fa] doğrulanan kullanıcının e-postası bulunamadı");
+    return false;
+  }
+
+  const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+  });
+
+  const tokenHash = link?.properties?.hashed_token;
+
+  if (linkError || !tokenHash) {
+    console.error("[2fa] giriş jetonu üretilemedi:", linkError);
+    return false;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({
+    token_hash: tokenHash,
+    type: "magiclink",
+  });
+
+  if (error) {
+    console.error("[2fa] oturum açılamadı:", error);
+    return false;
+  }
+
+  return true;
 }
 
 export async function signUp(

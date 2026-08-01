@@ -318,17 +318,19 @@ create index if not exists notifications_product_id_idx on notifications(product
 -- One "returning tomorrow" notification per booking.
 create unique index if not exists notifications_booking_id_unique on notifications(booking_id);
 
--- Güvenlik olaylarının kaydı: başarısız ve başarılı girişler, engellenen
--- istekler, yetkisiz erişim denemeleri. Bir saldırının geriye iz bırakması ve
--- eşik aşılınca haber verilebilmesi için (bkz. 0017, lib/security.ts).
+-- Güvenlik olaylarının kaydı: başarısız girişler, engellenen istekler, yetkisiz
+-- erişim denemeleri. Bir saldırının geriye iz bırakması ve eşik aşılınca haber
+-- verilebilmesi için (bkz. 0017, lib/security.ts). Başarılı girişler bilinçli
+-- olarak yazılmıyor (bkz. 0023).
 --
 -- Kişisel veri tutmuyor: `identifier` denenen kullanıcı adı (şifre asla),
 -- `ip` ve `user_agent` isteğin geldiği yer. Müşteri bilgisi buraya girmiyor —
 -- güvenlik kaydının kendisi yeni bir sızıntı kaynağı olmasın.
 create table if not exists security_events (
   id uuid primary key default gen_random_uuid(),
-  -- Uygulamadaki sabit listeden gelir: login_failed, login_ok, signup,
-  -- rate_limited, unauthorized, cron_unauthorized, alert_sent.
+  -- Uygulamadaki sabit listeden gelir: login_failed, signup, two_factor_sent,
+  -- two_factor_failed, rate_limited, unauthorized, cron_unauthorized,
+  -- alert_sent.
   kind text not null,
   severity text not null default 'info'
     check (severity in ('info', 'warning', 'critical')),
@@ -346,6 +348,28 @@ create index if not exists security_events_identifier_idx
   on security_events (identifier, kind, created_at desc);
 create index if not exists security_events_ip_idx
   on security_events (ip, kind, created_at desc);
+
+-- Superuser girişinin ikinci adımı: telefona giden tek kullanımlık kod
+-- (bkz. 0022, lib/two-factor.ts). Şifre doğru olsa bile oturum açılmıyor, önce
+-- buraya bir bilet yazılıyor; oturum ancak kod doğrulanınca açılıyor.
+--
+-- Kodun düz hâli hiçbir yere yazılmıyor: `code_hash` scrypt özeti, `salt:hash`.
+create table if not exists login_challenges (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  code_hash text not null,
+  -- Kaç kez yanlış girildi; eşiği aşınca bilet yanıyor. Altı haneli bir kod
+  -- sınırsız denemeye bırakılırsa saniyeler içinde bulunur.
+  attempts integer not null default 0,
+  -- Doğrulanınca damgalanıyor: aynı bilet ikinci kez oturum açamıyor.
+  consumed_at timestamptz,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+-- Süresi geçmiş biletler her yeni bilet açılışında siliniyor.
+create index if not exists login_challenges_expires_at_idx
+  on login_challenges (expires_at);
 
 -- QR okutmalarının kaydı: ürün sayfası sahibi olmayan biri tarafından açıldı
 -- (bkz. 0019, lib/scans.ts). Ziyaretçiden saklanan tek şey `visitor_hash` —
@@ -781,6 +805,10 @@ alter table notifications enable row level security;
 alter table rental_settings enable row level security;
 alter table profiles enable row level security;
 alter table security_events enable row level security;
+-- login_challenges: hiçbir politika yok. Biletlere yalnızca sunucu tarafındaki
+-- service role dokunuyor; tarayıcıdan gelen bir istek onları ne okuyabilir ne
+-- damgalayabilir.
+alter table login_challenges enable row level security;
 alter table product_scans enable row level security;
 -- active_sessions: ne okuma ne yazma politikası var. Satırlara tek tek kimsenin
 -- ihtiyacı yok; panel yalnızca `admin_presence()`'ın döndürdüğü sayıyı görüyor,

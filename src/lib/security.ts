@@ -14,8 +14,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type SecurityEventKind =
   | "login_failed"
-  | "login_ok"
   | "signup"
+  | "two_factor_sent"
+  | "two_factor_failed"
   | "rate_limited"
   | "unauthorized"
   | "cron_unauthorized"

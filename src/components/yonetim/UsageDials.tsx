@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatBytes } from "@/lib/format";
 import type { Plan, Usage } from "@/lib/usage";
 import {
@@ -8,6 +8,7 @@ import {
   IconBolt,
   IconDatabase,
   IconImage,
+  IconRefresh,
   IconServer,
   IconUsers,
 } from "@/components/icons";
@@ -15,18 +16,29 @@ import {
 /**
  * Supabase kullanım göstergeleri.
  *
- * Sayfanın tamamı canlı, o yüzden tek istemci bileşeni bu. İlk değer sunucudan
- * geliyor (ekran boş açılmıyor), sonrası 15 saniyede bir tazeleniyor. Sekme arka
- * plandayken sorgu duruyor, öne gelince hemen yenileniyor — açık unutulmuş bir
- * panel Supabase'i boşuna yormasın. Anlık kullanıcı sayacındaki (LiveUsers)
- * düzenin aynısı.
+ * İlk değer sunucudan geliyor, yani sayfayı her açış zaten taze bir ölçüm. Kendi
+ * kendine tazelemesi bilerek seyrek: bir ölçüm Supabase'den ~24 KB indiriyor ve
+ * bu, projenin aylık dışa aktarım kotasından düşüyor. On beş saniyede bir
+ * yenilenen bir sekme ayda gigabaytlarca yer tutardı; oysa buradaki sayılar
+ * (veritabanı boyutu, aylık aktif kullanıcı, disk) saatler içinde kıpırdıyor.
+ *
+ * O yüzden düzen şu: açık unutulmuş bir sekme günde bir iki kez tazeleniyor,
+ * daha yenisi isteniyorsa Yenile düğmesi var. Düğmenin de kısa bir bekleme
+ * süresi var — arka arkaya basmak kotayı yakmasın.
  *
  * Halkalar bir kotanın ne kadarının dolduğunu gösteriyor; ölçüsü olan ama kotası
  * olmayan şeyler (bellek, işlemci, bağlantı) altta çubuk. Renk tek başına hiçbir
  * şey taşımıyor: her halkanın yanında durumu yazan bir etiket var.
  */
 
-const REFRESH_MS = 15_000;
+/** Ölçüm bu kadar eskidiyse kendiliğinden tazeleniyor: açık bir sekmede günde iki kez. */
+const REFRESH_MS = 12 * 60 * 60 * 1000;
+
+/** Yaşın ne sıklıkla sınandığı. Ağa çıkmıyor, yalnızca saate bakıyor. */
+const CHECK_MS = 60_000;
+
+/** Yenile düğmesinin iki basış arasında beklettiği süre. */
+const COOLDOWN_MS = 30_000;
 
 /** Halkanın rengini ve yanındaki yazıyı belirleyen eşikler. */
 const LEVELS = [
@@ -56,37 +68,80 @@ function formatCount(value: number): string {
 export default function UsageDials({ initial, plan }: { initial: Usage; plan: Plan }) {
   const [usage, setUsage] = useState(initial);
   const [stale, setStale] = useState(false);
+  const [busy, setBusy] = useState(false);
+  /** Yenile düğmesinin tekrar basılabileceği an. Sıfır: bekleme yok. */
+  const [readyAt, setReadyAt] = useState(0);
+  const requestRef = useRef<AbortController | null>(null);
+  /**
+   * Son *deneme* anı — son başarılı ölçümünki değil. Kendiliğinden tazeleme
+   * buna bakıyor: ölçüm ucu düştüğünde `measuredAt` olduğu yerde kalır ve yaşa
+   * bakan sınama her dakika yeniden denemeye başlardı.
+   */
+  const lastTryRef = useRef(new Date(initial.measuredAt).getTime());
+  const now = useNow();
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    lastTryRef.current = Date.now();
+
+    // Süren bir istek varsa bırakılıyor: düğmeye basıldığında bekleyen eski
+    // sorgunun sonucu yenisinin üstüne yazmasın.
+    requestRef.current?.abort();
     const controller = new AbortController();
+    requestRef.current = controller;
+    setBusy(true);
 
-    const load = async () => {
+    try {
+      const response = await fetch("/api/kullanim", {
+        signal: controller.signal,
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      setUsage((await response.json()) as Usage);
+      setStale(false);
+    } catch {
+      // İptal edilen istek hata değil: yerine yenisi geçti ya da bileşen
+      // kaldırıldı. İkisinde de `busy` yeni isteğin sorumluluğunda.
+      if (controller.signal.aborted) return;
+      setStale(true);
+    }
+
+    setBusy(false);
+  }, []);
+
+  // Bileşen kaldırılırken açık kalan istek kapatılıyor.
+  useEffect(() => () => requestRef.current?.abort(), []);
+
+  /**
+   * Kendiliğinden tazeleme. Zamanlayıcı `REFRESH_MS`'te bir kurulmuyor, dakikada
+   * bir *yaşa bakıyor*: arka plandaki sekmede zamanlayıcılar kısılıyor ve uzun
+   * bir aralık böyle kaçırılabiliyor. Aynı sınama sekme öne geldiğinde de
+   * çalışıyor, o yüzden sekmeler arası her gidiş geliş değil yalnızca ölçüm
+   * gerçekten eskimişse ağa çıkılıyor.
+   */
+  useEffect(() => {
+    const maybeLoad = () => {
       if (document.hidden) return;
-
-      try {
-        const response = await fetch("/api/kullanim", {
-          signal: controller.signal,
-          cache: "no-store",
-        });
-        if (!response.ok) throw new Error(String(response.status));
-        setUsage((await response.json()) as Usage);
-        setStale(false);
-      } catch {
-        // İptal edilen istek hata değil, bileşen kaldırıldı demek.
-        if (controller.signal.aborted) return;
-        setStale(true);
-      }
+      if (Date.now() - lastTryRef.current < REFRESH_MS) return;
+      void load();
     };
 
-    const timer = setInterval(load, REFRESH_MS);
-    document.addEventListener("visibilitychange", load);
+    const timer = setInterval(maybeLoad, CHECK_MS);
+    document.addEventListener("visibilitychange", maybeLoad);
 
     return () => {
-      controller.abort();
       clearInterval(timer);
-      document.removeEventListener("visibilitychange", load);
+      document.removeEventListener("visibilitychange", maybeLoad);
     };
-  }, []);
+  }, [load]);
+
+  // Bekleme başarısız denemede de başlıyor: ölçüm ucu düştüyse düğmeye arka
+  // arkaya basmak onu geri getirmez.
+  const refresh = () => {
+    setReadyAt(Date.now() + COOLDOWN_MS);
+    void load();
+  };
+
+  const waitLeft = now === null ? 0 : Math.max(0, Math.ceil((readyAt - now) / 1000));
 
   const quotas = [
     {
@@ -183,20 +238,47 @@ export default function UsageDials({ initial, plan }: { initial: Usage; plan: Pl
         </div>
       )}
 
-      {/* Canlılık göstergesi halkaların üstünde: aşağıdaki bütün sayılar aynı
-          ölçüme ait, durumu bir kez söylemek yeterli. */}
-      <div className="mt-6 flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className={`live-dot h-2 w-2 rounded-full ${stale ? "bg-ink-muted" : "bg-success"}`}
-        />
-        <span className="eyebrow text-ink-muted">
-          {stale ? "Bağlantı koptu" : "Canlı ölçüm"}
-        </span>
-        <span className="text-xs text-ink-muted">
-          · <MeasuredAt at={usage.measuredAt} />
-        </span>
+      {/* Ölçümün yaşı ve Yenile düğmesi halkaların üstünde: aşağıdaki bütün
+          sayılar aynı ölçüme ait, ne zaman alındığını bir kez söylemek yeterli.
+          Nokta yalnızca yenilenirken atıyor — sürekli atan bir nokta sayıların
+          saniye saniye tazelendiğini söylerdi, oysa öyle değil. */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {/* Yenileme durumu başarısızlığın önünde: hata sonrası tekrar
+              denenirken nokta "hâlâ bozuk" değil "deniyorum" demeli. */}
+          <span
+            aria-hidden="true"
+            className={`h-2 w-2 rounded-full ${
+              busy ? "live-dot bg-accent" : stale ? "bg-danger" : "bg-success"
+            }`}
+          />
+          <span className="eyebrow text-ink-muted">
+            {busy ? "Yenileniyor" : stale ? "Ölçüm alınamadı" : "Son ölçüm"}
+          </span>
+          <span className="text-xs text-ink-muted">
+            · <MeasuredAt at={usage.measuredAt} now={now} />
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={refresh}
+          disabled={busy || waitLeft > 0}
+          className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <IconRefresh
+            aria-hidden="true"
+            className={`h-4 w-4 ${busy ? "nav-spinner" : ""}`}
+          />
+          {busy ? "Yenileniyor…" : waitLeft > 0 ? `Yenile (${waitLeft} sn)` : "Yenile"}
+        </button>
       </div>
+
+      {/* Düğmenin neden bazen beklettiğini söylüyor: sayfa bozuk değil. */}
+      <p className="mt-2 text-xs text-ink-muted">
+        Sayfa kendini günde bir iki kez tazeliyor. Her ölçüm Supabase&apos;den
+        veri indirdiği için daha sık değil — daha yenisi gerekiyorsa Yenile.
+      </p>
 
       <section
         aria-label="Plan sınırları"
@@ -452,15 +534,17 @@ function Fact({
 }
 
 /**
- * "14 saniye önce". Sunucuda hesaplanamaz — sunucunun ürettiği metin istemcinin
- * saatine göre daima eskimiş olurdu — o yüzden ilk çizimde nötr bir yazı var,
- * gerçek süre hemen ardından geliyor ve saniyede bir tazeleniyor.
+ * Saniyede bir ilerleyen "şu an".
+ *
+ * Sunucuda üretilemez: sunucunun saatiyle yazılmış bir "3 dakika önce" ilk
+ * çizimde istemcininkiyle uyuşmaz. O yüzden mount'tan önce `null` — hem ölçümün
+ * yaşı hem düğmenin geri sayımı bunu bekliyor.
  *
  * İlk okuma da zamanlayıcıdan geçiyor, doğrudan efektin gövdesinden değil:
  * efektin içinden senkron `setState` çağırmak aynı karede ikinci bir çizim
  * tetikler.
  */
-function MeasuredAt({ at }: { at: string }) {
+function useNow(): number | null {
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
@@ -474,10 +558,18 @@ function MeasuredAt({ at }: { at: string }) {
     };
   }, []);
 
+  return now;
+}
+
+/** "14 saniye önce" / "3 saat önce". */
+function MeasuredAt({ at, now }: { at: string; now: number | null }) {
   if (now === null) return <span>ölçülüyor</span>;
 
   const seconds = Math.max(0, Math.round((now - new Date(at).getTime()) / 1000));
-  if (seconds < 5) return <span>az önce ölçüldü</span>;
+  if (seconds < 5) return <span>az önce</span>;
   if (seconds < 60) return <span>{seconds} saniye önce</span>;
-  return <span>{Math.round(seconds / 60)} dakika önce</span>;
+
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return <span>{minutes} dakika önce</span>;
+  return <span>{Math.round(minutes / 60)} saat önce</span>;
 }

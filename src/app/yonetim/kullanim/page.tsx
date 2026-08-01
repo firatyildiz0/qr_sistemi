@@ -19,7 +19,7 @@ export default async function KullanimPage() {
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Supabase kullanımı</h1>
       <p className="mt-1 text-sm text-ink-muted">
         Projenin kapasitesinin ne kadarı dolu. Sayılar Supabase&apos;in kendi
-        ölçümünden geliyor ve sayfa açık kaldığı sürece kendini tazeliyor.
+        ölçümünden geliyor; sayfayı her açışınız taze bir ölçüm.
       </p>
 
       {/* Yüzdelerin bölenini plan belirliyor; ölçülen değerler değişmiyor. Bir

@@ -1010,8 +1010,8 @@ summary,
   /* Supabase kullanım halkaları ve çubukları (bkz. components/yonetim/
      UsageDials.tsx).
 
-     Değer 15 saniyede bir tazeleniyor; geçişin tek işi yeni oranın nereden
-     nereye gittiğini göstermek — sayı yerinde zıplamasın. Renk de aynı anda
+     Değer seyrek tazeleniyor; geçişin tek işi yeni oranın nereden nereye
+     gittiğini göstermek — sayı yerinde zıplamasın. Renk de aynı anda
      kayıyor, çünkü eşik atlandığında halkanın yeşilden sarıya geçişi
      dolmasıyla birlikte okunsun. */
   .usage-arc {

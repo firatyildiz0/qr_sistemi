@@ -370,6 +370,20 @@ create index if not exists product_scans_owner_id_idx
 create index if not exists product_scans_visitor_idx
   on product_scans (product_id, visitor_hash, created_at desc);
 
+-- Anlık etkin kullanıcılar (bkz. 0020, lib/presence.ts). Oturum tablosu değil,
+-- son görülme tablosu: her açık sekme 45 saniyede bir haber veriyor ve anahtar
+-- başına tek satır güncelleniyor, geçmiş birikmiyor. Anahtar giriş yapmış
+-- satıcı için kullanıcı kimliği, ziyaretçi için IP'nin tuzlanmış özeti.
+create table if not exists active_sessions (
+  session_key text primary key,
+  -- Nerede olduğu: satıcı panelinde mi, herkese açık ürün sayfasında mı.
+  kind text not null check (kind in ('panel', 'urun')),
+  last_seen_at timestamptz not null default now()
+);
+
+create index if not exists active_sessions_last_seen_idx
+  on active_sessions (last_seen_at desc);
+
 -- ---------------------------------------------------------------------------
 -- Sahiplik ve herkese açık müsaitlik
 -- ---------------------------------------------------------------------------
@@ -663,6 +677,65 @@ begin
 end;
 $$;
 
+-- Açık sekmenin kalp atışı. Anahtar başına tek satır: aynı sekme dakikada bir
+-- gelse de tablo büyümüyor, yalnızca `last_seen_at` ilerliyor.
+create or replace function touch_presence(p_key text, p_kind text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_kind not in ('panel', 'urun') then
+    return;
+  end if;
+
+  insert into active_sessions (session_key, kind, last_seen_at)
+  values (p_key, p_kind, now())
+  on conflict (session_key)
+  do update set kind = excluded.kind, last_seen_at = now();
+end;
+$$;
+
+-- Panelin gördüğü anlık sayı. İki dakika, 45 saniyelik kalp atışına iki atışlık
+-- pay bırakıyor: kısa bir ağ kesintisi kullanıcıyı listeden düşürmesin.
+create or replace function admin_presence()
+returns table (kind text, viewers bigint)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not is_superuser() then
+    raise exception 'Bu veriye erişim yetkiniz yok.';
+  end if;
+
+  return query
+  select a.kind, count(*)
+  from active_sessions a
+  where a.last_seen_at > now() - interval '2 minutes'
+  group by a.kind;
+end;
+$$;
+
+-- Kapanan sekmelerden kalan ölü satırlar. Sayımı etkilemiyorlar (iki dakikalık
+-- pencerenin dışındalar) ama tablo boşuna büyümesin.
+create or replace function prune_presence()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_deleted integer;
+begin
+  delete from active_sessions where last_seen_at < now() - interval '1 day';
+  get diagnostics v_deleted = row_count;
+  return v_deleted;
+end;
+$$;
+
 -- Supabase yeni fonksiyonları varsayılan olarak anon ve authenticated'a da
 -- açıyor. Sayaç tarayıcıdaki anahtarla şişirilemesin ve bakım işleri dışarıdan
 -- tetiklenemesin diye yetkiler tek tek geri alınıyor.
@@ -675,6 +748,12 @@ grant execute on function prune_security_events() to service_role;
 revoke all on function prune_product_scans() from public, anon, authenticated;
 grant execute on function prune_product_scans() to service_role;
 
+revoke all on function touch_presence(text, text) from public, anon, authenticated;
+grant execute on function touch_presence(text, text) to service_role;
+
+revoke all on function prune_presence() from public, anon, authenticated;
+grant execute on function prune_presence() to service_role;
+
 -- İstatistikleri panel çağırıyor; yetkiyi fonksiyonun içindeki is_superuser()
 -- veriyor, o yüzden authenticated'a açık kalıyorlar.
 revoke all on function admin_stats_buckets(text, integer) from public, anon;
@@ -682,6 +761,9 @@ grant execute on function admin_stats_buckets(text, integer) to authenticated;
 
 revoke all on function admin_top_scanned_products(text, integer, integer) from public, anon;
 grant execute on function admin_top_scanned_products(text, integer, integer) to authenticated;
+
+revoke all on function admin_presence() from public, anon;
+grant execute on function admin_presence() to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Row Level Security
@@ -700,6 +782,10 @@ alter table rental_settings enable row level security;
 alter table profiles enable row level security;
 alter table security_events enable row level security;
 alter table product_scans enable row level security;
+-- active_sessions: ne okuma ne yazma politikası var. Satırlara tek tek kimsenin
+-- ihtiyacı yok; panel yalnızca `admin_presence()`'ın döndürdüğü sayıyı görüyor,
+-- yazma da service role'den geçiyor.
+alter table active_sessions enable row level security;
 
 -- profiles: satıcı yalnızca kendi kaydını görür. Kullanıcı adı → e-posta
 -- eşlemesi girişte service role anahtarıyla okunduğu için başka politika yok;

@@ -769,6 +769,174 @@ summary,
     font-variant-numeric: tabular-nums;
   }
 
+  /* ------------------------------------------------------------------
+     Giriş / üye ol ekranının sol paneli (bkz. components/AuthAside.tsx).
+
+     Dört adımlık tek bir döngü anlatıyor: etiket kurulur, müşteri okutur,
+     ürün sayfası açılır, aynı bağlantı satıcıda rezervasyon formuna döner.
+     Bütün parçalar aynı `--auth-loop` süresini paylaşıyor ve adım sınırları
+     her yerde %25 / %50 / %75'e denk geliyor — görsel, anlatı ve alttaki
+     ilerleme çizgileri böylece tek bir zamanda yürüyor. Ayrı ayrı süreler
+     verilseydi zamanla birbirlerinden kayarlardı.
+     ------------------------------------------------------------------ */
+  .auth-scene {
+    --auth-loop: 14s;
+  }
+
+  /* Yalnızca hareket kapalıyken devreye giren tek satırlık özet. */
+  .auth-cap-static {
+    display: none;
+  }
+
+  /* Panelin kendi renkleri. `pill-success` ya da `accent-muted` gibi hazır
+     sınıflar burada kullanılamıyor: onlar --color-card ile karışıyor, oysa bu
+     yüzey iki temada da koyu. Aşağıdakiler --color-deep ile karışıyor, yani
+     tema değişince zemin değil yalnızca vurgu tonu kayıyor. */
+  .auth-cap b {
+    font-weight: 700;
+    color: color-mix(in oklab, var(--color-accent) 72%, #ffffff);
+  }
+
+  .auth-pill {
+    background: color-mix(in oklab, var(--color-success) 18%, transparent);
+    color: color-mix(in oklab, var(--color-success) 55%, #ffffff);
+  }
+
+  /* Ürün sayfasındaki müsaitlik şeridi: takvimdeki .rdp-booked ve
+     .rdp-partly'nin koyu zemin karşılığı. */
+  .auth-day-full {
+    background: color-mix(in oklab, var(--color-accent) 46%, var(--color-deep));
+    color: #ffffff;
+    text-decoration: line-through;
+  }
+  .auth-day-part {
+    background: color-mix(in oklab, var(--color-accent) 16%, var(--color-deep));
+    color: #ffffff;
+  }
+
+  /* Adım k'da beliren öğe: `f` yalnızca görünürlük, `qr` ve `beam` gibi
+     kendi hareketi olanlar aşağıda kendi keyframe'lerini kullanıyor. */
+  .auth-f1,
+  .auth-f2,
+  .auth-f3,
+  .auth-f4 {
+    animation-duration: var(--auth-loop);
+    animation-iteration-count: infinite;
+    animation-timing-function: cubic-bezier(0.22, 0.9, 0.3, 1);
+  }
+  .auth-f1 { animation-name: auth-f1; }
+  .auth-f2 { animation-name: auth-f2; }
+  .auth-f3 { animation-name: auth-f3; }
+  .auth-f4 { animation-name: auth-f4; }
+
+  @keyframes auth-f1 {
+    0% { opacity: 0; transform: translateY(9px); }
+    3%, 96% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateY(-5px); }
+  }
+  @keyframes auth-f2 {
+    0%, 25% { opacity: 0; transform: translateY(9px); }
+    28%, 96% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateY(-5px); }
+  }
+  @keyframes auth-f3 {
+    0%, 50% { opacity: 0; transform: translateY(9px); }
+    53%, 96% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateY(-5px); }
+  }
+  @keyframes auth-f4 {
+    0%, 75% { opacity: 0; transform: translateY(9px); }
+    78%, 96% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateY(-5px); }
+  }
+
+  /* Etiket. Üçüncü adımda küçülüp ürün sayfasına yer açıyor. */
+  .auth-qr {
+    animation: auth-qr var(--auth-loop) cubic-bezier(0.22, 0.9, 0.3, 1) infinite;
+    transform-origin: 50% 0;
+  }
+  @keyframes auth-qr {
+    0% { opacity: 0; transform: scale(0.9); }
+    4%, 50% { opacity: 1; transform: scale(1); }
+    58%, 96% { opacity: 1; transform: scale(0.62) translateY(-4px); }
+    100% { opacity: 0; transform: scale(0.62) translateY(-4px); }
+  }
+
+  /* Etiketin altındaki yazı, kod küçülürken kendi boyunda kalsın. */
+  .auth-qr-tag {
+    animation: auth-qr-tag var(--auth-loop) cubic-bezier(0.22, 0.9, 0.3, 1) infinite;
+  }
+  @keyframes auth-qr-tag {
+    0%, 50% { transform: translateX(-50%) scale(1); }
+    58%, 100% { transform: translateX(-50%) scale(1.6); }
+  }
+
+  /* Modüller dağınık bir sırayla beliriyor; sıra `AuthAside.tsx` içinde bir
+     kez hesaplanıp gecikme olarak veriliyor. `backwards`: gecikme boyunca
+     modül görünmez kalsın, ama animasyon kapalıyken kod olduğu gibi dursun. */
+  .auth-mod {
+    animation: auth-mod var(--auth-loop) linear infinite backwards;
+  }
+  @keyframes auth-mod {
+    0% { opacity: 0; transform: scale(0.3); }
+    5%, 96% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1); }
+  }
+
+  .auth-beam {
+    animation: auth-beam var(--auth-loop) cubic-bezier(0.45, 0, 0.5, 1) infinite;
+  }
+  @keyframes auth-beam {
+    0%, 26% { transform: translateY(-8px); opacity: 0; }
+    30%, 44% { opacity: 1; }
+    47%, 100% { transform: translateY(134px); opacity: 0; }
+  }
+
+  .auth-bracket {
+    animation: auth-bracket var(--auth-loop) ease-out infinite;
+  }
+  @keyframes auth-bracket {
+    0%, 25% { opacity: 0; transform: scale(1.4); }
+    30%, 48% { opacity: 1; transform: scale(1); }
+    52%, 100% { opacity: 0; transform: scale(1); }
+  }
+
+  /* Adımı anlatan cümle ve ilerleme çizgileri. */
+  .auth-cap > p {
+    animation: auth-cap var(--auth-loop) cubic-bezier(0.22, 0.9, 0.3, 1) infinite backwards;
+    animation-delay: calc(var(--i) * var(--auth-loop) / 4);
+  }
+  @keyframes auth-cap {
+    0% { opacity: 0; transform: translateY(7px); }
+    4%, 21% { opacity: 1; transform: none; }
+    25%, 100% { opacity: 0; transform: translateY(-7px); }
+  }
+  .auth-dot {
+    animation: auth-dot var(--auth-loop) cubic-bezier(0.22, 0.9, 0.3, 1) infinite;
+    animation-delay: calc(var(--i) * var(--auth-loop) / 4);
+  }
+  @keyframes auth-dot {
+    0%, 24.9% { background: var(--color-accent); width: 28px; }
+    25%, 100% { background: color-mix(in oklab, var(--color-on-deep) 16%, transparent); width: 14px; }
+  }
+
+  /* Canlı sayacın nabzı. Hareket kapatıldığında nokta sabit kalıyor; anlamı
+     zaten yanındaki yazıda ("Şu anda sitede"), harekette değil. */
+  .live-dot {
+    animation: live-pulse 2s ease-in-out infinite;
+  }
+  @keyframes live-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.8);
+    }
+  }
+
   /* Logodaki renk dalgası (bkz. components/Wordmark.tsx). Her harf 95ms arayla
      başlıyor, yani dalga soldan sağa ilerliyor.
 
@@ -847,7 +1015,8 @@ summary,
     .check-draw,
     .wordmark-letter,
     .modal-backdrop,
-    .modal-panel {
+    .modal-panel,
+    .live-dot {
       animation: none !important;
     }
     .nav-spinner {
@@ -868,11 +1037,49 @@ summary,
   :root[data-motion="reduced"] .check-draw,
   :root[data-motion="reduced"] .wordmark-letter,
   :root[data-motion="reduced"] .modal-backdrop,
-  :root[data-motion="reduced"] .modal-panel {
+  :root[data-motion="reduced"] .modal-panel,
+  :root[data-motion="reduced"] .live-dot {
     animation: none !important;
   }
   :root[data-motion="reduced"] .btn:hover,
   :root[data-motion="reduced"] .card-hover:hover {
     transform: none;
+  }
+
+  /* Giriş panelinin hareketsiz hâli. Yukarıdaki listeye eklemek yerine ayrı
+     duruyor, çünkü burada iş `animation: none` ile bitmiyor: dönüşümlü dört
+     cümlenin yerini tek bir sabit cümle alıyor, sırf hareket için var olan
+     tarama ışığı ile köşe çerçevesi ise hiç çizilmiyor. Geriye panelin son
+     karesi kalıyor — etiket, ürün sayfası ve satıcı satırı. */
+  @media (prefers-reduced-motion: reduce) {
+    .auth-scene *,
+    .auth-scene *::before,
+    .auth-scene *::after {
+      animation: none !important;
+    }
+    .auth-scene .auth-beam,
+    .auth-scene .auth-bracket,
+    .auth-scene .auth-cap,
+    .auth-scene .auth-dots {
+      display: none;
+    }
+    .auth-scene .auth-cap-static {
+      display: block;
+    }
+  }
+
+  :root[data-motion="reduced"] .auth-scene *,
+  :root[data-motion="reduced"] .auth-scene *::before,
+  :root[data-motion="reduced"] .auth-scene *::after {
+    animation: none !important;
+  }
+  :root[data-motion="reduced"] .auth-scene .auth-beam,
+  :root[data-motion="reduced"] .auth-scene .auth-bracket,
+  :root[data-motion="reduced"] .auth-scene .auth-cap,
+  :root[data-motion="reduced"] .auth-scene .auth-dots {
+    display: none;
+  }
+  :root[data-motion="reduced"] .auth-scene .auth-cap-static {
+    display: block;
   }
 }

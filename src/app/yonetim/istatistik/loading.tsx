@@ -6,7 +6,21 @@ export default function Loading() {
       <span className="eyebrow text-accent">Yönetim</span>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">İstatistik</h1>
       <Skeleton className="mt-3 h-4 w-72" />
-      <Skeleton className="mt-6 h-11 w-64" />
+
+      <div className="card mt-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="mt-3 h-11 w-28" />
+          <Skeleton className="mt-3 h-3 w-56" />
+        </div>
+        <div className="flex gap-3">
+          <Skeleton className="h-20 w-28" />
+          <Skeleton className="h-20 w-28" />
+        </div>
+      </div>
+
+      <Skeleton className="mt-10 h-4 w-28" />
+      <Skeleton className="mt-3 h-11 w-64" />
 
       <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (

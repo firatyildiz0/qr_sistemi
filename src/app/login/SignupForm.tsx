@@ -1,13 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { signUp, type SignupState } from "./actions";
 import { USERNAME_RULE } from "@/lib/username";
+import PasswordField from "@/components/PasswordField";
+import PendingApprovalDialog from "@/components/PendingApprovalDialog";
 
-const initialState: SignupState = { error: null, notice: null };
+const initialState: SignupState = { error: null, notice: null, awaitingApproval: false };
 
 export default function SignupForm() {
   const [state, formAction, pending] = useActionState(signUp, initialState);
+
+  // Bkz. LoginForm: kapatma tek bir cevaba bağlanıyor.
+  const [dismissed, setDismissed] = useState<SignupState | null>(null);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -45,20 +50,7 @@ export default function SignupForm() {
         <p className="mt-1.5 text-xs text-ink-muted">{USERNAME_RULE}</p>
       </div>
 
-      <div>
-        <label htmlFor="signup-password" className="field-label">
-          Şifre
-        </label>
-        <input
-          id="signup-password"
-          name="password"
-          type="password"
-          required
-          minLength={6}
-          autoComplete="new-password"
-          className="input"
-        />
-      </div>
+      <PasswordField />
 
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
       {state.notice && <p className="text-sm text-ink">{state.notice}</p>}
@@ -66,6 +58,12 @@ export default function SignupForm() {
       <button type="submit" disabled={pending} className="btn btn-primary w-full">
         {pending ? "Hesap oluşturuluyor…" : "Üye ol"}
       </button>
+
+      <PendingApprovalDialog
+        open={state.awaitingApproval && dismissed !== state}
+        origin="signup"
+        onClose={() => setDismissed(state)}
+      />
     </form>
   );
 }

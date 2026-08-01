@@ -107,12 +107,17 @@ const LIMITS = {
   perIdentifier: { max: 5, windowMinutes: 15 },
   /** Aynı IP: 15 dakikada 20 başarısız deneme (ofisten birkaç kişi girebilir). */
   perIp: { max: 20, windowMinutes: 15 },
+  /** Aynı IP: bir saatte 5 kayıt (aşağıdaki gerekçe). */
+  signupPerIp: { max: 5, windowMinutes: 60 },
 };
 
 export type RateLimitResult = { allowed: true } | { allowed: false; message: string };
 
 const BLOCKED_MESSAGE =
   "Çok fazla başarısız deneme yapıldı. Güvenlik için 15 dakika bekleyip tekrar deneyin.";
+
+const SIGNUP_BLOCKED_MESSAGE =
+  "Bu bağlantıdan çok fazla kayıt yapıldı. Güvenlik için bir saat bekleyip tekrar deneyin.";
 
 export async function checkLoginRateLimit(
   identifier: string
@@ -150,6 +155,58 @@ export async function checkLoginRateLimit(
     // Sayaç okunamadıysa girişi engellemiyoruz: güvenlik tablosundaki bir arıza
     // bütün satıcıları dışarıda bırakmasın. Olay yine de log'a düşüyor.
     console.error("[security] hız sınırı okunamadı:", error);
+    return { allowed: true };
+  }
+}
+
+/**
+ * Kayıt eşiği.
+ *
+ * Girişten ayrı bir sayaç, çünkü ölçtüğü şey farklı: burada sayılan başarısız
+ * denemeler değil *başarılı* kayıtlar. Her başarılı kayıt, Supabase'in formda
+ * yazılan adrese bir doğrulama e-postası göndermesi demek — ve o adres
+ * saldırganın seçtiği herhangi biri olabilir. Yani sayaç şu soruyu yanıtlıyor:
+ * "bu bağlantı son bir saatte kaç kişinin gelen kutusuna e-posta yollattı".
+ * Başarısız denemeler sayılmıyor çünkü ne hesap açıyorlar ne e-posta
+ * gönderiyorlar; onları da saymak yalnızca kaydı gürültüye boğardı.
+ *
+ * Yalnızca IP'ye bakıyor: kullanıcı adı ve e-posta her denemede farklı
+ * olabiliyor, saldırganın değiştirmesi en pahalı olan şey bağlantısı.
+ *
+ * Eşik bilinçli olarak cömert — kayıt nadir bir işlem ve aynı ofisten birkaç
+ * satıcı arka arkaya kaydolabilir. Beşi aşan bir IP artık elle kaydolan bir
+ * insan değil.
+ */
+export async function checkSignupRateLimit(): Promise<RateLimitResult> {
+  try {
+    const { ip } = await requestContext();
+
+    // IP okunamadıysa sayılacak bir şey yok. Girişteki sayaçla aynı davranış:
+    // sayamadığımız bir isteği engellemiyoruz.
+    if (!ip) return { allowed: true };
+
+    const recent = await countRecent(
+      "ip",
+      ip,
+      "signup",
+      LIMITS.signupPerIp.windowMinutes
+    );
+
+    if (recent < LIMITS.signupPerIp.max) return { allowed: true };
+
+    // Otomatik bir betiğin işareti ve doğrudan e-posta kotasına dokunuyor —
+    // giriş tarafındaki IP eşiğiyle aynı ciddiyette, o yüzden `critical`.
+    await recordSecurityEvent({
+      kind: "rate_limited",
+      severity: "critical",
+      detail: { signupsForIp: recent, reason: "signup_ip" },
+    });
+
+    return { allowed: false, message: SIGNUP_BLOCKED_MESSAGE };
+  } catch (error) {
+    // Girişteki gerekçenin aynısı: güvenlik tablosundaki bir arıza yeni
+    // satıcıların kaydolmasını tümden engellemesin.
+    console.error("[security] kayıt hız sınırı okunamadı:", error);
     return { allowed: true };
   }
 }

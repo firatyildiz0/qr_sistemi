@@ -5,12 +5,23 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeNextPath } from "@/lib/redirects";
 import { isValidUsername, normalizeUsername, USERNAME_RULE } from "@/lib/username";
-import { checkLoginRateLimit, recordSecurityEvent } from "@/lib/security";
+import {
+  checkLoginRateLimit,
+  checkSignupRateLimit,
+  recordSecurityEvent,
+} from "@/lib/security";
+import { passwordError } from "@/lib/password";
 
-export type LoginState = { error: string | null };
-export type SignupState = { error: string | null; notice: string | null };
+// `awaitingApproval`, arayüzün "onay bekleniyor" penceresini açması için: aynı
+// durum hem kayıttan hemen sonra hem de onaysız hesapla giriş denendiğinde
+// doğuyor, ikisinde de aynı pencere çıkıyor (bkz. PendingApprovalDialog).
+export type LoginState = { error: string | null; awaitingApproval: boolean };
+export type SignupState = {
+  error: string | null;
+  notice: string | null;
+  awaitingApproval: boolean;
+};
 
-const MIN_PASSWORD_LENGTH = 6;
 
 /**
  * Kullanıcı adı → hesabın e-postası.
@@ -44,7 +55,7 @@ export async function signIn(
   const next = String(formData.get("next") ?? "/admin");
 
   if (!identifier || !password) {
-    return { error: "Kullanıcı adı ve şifre gereklidir." };
+    return { error: "Kullanıcı adı ve şifre gereklidir.", awaitingApproval: false };
   }
 
   // Şifre denenmeden önce: son 15 dakikadaki başarısız denemeler eşiği aştıysa
@@ -52,7 +63,7 @@ export async function signIn(
   // iki ayrı saldırıyı yakalıyor (bkz. lib/security.ts).
   const limit = await checkLoginRateLimit(identifier);
   if (!limit.allowed) {
-    return { error: limit.message };
+    return { error: limit.message, awaitingApproval: false };
   }
 
   // Kullanıcı adı da e-posta da kabul edilir: kullanıcı adı zorunlu olalı
@@ -72,7 +83,7 @@ export async function signIn(
       identifier,
       detail: { reason: "unknown_identifier" },
     });
-    return { error: "Kullanıcı adı veya şifre hatalı." };
+    return { error: "Kullanıcı adı veya şifre hatalı.", awaitingApproval: false };
   }
 
   const supabase = await createClient();
@@ -85,7 +96,7 @@ export async function signIn(
       identifier,
       detail: { reason: "bad_password" },
     });
-    return { error: "Kullanıcı adı veya şifre hatalı." };
+    return { error: "Kullanıcı adı veya şifre hatalı.", awaitingApproval: false };
   }
 
   // Şifre doğru olsa da hesabın onaylanmış olması gerekiyor. Oturum bu noktada
@@ -106,11 +117,18 @@ export async function signIn(
       identifier,
       detail: { reason: "account_not_approved", status: profile?.status ?? "missing" },
     });
+    // Reddedilmiş hesabın bekleyecek bir şeyi yok — ona pencere değil, satır
+    // altında düz bir mesaj gösteriliyor.
+    if (profile?.status === "rejected") {
+      return {
+        error: "Başvurunuz onaylanmadı. Ayrıntı için yöneticiyle görüşün.",
+        awaitingApproval: false,
+      };
+    }
+
     return {
-      error:
-        profile?.status === "rejected"
-          ? "Başvurunuz onaylanmadı. Ayrıntı için yöneticiyle görüşün."
-          : "Hesabınız henüz onaylanmadı. Onaylandığında giriş yapabilirsiniz.",
+      error: "Hesabınız henüz onaylanmadı. Onaylandığında giriş yapabilirsiniz.",
+      awaitingApproval: true,
     };
   }
 
@@ -142,15 +160,27 @@ export async function signUp(
   const password = String(formData.get("password") ?? "");
 
   if (!email || !username || !password) {
-    return { error: "E-posta, kullanıcı adı ve şifre gereklidir.", notice: null };
+    return { error: "E-posta, kullanıcı adı ve şifre gereklidir.", notice: null, awaitingApproval: false };
   }
 
   if (!isValidUsername(username)) {
-    return { error: `Kullanıcı adı geçersiz. ${USERNAME_RULE}`, notice: null };
+    return { error: `Kullanıcı adı geçersiz. ${USERNAME_RULE}`, notice: null, awaitingApproval: false };
   }
 
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalıdır.`, notice: null };
+  // Formdaki canlı liste aynı kuralları kullanıyor (lib/password.ts), ama o
+  // yalnızca tarayıcıda çalışıyor — elle atılan bir istek buraya takılır.
+  const weak = passwordError(password);
+  if (weak) {
+    return { error: weak, notice: null, awaitingApproval: false };
+  }
+
+  // Biçim kontrollerinden sonra, veritabanına ve Supabase'e gitmeden önce:
+  // buradan öteye geçen her istek bir hesap açıp formda yazılan adrese
+  // doğrulama e-postası gönderiyor, ve o adres saldırganın seçtiği herhangi
+  // biri olabilir (bkz. lib/security.ts).
+  const limit = await checkSignupRateLimit();
+  if (!limit.allowed) {
+    return { error: limit.message, notice: null, awaitingApproval: false };
   }
 
   // Kullanıcı adı `profiles` üzerindeki unique kısıtla korunuyor; buradaki
@@ -164,7 +194,7 @@ export async function signUp(
     .maybeSingle();
 
   if (taken) {
-    return { error: "Bu kullanıcı adı kullanılıyor.", notice: null };
+    return { error: "Bu kullanıcı adı kullanılıyor.", notice: null, awaitingApproval: false };
   }
 
   const supabase = await createClient();
@@ -178,23 +208,24 @@ export async function signUp(
 
   if (error) {
     if (error.message.toLowerCase().includes("already registered")) {
-      return { error: "Bu e-posta ile bir hesap zaten var.", notice: null };
+      return { error: "Bu e-posta ile bir hesap zaten var.", notice: null, awaitingApproval: false };
     }
     // Trigger'daki unique ihlali Supabase'e "Database error saving new user"
     // olarak döner — bu noktada geriye tek olası çakışma kullanıcı adıdır.
     if (error.message.toLowerCase().includes("database error")) {
-      return { error: "Bu kullanıcı adı kullanılıyor.", notice: null };
+      return { error: "Bu kullanıcı adı kullanılıyor.", notice: null, awaitingApproval: false };
     }
     return {
       error: "Kayıt oluşturulamadı. Bilgileri kontrol edip tekrar deneyin.",
       notice: null,
+      awaitingApproval: false,
     };
   }
 
   // E-posta doğrulaması açıkken Supabase, kayıtlı bir adresi ele vermemek için
   // kimliksiz (identities: []) sahte bir kullanıcı döndürür.
   if (data.user && data.user.identities?.length === 0) {
-    return { error: "Bu e-posta ile bir hesap zaten var.", notice: null };
+    return { error: "Bu e-posta ile bir hesap zaten var.", notice: null, awaitingApproval: false };
   }
 
   // Kayıtlar onay beklediği için tek başına bir tehdit değil, ama arka arkaya
@@ -217,6 +248,7 @@ export async function signUp(
     error: null,
     notice:
       "Kaydınız alındı. Yönetici hesabınızı onayladıktan sonra kullanıcı adınız ve şifrenizle giriş yapabilirsiniz.",
+    awaitingApproval: true,
   };
 }
 

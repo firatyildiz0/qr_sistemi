@@ -55,11 +55,13 @@ export async function GET(request: NextRequest) {
   const tomorrow = tomorrowDateString();
 
   // Günlük bakım: güvenlik kayıtları 90, QR okutma kayıtları 400 günden eskiyse
-  // silinsin. Zaten her sabah çalışan tek zamanlanmış iş burası, ayrı bir cron
-  // açmaya değmez.
+  // silinsin, kapanmış sekmelerden kalan etkinlik satırları da temizlensin.
+  // Zaten her sabah çalışan tek zamanlanmış iş burası, ayrı bir cron açmaya
+  // değmez.
   await Promise.all([
     supabase.rpc("prune_security_events"),
     supabase.rpc("prune_product_scans"),
+    supabase.rpc("prune_presence"),
   ]);
 
   const { data: bookings, error } = await supabase

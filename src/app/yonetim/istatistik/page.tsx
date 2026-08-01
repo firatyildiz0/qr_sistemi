@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getProfile } from "@/lib/profile";
+import { getPresence } from "@/lib/presence";
 import { getStats, periodOf, PERIODS, type Bucket, type Period } from "@/lib/stats";
+import LiveUsers from "@/components/yonetim/LiveUsers";
 import StatsTrend from "@/components/yonetim/StatsTrend";
 import {
   IconAlertTriangle,
@@ -39,7 +41,10 @@ export default async function IstatistikPage({
   if (me?.role !== "superuser" || me.status !== "approved") return null;
 
   const period = periodOf(aralik);
-  const { buckets, top, error } = await getStats(period);
+  const [{ buckets, top, error }, presence] = await Promise.all([
+    getStats(period),
+    getPresence(),
+  ]);
 
   const current: Bucket | undefined = buckets[buckets.length - 1];
   const previous: Bucket | undefined = buckets[buckets.length - 2];
@@ -55,9 +60,17 @@ export default async function IstatistikPage({
         karşılaştırma bir önceki tamamlanmış dönemle yapılıyor.
       </p>
 
+      {/* Anlık sayı dönemden bağımsız, o yüzden dönem sekmelerinin de üstünde:
+          sekmeler onu değiştirmiyor. */}
+      <section className="mt-6">
+        <LiveUsers initial={presence} />
+      </section>
+
+      <h2 className="mt-10 text-sm font-semibold text-ink">Dönemsel özet</h2>
+
       {/* Dönem seçimi. Sunucuda okunan bir arama parametresi — istemci
           bileşenine geçmeye değmiyor, üç bağlantı yeterli. */}
-      <nav aria-label="Dönem" className="mt-6 inline-flex gap-1 rounded-md border border-border bg-card p-1">
+      <nav aria-label="Dönem" className="mt-3 inline-flex gap-1 rounded-md border border-border bg-card p-1">
         {PERIODS.map((p) => {
           const selected = p.key === period;
           return (

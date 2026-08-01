@@ -17,6 +17,7 @@ import { getTurnaround } from "@/lib/settings";
 import AvailabilityCalendar from "@/components/booking/AvailabilityCalendar";
 import BookingForm from "@/components/booking/BookingForm";
 import BookingList from "@/components/booking/BookingList";
+import PresenceBeacon from "@/components/PresenceBeacon";
 import { IconQrCode, IconTag } from "@/components/icons";
 
 export default async function ProductDetailPage({
@@ -125,6 +126,11 @@ export default async function ProductDetailPage({
 
   return (
     <main className="min-h-screen bg-paper">
+      {/* Sayfa açık kaldığı sürece anlık kullanıcı sayacına dahil. Sahibi
+          buradaysa "panel" tarafına yazılıyor: satıcının kendi ürününe bakması
+          müşteri değil, panel kullanımı. */}
+      <PresenceBeacon kind={isOwner ? "panel" : "urun"} />
+
       <div className="relative h-64 overflow-hidden border-b border-border bg-surface sm:h-80">
         {images.length > 0 ? (
           <div className={`grid h-full ${images.length > 1 ? "grid-cols-2 gap-3" : "grid-cols-1"} p-3`}>

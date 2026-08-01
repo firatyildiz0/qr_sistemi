@@ -7,6 +7,7 @@ import { signOut } from "@/app/login/actions";
 import AdminShell, { type Identity } from "@/components/admin/AdminShell";
 import UsernamePrompt from "@/components/admin/UsernamePrompt";
 import AccessGuard from "@/components/admin/AccessGuard";
+import PresenceBeacon from "@/components/PresenceBeacon";
 
 async function loadIdentity(): Promise<Identity> {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
@@ -65,6 +66,11 @@ export default function AdminLayout({
       <Suspense fallback={null}>
         <UsernamePrompt profilePromise={getProfile()} />
       </Suspense>
+
+      {/* Panel açık kaldığı sürece "buradayım" diyor; yönetim panelindeki anlık
+          kullanıcı sayacı bunu sayıyor. Layout'ta duruyor ki sayfa değiştirmek
+          sayacı sıfırlamasın. */}
+      <PresenceBeacon kind="panel" />
     </>
   );
 }

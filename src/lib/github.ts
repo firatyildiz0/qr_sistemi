@@ -174,13 +174,26 @@ export async function canliyiIlerlet(sha: string): Promise<void> {
 
   if (yanit.ok) return;
 
+  // GitHub'ın kendi açıklaması genelde asıl sebebi söylüyor (korumalı dal, eksik
+  // izin, kayıp commit). Onu yutup yerine tahmin yazmak, hatayı log'dan okumak
+  // zorunda bırakıyor — nitekim ilk sürümde tam olarak bu oldu.
+  let detay = "";
+  try {
+    const govde = (await yanit.json()) as { message?: string };
+    if (govde.message) detay = ` GitHub şöyle diyor: “${govde.message}”`;
+  } catch {
+    // Gövde okunamadıysa HTTP kodu ile idare ederiz.
+  }
+
   if (yanit.status === 422) {
     throw new Error(
-      "GitHub bu değişikliği ileri sarma olarak kabul etmedi. Canlı, beklenenden farklı bir noktada olabilir — sayfayı yenileyip tekrar bak.",
+      `GitHub bu değişikliği ileri sarma olarak kabul etmedi. Canlı, beklenenden farklı bir noktada olabilir — sayfayı yenileyip tekrar bakın.${detay}`,
     );
   }
   if (yanit.status === 403 || yanit.status === 401) {
-    throw new Error("GitHub anahtarının bu depoya yazma yetkisi yok.");
+    throw new Error(
+      `GitHub anahtarı bu depoya yazamıyor. Fine-grained token'da "Contents" izni "Read and write" olmalı; korumalı bir dal da aynı cevabı verir.${detay}`,
+    );
   }
-  throw new Error(`Gönderilemedi (HTTP ${yanit.status}).`);
+  throw new Error(`Gönderilemedi (HTTP ${yanit.status}).${detay}`);
 }

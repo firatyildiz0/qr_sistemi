@@ -13,6 +13,13 @@
       "baslik": "Giriş ekranındaki animasyondaki QR kod artık gerçekten okunuyor",
       "aciklama": "Giriş sayfasının solundaki animasyonda duran kod yalnızca bir desendi, telefonla okutulduğunda hiçbir şey olmuyordu. Artık gerçek bir QR kod: okutan kişi doğrudan sitenin ana sayfasına gidiyor.",
       "dikkat": null
+    },
+    {
+      "id": "2026-08-01-canliya-alma-basarisiz-olunca-sebebi-ekranda-yaz",
+      "tip": "hata",
+      "baslik": "Canlıya alma başarısız olunca sebebi ekranda yazmıyordu",
+      "aciklama": "Yayın ekranında bir değişikliği canlıya almaya çalıştığında iş başarısız olursa, ekranda sebebini söylemeyen teknik bir uyarı çıkıyordu. Artık ne olduğu düz Türkçe yazıyor ve GitHub'ın kendi açıklaması da ekleniyor — örneğin erişim anahtarının yazma yetkisi yoksa bunu doğrudan söylüyor.",
+      "dikkat": null
     }
   ]
 }

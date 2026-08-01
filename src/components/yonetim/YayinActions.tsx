@@ -28,10 +28,13 @@ export default function YayinActions({
     setError(null);
     startTransition(async () => {
       try {
-        await yayinla(sha);
-        setSoruluyor(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Gönderilemedi.");
+        const sonuc = await yayinla(sha);
+        if (sonuc.tamam) setSoruluyor(false);
+        else setError(sonuc.mesaj);
+      } catch {
+        // Buraya ancak istek hiç ulaşmazsa düşülür; işin kendi hataları
+        // `sonuc` içinde geliyor.
+        setError("Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.");
       }
     });
   }

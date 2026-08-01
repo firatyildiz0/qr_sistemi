@@ -319,6 +319,69 @@ create index if not exists notifications_product_id_idx on notifications(product
 create unique index if not exists notifications_booking_id_unique on notifications(booking_id);
 
 -- ---------------------------------------------------------------------------
+-- Sahiplik ve herkese açık müsaitlik
+-- ---------------------------------------------------------------------------
+
+-- `security definer`: politikanın içinden `products` sorgulanınca o tablonun
+-- kendi RLS'i de devreye girer ve iç içe geçmiş politikalar birbirini
+-- kilitleyebilir. Definer olarak çalışan fonksiyon o bağı kesiyor.
+create or replace function owns_product(p_product_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from products
+    where products.id = p_product_id
+      and products.owner_id = auth.uid()
+  );
+$$;
+
+-- QR'ı okutan müşterinin gördüğü müsaitlik takvimi. `bookings` satırları kişisel
+-- veri taşıdığı için ona kapalı; takvimin saydığı tarihler buradan geliyor.
+-- Dönen satırlarda ad, telefon, adres, teminat ya da rezervasyon kimliği yok.
+--
+-- `delivery_mode` burada çözülüyor: kolon eklenmeden önceki kayıtlarda null ve
+-- uygulama onu müşterinin ilinden türetiyor. Aynı kural (Bursa → elden) burada
+-- uygulanıyor ki il dışarı çıkmasın.
+create or replace function product_availability(p_product_id uuid)
+returns table (
+  start_date date,
+  end_date date,
+  delivery_mode text,
+  blocked_start date,
+  blocked_end date
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    b.start_date,
+    b.end_date,
+    coalesce(
+      b.delivery_mode,
+      case when b.customer_city = 'Bursa' then 'elden' else 'kargo' end
+    ),
+    b.blocked_start,
+    b.blocked_end
+  from bookings b
+  where b.product_id = p_product_id
+    and b.status <> 'cancelled';
+$$;
+
+-- `security definer` fonksiyonların yetkisi açıkça veriliyor: varsayılan
+-- `public` grubu alınıp yerine yalnızca gerçekten çağıracak roller konuyor.
+revoke all on function product_availability(uuid) from public;
+grant execute on function product_availability(uuid) to anon, authenticated;
+
+revoke all on function owns_product(uuid) from public;
+grant execute on function owns_product(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------------
 -- Multi-seller app: each product has an owner (the seller who created it via
@@ -397,13 +460,17 @@ create policy "products_delete_owner" on products
   for delete to authenticated
   using (owner_id = (select auth.uid()) and is_approved());
 
--- bookings: public read (no customer accounts, so anyone with the link can see
--- what dates are taken), but every write — creating, editing, cancelling — is
--- restricted to the seller who owns the product. The public product page shows
--- a read-only availability calendar; only the owner gets the booking form, and
--- the insert policy below is what actually enforces that.
-create policy "bookings_select_public" on bookings
-  for select using (true);
+-- bookings: satır müşterinin adını, telefonunu ve açık adresini taşıyor, o
+-- yüzden okuması da yazması da ürünün sahibine ait. Herkese açık ürün sayfası
+-- takvimi `product_availability()` üzerinden besleniyor: dolu tarihler dönüyor,
+-- kimin doldurduğu dönmüyor.
+--
+-- Bu politika eskiden `using (true)` idi. Anon anahtar tarayıcıdaki pakette
+-- göründüğü için o hâliyle bütün müşteri kayıtları internete açıktı (bkz.
+-- 0016). Takvimin ihtiyaç duyduğu şeyle kişisel verinin aynı sorgudan gelmesi
+-- gerekmiyordu; ikisi ayrıldı.
+create policy "bookings_select_owner" on bookings
+  for select to authenticated using (owns_product(product_id));
 
 create policy "bookings_insert_owner" on bookings
   for insert to authenticated with check (

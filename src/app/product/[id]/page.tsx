@@ -3,8 +3,13 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Booking } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
-import { availabilityOf } from "@/lib/bookings";
-import { getBookingGroups, getOwnerCatalog } from "@/lib/catalog";
+import { availabilityOf, type BookingOccupancy } from "@/lib/bookings";
+import {
+  getBookingGroups,
+  getOwnerCatalog,
+  type CatalogProduct,
+  type GroupMember,
+} from "@/lib/catalog";
 import { getTurnaround } from "@/lib/settings";
 import AvailabilityCalendar from "@/components/booking/AvailabilityCalendar";
 import BookingForm from "@/components/booking/BookingForm";
@@ -24,7 +29,6 @@ export default async function ProductDetailPage({
       data: { user },
     },
     { data: product },
-    { data: bookings },
     // Ziyaretçi satıcı değilse RLS bunu okutmaz ve varsayılanlar döner — sorun
     // değil, çünkü kayıtlı rezervasyonların bloke aralığı zaten kendi
     // kolonlarında yazılı. Süreler yalnızca satıcının formundaki canlı
@@ -33,11 +37,6 @@ export default async function ProductDetailPage({
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("products").select("*").eq("id", id).single(),
-    supabase
-      .from("bookings")
-      .select("*")
-      .eq("product_id", id)
-      .order("start_date", { ascending: true }),
     getTurnaround(),
   ]);
 
@@ -46,22 +45,45 @@ export default async function ProductDetailPage({
   const isOwner = user?.id === product.owner_id;
   const images: string[] = (product.images ?? []).slice(0, 2);
 
-  // Toplu rezervasyon için satıcının bütün ürünleri ve grup içerikleri gerekiyor;
-  // ziyaretçiye rezervasyon formu hiç gösterilmediği için o sorgular da atılmıyor.
-  const [catalog, groups] = isOwner
-    ? await Promise.all([
-        getOwnerCatalog(supabase, product.owner_id, turnaround),
-        getBookingGroups(supabase, product.owner_id),
-      ])
-    : [[], {}];
+  // Rezervasyon satırları artık yalnızca satıcıya açık: içlerinde müşterinin
+  // adı, telefonu ve adresi var, oysa bu sayfayı QR'ı okutan herkes görüyor.
+  // Ziyaretçiye gereken tek şey takvim, o da `product_availability` üzerinden
+  // geliyor — dolu tarihler dönüyor, kimin doldurduğu dönmüyor.
+  //
+  // Toplu rezervasyon için gereken katalog ve grup içerikleri de aynı sebeple
+  // yalnızca satıcı yolunda sorgulanıyor.
+  let bookings: Booking[] = [];
+  let catalog: CatalogProduct[] = [];
+  let groups: Record<string, GroupMember[]> = {};
+  let occupancy: BookingOccupancy[];
+
+  if (isOwner) {
+    const [{ data: rows }, ownerCatalog, ownerGroups] = await Promise.all([
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("product_id", id)
+        .order("start_date", { ascending: true }),
+      getOwnerCatalog(supabase, product.owner_id, turnaround),
+      getBookingGroups(supabase, product.owner_id),
+    ]);
+
+    bookings = (rows ?? []) as Booking[];
+    catalog = ownerCatalog;
+    groups = ownerGroups;
+    occupancy = bookings.filter((b) => b.status !== "cancelled");
+  } else {
+    const { data } = await supabase.rpc("product_availability", {
+      p_product_id: id,
+    });
+    // İptal edilenleri fonksiyon zaten eliyor.
+    occupancy = (data ?? []) as BookingOccupancy[];
+  }
 
   // Per-day counts rather than plain ranges: a day is unavailable only when
   // as many bookings cover it as the product has units in stock. Sayılan
   // aralık kiralama günleri değil, ürünün elde olmadığı günler.
-  const availability = availabilityOf(
-    (bookings ?? []).filter((b: Booking) => b.status !== "cancelled"),
-    turnaround
-  );
+  const availability = availabilityOf(occupancy, turnaround);
 
   return (
     <main className="min-h-screen bg-paper">
@@ -145,7 +167,7 @@ export default async function ProductDetailPage({
           <section className="mt-10">
             <h2 className="mb-3 text-lg font-semibold text-ink">Kiralamalar</h2>
             <BookingList
-              bookings={bookings ?? []}
+              bookings={bookings}
               productId={id}
               stock={product.stock}
               turnaround={turnaround}

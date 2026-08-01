@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordSecurityEvent } from "@/lib/security";
 
 /**
  * Guards the only endpoint that reaches for the service-role key, so it has to
@@ -40,11 +41,22 @@ export async function GET(request: NextRequest) {
   }
 
   if (!isAuthorized(request)) {
+    // Bu uca yalnızca Vercel Cron gelir. Başka biri denediyse ya anahtarı
+    // arıyor ya da bulmuş — ikisi de anında bilinmeli, o yüzden `critical`.
+    await recordSecurityEvent({
+      kind: "cron_unauthorized",
+      severity: "critical",
+      detail: { hasHeader: request.headers.has("authorization") },
+    });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createAdminClient();
   const tomorrow = tomorrowDateString();
+
+  // Günlük bakım: güvenlik kayıtları 90 günden eskiyse silinsin. Zaten her sabah
+  // çalışan tek zamanlanmış iş burası, ayrı bir cron açmaya değmez.
+  await supabase.rpc("prune_security_events");
 
   const { data: bookings, error } = await supabase
     .from("bookings")

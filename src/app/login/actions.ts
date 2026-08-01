@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeNextPath } from "@/lib/redirects";
 import { isValidUsername, normalizeUsername, USERNAME_RULE } from "@/lib/username";
+import { checkLoginRateLimit, recordSecurityEvent } from "@/lib/security";
 
 export type LoginState = { error: string | null };
 export type SignupState = { error: string | null; notice: string | null };
@@ -46,6 +47,14 @@ export async function signIn(
     return { error: "Kullanıcı adı ve şifre gereklidir." };
   }
 
+  // Şifre denenmeden önce: son 15 dakikadaki başarısız denemeler eşiği aştıysa
+  // istek buradan geri döner. Eşik hem kullanıcı adına hem IP'ye bakıyor, ikisi
+  // iki ayrı saldırıyı yakalıyor (bkz. lib/security.ts).
+  const limit = await checkLoginRateLimit(identifier);
+  if (!limit.allowed) {
+    return { error: limit.message };
+  }
+
   // Kullanıcı adı da e-posta da kabul edilir: kullanıcı adı zorunlu olalı
   // beri kayıtlı olanların türetilmiş bir kullanıcı adı var ve onu bilmiyorlar
   // — e-postayla giriş o hesapları kilit dışında tutar. "@" ayırt etmeye yeter,
@@ -55,6 +64,14 @@ export async function signIn(
   // halde form hangi kullanıcı adlarının kayıtlı olduğunu ele verirdi.
   const email = identifier.includes("@") ? identifier : await emailForUsername(identifier);
   if (!email) {
+    // Kullanıcı adı yok — ama bu da bir deneme. Sayılmazsa saldırgan var olmayan
+    // adlarla sınırsız deneyip hangilerinin kayıtlı olduğunu tarayabilirdi.
+    await recordSecurityEvent({
+      kind: "login_failed",
+      severity: "info",
+      identifier,
+      detail: { reason: "unknown_identifier" },
+    });
     return { error: "Kullanıcı adı veya şifre hatalı." };
   }
 
@@ -62,6 +79,12 @@ export async function signIn(
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.user) {
+    await recordSecurityEvent({
+      kind: "login_failed",
+      severity: "info",
+      identifier,
+      detail: { reason: "bad_password" },
+    });
     return { error: "Kullanıcı adı veya şifre hatalı." };
   }
 
@@ -75,6 +98,14 @@ export async function signIn(
 
   if (profile?.status !== "approved") {
     await supabase.auth.signOut();
+    // Şifre doğruydu ama hesap onaylı değil. Reddedilmiş bir hesabın ısrarla
+    // girmeye çalışması bilinmesi gereken bir şey.
+    await recordSecurityEvent({
+      kind: "unauthorized",
+      severity: profile?.status === "rejected" ? "warning" : "info",
+      identifier,
+      detail: { reason: "account_not_approved", status: profile?.status ?? "missing" },
+    });
     return {
       error:
         profile?.status === "rejected"
@@ -82,6 +113,16 @@ export async function signIn(
           : "Hesabınız henüz onaylanmadı. Onaylandığında giriş yapabilirsiniz.",
     };
   }
+
+  // Başarılı girişler de kaydediliyor: başarısız denemelerin arasında hangi
+  // oturumların gerçekten açıldığını görmeden bir saldırının başarıya ulaşıp
+  // ulaşmadığı anlaşılmaz.
+  await recordSecurityEvent({
+    kind: "login_ok",
+    severity: "info",
+    identifier,
+    detail: { role: profile.role },
+  });
 
   // Superuser'ın satıcı panelinde işi yok; `next` bir satıcı sayfasını
   // gösteriyor olsa bile yönetim paneline iner.
@@ -155,6 +196,14 @@ export async function signUp(
   if (data.user && data.user.identities?.length === 0) {
     return { error: "Bu e-posta ile bir hesap zaten var.", notice: null };
   }
+
+  // Kayıtlar onay beklediği için tek başına bir tehdit değil, ama arka arkaya
+  // açılan onlarca hesap otomatik bir betiğin işareti — panelde görünsün.
+  await recordSecurityEvent({
+    kind: "signup",
+    severity: "info",
+    identifier: username,
+  });
 
   // Kayıt `pending` doğuyor (bkz. profiles.status). Supabase e-posta doğrulaması
   // kapalıyken kayıtla birlikte oturum da açtığı için onu hemen kapatıyoruz:

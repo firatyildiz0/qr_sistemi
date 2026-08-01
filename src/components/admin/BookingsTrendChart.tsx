@@ -106,7 +106,11 @@ export default function BookingsTrendChart({ points, unitLabel }: Props) {
     ? `${line} L${coords[coords.length - 1].x},${PAD.top + innerH} L${coords[0].x},${PAD.top + innerH} Z`
     : "";
 
-  const ticks = [0, 0.5, 1].map((f) => Math.round(top * f));
+  // Yinelenenler eleniyor: `top` 0 ya da 1 iken üç kesir de aynı sayıya
+  // yuvarlanıyor ([0,0,0] ve [0,1,1]). Aynı çizgiyi üst üste çizmenin anlamı
+  // yok, üstelik değerler `key` olarak kullanıldığı için React tekrarlanan
+  // anahtar uyarısı veriyordu.
+  const ticks = [...new Set([0, 0.5, 1].map((f) => Math.round(top * f)))];
   const labelStep = Math.max(1, Math.ceil(points.length / 6));
 
   const onMove = useCallback(

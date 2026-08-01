@@ -1007,7 +1007,26 @@ summary,
     }
   }
 
+  /* Supabase kullanım halkaları ve çubukları (bkz. components/yonetim/
+     UsageDials.tsx).
+
+     Değer 15 saniyede bir tazeleniyor; geçişin tek işi yeni oranın nereden
+     nereye gittiğini göstermek — sayı yerinde zıplamasın. Renk de aynı anda
+     kayıyor, çünkü eşik atlandığında halkanın yeşilden sarıya geçişi
+     dolmasıyla birlikte okunsun. */
+  .usage-arc {
+    transition: stroke-dashoffset 700ms cubic-bezier(0.33, 1, 0.68, 1),
+      stroke 400ms ease;
+  }
+  .usage-bar {
+    transition: width 700ms cubic-bezier(0.33, 1, 0.68, 1), background-color 400ms ease;
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .usage-arc,
+    .usage-bar {
+      transition: none;
+    }
     .fade-slide-up,
     .scan-line,
     .drift,
@@ -1044,6 +1063,10 @@ summary,
   :root[data-motion="reduced"] .btn:hover,
   :root[data-motion="reduced"] .card-hover:hover {
     transform: none;
+  }
+  :root[data-motion="reduced"] .usage-arc,
+  :root[data-motion="reduced"] .usage-bar {
+    transition: none;
   }
 
   /* Giriş panelinin hareketsiz hâli. Yukarıdaki listeye eklemek yerine ayrı

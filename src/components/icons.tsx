@@ -477,3 +477,34 @@ export function IconAlertTriangle(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconDatabase(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <ellipse cx="12" cy="5.5" rx="8" ry="3" />
+      <path d="M4 5.5v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+      <path d="M4 11.5v7c0 1.66 3.58 3 8 3s8-1.34 8-3v-7" />
+    </svg>
+  );
+}
+
+export function IconServer(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="4" width="18" height="7" rx="2" />
+      <rect x="3" y="13" width="18" height="7" rx="2" />
+      <path d="M7 7.5h.01" />
+      <path d="M7 16.5h.01" />
+    </svg>
+  );
+}
+
+export function IconGauge(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3.5 18a9 9 0 1 1 17 0" />
+      <path d="m12 14 4.5-4.5" />
+      <circle cx="12" cy="14" r="1.5" />
+    </svg>
+  );
+}

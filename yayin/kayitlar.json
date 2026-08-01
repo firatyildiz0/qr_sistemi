@@ -20,6 +20,13 @@
       "baslik": "Canlıya alma başarısız olunca sebebi ekranda yazmıyordu",
       "aciklama": "Yayın ekranında bir değişikliği canlıya almaya çalıştığında iş başarısız olursa, ekranda sebebini söylemeyen teknik bir uyarı çıkıyordu. Artık ne olduğu düz Türkçe yazıyor ve GitHub'ın kendi açıklaması da ekleniyor — örneğin erişim anahtarının yazma yetkisi yoksa bunu doğrudan söylüyor.",
       "dikkat": null
+    },
+    {
+      "id": "2026-08-01-supabase-kullanimini-yonetim-panelinden-anlik-go",
+      "tip": "ozellik",
+      "baslik": "Supabase kullanımını yönetim panelinden anlık görebiliyorsunuz",
+      "aciklama": "Projenin kapasitesinin ne kadarının dolu olduğunu görmek için Supabase panelini açmak gerekiyordu. Artık Yönetim > Kullanım ekranında veritabanı, dosyalar, aylık aktif kullanıcı ve disk doluluk oranları yüzde halkalarıyla duruyor; sayfa açık kaldığı sürece kendini tazeliyor. Yüzdelerin hangi plana göre hesaplanacağını Free/Pro seçimiyle değiştirebilirsiniz.",
+      "dikkat": "Göndermeden önce Supabase SQL düzenleyicisinde 0021_usage.sql çalıştırılmalı; yoksa dosya boyutu, aylık aktif kullanıcı ve tablo listesi boş görünür."
     }
   ]
 }

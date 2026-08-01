@@ -3,7 +3,14 @@ import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import AccessGuard from "@/components/admin/AccessGuard";
 import Wordmark from "@/components/Wordmark";
-import { IconBolt, IconChart, IconLogOut, IconShield, IconUsers } from "@/components/icons";
+import {
+  IconBolt,
+  IconChart,
+  IconGauge,
+  IconLogOut,
+  IconShield,
+  IconUsers,
+} from "@/components/icons";
 
 export default function YonetimLayout({ children }: { children: React.ReactNode }) {
   // Satıcı paneliyle aynı gerekçe: layout hiçbir şeyi beklemiyor, erişim
@@ -33,10 +40,11 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
         </form>
       </header>
 
-      {/* Üç sayfalık bir panel; aktif sekmeyi işaretlemek için istemci
-          bileşenine geçmeye değmiyor, bağlantılar yeterli. */}
+      {/* Beş sayfalık bir panel; aktif sekmeyi işaretlemek için istemci
+          bileşenine geçmeye değmiyor, bağlantılar yeterli. Dar ekranda sekmeler
+          sığmıyor: sarmak yerine yana kaydırılıyorlar, sıra tek satırda kalsın. */}
       <nav className="border-b border-border bg-surface px-4 sm:px-8">
-        <div className="mx-auto flex w-full max-w-4xl gap-1">
+        <div className="mx-auto flex w-full max-w-4xl gap-1 overflow-x-auto [&>a]:shrink-0 [&>a]:whitespace-nowrap">
           <Link
             href="/yonetim"
             className="flex items-center gap-2 px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
@@ -50,6 +58,13 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
           >
             <IconChart className="h-4 w-4" />
             İstatistik
+          </Link>
+          <Link
+            href="/yonetim/kullanim"
+            className="flex items-center gap-2 px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <IconGauge className="h-4 w-4" />
+            Kullanım
           </Link>
           <Link
             href="/yonetim/guvenlik"

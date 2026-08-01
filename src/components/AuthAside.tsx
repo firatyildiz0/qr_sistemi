@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import QRCode from "qrcode";
 import { IconCalendar } from "@/components/icons";
 import Wordmark from "@/components/Wordmark";
 
@@ -15,7 +16,8 @@ import Wordmark from "@/components/Wordmark";
  * karesinde durur ve alttaki dört cümlenin yerini tek bir sabit cümle alır.
  */
 
-const QR_SIZE = 11;
+/** Etiketteki kodun gerçekten götürdüğü yer. */
+const QR_TARGET = "https://qrsistemi.vercel.app/";
 
 /** Ürün sayfasındaki müsaitlik şeridinin gösterdiği günler. */
 const DAYS = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -23,25 +25,30 @@ const FULL_DAYS = [5, 6];
 const PARTIAL_DAYS = [3, 4, 7, 8];
 
 /**
- * Temsilî bir QR deseni. Gerçek bir kod değil — okutulacak bir hedefi yok, o
- * yüzden `lib/qr.ts` çağırmak yerine sabit bir desen çiziliyor: sunucuda tek
- * seferde hesaplanıyor ve her ziyarette aynı kod beliriyor.
+ * Etiketteki desen gerçek bir QR kod: okutulduğunda `QR_TARGET` açılır. Modüller
+ * sunucuda tek seferde hesaplanıyor, yani her ziyarette aynı kod beliriyor.
+ *
+ * Okunabilmesi için iki şart var: modüller bitişik çizilmeli (arada boşluk
+ * bırakılırsa desen bozulur) ve etrafında sessiz alan kalmalı — `QrLabel`
+ * içindeki beyaz iç boşluk bunun için.
+ *
+ * Hata düzeltme seviyesi bilerek en düşükte: bu adreste kod 25×25 modülde
+ * kalıyor, bir üst seviye 29×29'a çıkıp modülleri ekranda okunamayacak kadar
+ * küçültüyor.
  *
  * `delay` modüllerin belirme sırası. Sıra dağınık görünsün ama her açılışta
  * aynı kalsın diye rastgelelik yerine koordinatlardan türeyen bir değere göre
  * sıralanıyor.
  */
-const QR_MODULES = (() => {
-  const isFinder = (x: number, y: number) =>
-    (x < 3 && y < 3) ||
-    (x > QR_SIZE - 4 && y < 3) ||
-    (x < 3 && y > QR_SIZE - 4);
+const { size: QR_SIZE, modules: QR_MODULES } = (() => {
+  const { modules } = QRCode.create(QR_TARGET, { errorCorrectionLevel: "L" });
+  const size = modules.size;
 
   const cells = [];
-  for (let y = 0; y < QR_SIZE; y += 1) {
-    for (let x = 0; x < QR_SIZE; x += 1) {
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
       cells.push({
-        on: isFinder(x, y) || (x * 31 + y * 17 + x * y * 7) % 5 < 2,
+        on: Boolean(modules.data[y * size + x]),
         key: (x * 53 + y * 97) % 101,
       });
     }
@@ -56,7 +63,10 @@ const QR_MODULES = (() => {
     delays[cell.index] = Math.round((rank / cells.length) * 1400);
   });
 
-  return cells.map((cell, index) => ({ on: cell.on, delay: delays[index] }));
+  return {
+    size,
+    modules: cells.map((cell, index) => ({ on: cell.on, delay: delays[index] })),
+  };
 })();
 
 const STEPS = [
@@ -142,9 +152,9 @@ export default function AuthAside() {
 /** Ürüne yapıştırılan etiket: modül modül kurulur, sonra taranır. */
 function QrLabel() {
   return (
-    <div className="auth-qr relative h-[164px] w-[164px] rounded-xl bg-on-deep p-3">
+    <div className="auth-qr relative h-45 w-45 rounded-xl bg-white p-4">
       <div
-        className="grid h-full w-full gap-[2px]"
+        className="grid h-full w-full"
         style={{
           gridTemplateColumns: `repeat(${QR_SIZE}, 1fr)`,
           gridTemplateRows: `repeat(${QR_SIZE}, 1fr)`,
@@ -155,7 +165,10 @@ function QrLabel() {
           module.on ? (
             <i
               key={index}
-              className="auth-mod rounded-[1px] bg-deep"
+              // Kutucuk kenarları tam piksele denk gelmediğinde aralarında saç
+              // teli kalınlığında beyaz çizgiler kalıyor ve tarayıcı kodu
+              // okuyamıyor; gölge her modülü yarım piksel şişirip kapatıyor.
+              className="auth-mod bg-black shadow-[0_0_0_0.5px_#000]"
               style={{ animationDelay: `${module.delay}ms` }}
             />
           ) : (

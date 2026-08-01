@@ -889,7 +889,7 @@ summary,
   @keyframes auth-beam {
     0%, 26% { transform: translateY(-8px); opacity: 0; }
     30%, 44% { opacity: 1; }
-    47%, 100% { transform: translateY(134px); opacity: 0; }
+    47%, 100% { transform: translateY(150px); opacity: 0; }
   }
 
   .auth-bracket {

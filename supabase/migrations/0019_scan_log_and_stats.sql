@@ -35,6 +35,14 @@ alter table product_scans enable row level security;
 -- Satıcı kendi ürünlerinin okutulmasını görebilir, superuser hepsini.
 -- Yazma politikası yok: kayıt yalnızca aşağıdaki fonksiyondan geçiyor,
 -- dolayısıyla kimse elle sayı şişiremiyor.
+--
+-- Önce düşürülüyor: dosyanın geri kalanı (`create table if not exists`,
+-- `create or replace function`) tekrar çalıştırılmaya dayanıklı, politikalar da
+-- öyle olsun. Yarıda kalmış bir çalıştırmadan sonra dosyayı baştan çalıştırmak
+-- "already exists" ile patlamamalı.
+drop policy if exists "product_scans_select_owner" on product_scans;
+drop policy if exists "product_scans_select_superuser" on product_scans;
+
 create policy "product_scans_select_owner" on product_scans
   for select to authenticated using (owner_id = (select auth.uid()));
 

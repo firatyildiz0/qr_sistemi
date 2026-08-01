@@ -38,6 +38,8 @@ $$;
 -- 2. Okuma artık ürün sahibine ait
 -- ---------------------------------------------------------------------------
 drop policy if exists "bookings_select_public" on bookings;
+-- Yenisi de düşürülüyor: dosya tekrar çalıştırılabilsin.
+drop policy if exists "bookings_select_owner" on bookings;
 
 create policy "bookings_select_owner" on bookings
   for select to authenticated using (owns_product(product_id));

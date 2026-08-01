@@ -318,6 +318,58 @@ create index if not exists notifications_product_id_idx on notifications(product
 -- One "returning tomorrow" notification per booking.
 create unique index if not exists notifications_booking_id_unique on notifications(booking_id);
 
+-- Güvenlik olaylarının kaydı: başarısız ve başarılı girişler, engellenen
+-- istekler, yetkisiz erişim denemeleri. Bir saldırının geriye iz bırakması ve
+-- eşik aşılınca haber verilebilmesi için (bkz. 0017, lib/security.ts).
+--
+-- Kişisel veri tutmuyor: `identifier` denenen kullanıcı adı (şifre asla),
+-- `ip` ve `user_agent` isteğin geldiği yer. Müşteri bilgisi buraya girmiyor —
+-- güvenlik kaydının kendisi yeni bir sızıntı kaynağı olmasın.
+create table if not exists security_events (
+  id uuid primary key default gen_random_uuid(),
+  -- Uygulamadaki sabit listeden gelir: login_failed, login_ok, signup,
+  -- rate_limited, unauthorized, cron_unauthorized, alert_sent.
+  kind text not null,
+  severity text not null default 'info'
+    check (severity in ('info', 'warning', 'critical')),
+  identifier text,
+  ip text,
+  user_agent text,
+  detail jsonb,
+  created_at timestamptz not null default now()
+);
+
+-- Panelin zaman sıralı listesi, hız sınırının kullanıcı adı ve IP sayımları.
+create index if not exists security_events_created_at_idx
+  on security_events (created_at desc);
+create index if not exists security_events_identifier_idx
+  on security_events (identifier, kind, created_at desc);
+create index if not exists security_events_ip_idx
+  on security_events (ip, kind, created_at desc);
+
+-- QR okutmalarının kaydı: ürün sayfası sahibi olmayan biri tarafından açıldı
+-- (bkz. 0019, lib/scans.ts). Ziyaretçiden saklanan tek şey `visitor_hash` —
+-- IP ve tarayıcı bilgisinin tuzlanmış tek yönlü özeti, yalnızca aynı kişinin
+-- sayfayı yenilemesini tek okutma saymak için. Ham IP buraya girmiyor.
+create table if not exists product_scans (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references products(id) on delete cascade,
+  -- Ürünün o anki sahibi. `products` üzerinden de bulunabilirdi ama satıcı
+  -- kırılımlı sorgular her seferinde join istemesin diye burada duruyor.
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  visitor_hash text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists product_scans_created_at_idx
+  on product_scans (created_at desc);
+create index if not exists product_scans_product_id_idx
+  on product_scans (product_id, created_at desc);
+create index if not exists product_scans_owner_id_idx
+  on product_scans (owner_id, created_at desc);
+create index if not exists product_scans_visitor_idx
+  on product_scans (product_id, visitor_hash, created_at desc);
+
 -- ---------------------------------------------------------------------------
 -- Sahiplik ve herkese açık müsaitlik
 -- ---------------------------------------------------------------------------
@@ -409,6 +461,229 @@ revoke all on function owns_product(uuid) from public;
 grant execute on function owns_product(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
+-- Okutma kaydı ve panel istatistikleri
+-- ---------------------------------------------------------------------------
+
+-- Uygulama `product_scans`'e doğrudan yazmıyor, buradan geçiyor: `owner_id`
+-- ürünün kendisinden okunuyor (istemciden gelen değere güvenilmiyor) ve aynı
+-- ziyaretçinin 30 dakika içindeki tekrarları eleniyor.
+create or replace function record_product_scan(
+  p_product_id uuid,
+  p_visitor_hash text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_owner uuid;
+begin
+  select owner_id into v_owner from products where id = p_product_id;
+
+  -- Silinmiş ya da uydurma bir kimlik. Sessizce geçiliyor: bu fonksiyon sayfa
+  -- görüntülemenin yan işi, hata fırlatıp isteği bozmasının anlamı yok.
+  if v_owner is null then
+    return false;
+  end if;
+
+  if p_visitor_hash is not null and exists (
+    select 1 from product_scans
+    where product_id = p_product_id
+      and visitor_hash = p_visitor_hash
+      and created_at > now() - interval '30 minutes'
+  ) then
+    return false;
+  end if;
+
+  insert into product_scans (product_id, owner_id, visitor_hash)
+  values (p_product_id, v_owner, p_visitor_hash);
+
+  return true;
+end;
+$$;
+
+-- Gün / hafta / ay kovalarında okutma, eklenen ürün ve oluşturulan rezervasyon
+-- sayıları. Sayım veritabanında yapılıyor: satırları uygulamaya çekip orada
+-- gruplamak supabase-js'in 1000 satır sınırına takılırdı. Kovalar Türkiye
+-- saatine göre kesiliyor — "bugün" satıcının günü, UTC'nin değil.
+--
+-- `security definer`, çünkü bütün satıcıların verisi toplanıyor; yetkiyi
+-- içerideki `is_superuser()` kontrolü veriyor.
+create or replace function admin_stats_buckets(
+  p_unit text,
+  p_buckets integer
+)
+-- Kolon adlarındaki `_count` eki bilinçli: PL/pgSQL çıkış parametrelerinin adı
+-- sorgudaki tablo adlarıyla çakışırsa "ambiguous reference" hatası veriyor.
+returns table (
+  bucket_start timestamp,
+  scan_count bigint,
+  product_count bigint,
+  booking_count bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_unit text := case when p_unit in ('day', 'week', 'month') then p_unit else 'day' end;
+  v_n integer := greatest(1, least(coalesce(p_buckets, 14), 60));
+  v_step interval := ('1 ' || v_unit)::interval;
+  v_now timestamp := now() at time zone 'Europe/Istanbul';
+  v_last timestamp;
+  v_first timestamp;
+begin
+  if not is_superuser() then
+    raise exception 'Bu veriye erişim yetkiniz yok.';
+  end if;
+
+  v_last := date_trunc(v_unit, v_now);
+  v_first := v_last - (v_n - 1) * v_step;
+
+  return query
+  with span as (
+    select generate_series(v_first, v_last, v_step) as b
+  ),
+  scan_counts as (
+    select date_trunc(v_unit, s.created_at at time zone 'Europe/Istanbul') as b,
+           count(*) as n
+    from product_scans s
+    where s.created_at >= (v_first at time zone 'Europe/Istanbul')
+    group by 1
+  ),
+  product_counts as (
+    select date_trunc(v_unit, p.created_at at time zone 'Europe/Istanbul') as b,
+           count(*) as n
+    from products p
+    where p.created_at >= (v_first at time zone 'Europe/Istanbul')
+    group by 1
+  ),
+  booking_counts as (
+    -- Satır başına bir ürün: üç adetlik bir rezervasyon üç satır, dolayısıyla
+    -- bu sayı "kaç ürün rezerve edildi" sorusunun cevabı. İptal edilenler de
+    -- burada — sayılan şey o an yapılan işlem, kaydın bugünkü durumu değil.
+    select date_trunc(v_unit, k.created_at at time zone 'Europe/Istanbul') as b,
+           count(*) as n
+    from bookings k
+    where k.created_at >= (v_first at time zone 'Europe/Istanbul')
+    group by 1
+  )
+  select
+    span.b,
+    coalesce(scan_counts.n, 0),
+    coalesce(product_counts.n, 0),
+    coalesce(booking_counts.n, 0)
+  from span
+  left join scan_counts on scan_counts.b = span.b
+  left join product_counts on product_counts.b = span.b
+  left join booking_counts on booking_counts.b = span.b
+  order by span.b;
+end;
+$$;
+
+-- En çok okutulan ürünler. Dönem yukarıdakiyle aynı parametrelerden
+-- hesaplanıyor ki iki liste aynı aralığı göstersin.
+create or replace function admin_top_scanned_products(
+  p_unit text,
+  p_buckets integer,
+  p_limit integer
+)
+returns table (
+  scanned_product_id uuid,
+  scanned_product_name text,
+  owner_username text,
+  scan_count bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_unit text := case when p_unit in ('day', 'week', 'month') then p_unit else 'day' end;
+  v_n integer := greatest(1, least(coalesce(p_buckets, 14), 60));
+  v_first timestamp;
+begin
+  if not is_superuser() then
+    raise exception 'Bu veriye erişim yetkiniz yok.';
+  end if;
+
+  v_first := date_trunc(v_unit, (now() at time zone 'Europe/Istanbul'))
+    - (v_n - 1) * (('1 ' || v_unit)::interval);
+
+  return query
+  select
+    p.id,
+    p.name,
+    coalesce(pr.username, '—'),
+    count(s.id)
+  from product_scans s
+  join products p on p.id = s.product_id
+  left join profiles pr on pr.id = p.owner_id
+  where s.created_at >= (v_first at time zone 'Europe/Istanbul')
+  group by p.id, p.name, pr.username
+  order by count(s.id) desc, p.name
+  limit greatest(1, least(coalesce(p_limit, 5), 20));
+end;
+$$;
+
+-- İki tablo da satır başına bir olay alıyor; sınırsız büyümesinler. Güvenlik
+-- kaydı 90 gün (olayı incelemeye ve KVKK saklama süresine fazlasıyla yeter),
+-- okutma kaydı 400 gün (panelin en uzun görünümü 12 ay, artı yedek pay).
+-- İkisini de bildirim cron'u her sabah çağırıyor.
+create or replace function prune_security_events()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_deleted integer;
+begin
+  delete from security_events where created_at < now() - interval '90 days';
+  get diagnostics v_deleted = row_count;
+  return v_deleted;
+end;
+$$;
+
+create or replace function prune_product_scans()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_deleted integer;
+begin
+  delete from product_scans where created_at < now() - interval '400 days';
+  get diagnostics v_deleted = row_count;
+  return v_deleted;
+end;
+$$;
+
+-- Supabase yeni fonksiyonları varsayılan olarak anon ve authenticated'a da
+-- açıyor. Sayaç tarayıcıdaki anahtarla şişirilemesin ve bakım işleri dışarıdan
+-- tetiklenemesin diye yetkiler tek tek geri alınıyor.
+revoke all on function record_product_scan(uuid, text) from public, anon, authenticated;
+grant execute on function record_product_scan(uuid, text) to service_role;
+
+revoke all on function prune_security_events() from public, anon, authenticated;
+grant execute on function prune_security_events() to service_role;
+
+revoke all on function prune_product_scans() from public, anon, authenticated;
+grant execute on function prune_product_scans() to service_role;
+
+-- İstatistikleri panel çağırıyor; yetkiyi fonksiyonun içindeki is_superuser()
+-- veriyor, o yüzden authenticated'a açık kalıyorlar.
+revoke all on function admin_stats_buckets(text, integer) from public, anon;
+grant execute on function admin_stats_buckets(text, integer) to authenticated;
+
+revoke all on function admin_top_scanned_products(text, integer, integer) from public, anon;
+grant execute on function admin_top_scanned_products(text, integer, integer) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------------
 -- Multi-seller app: each product has an owner (the seller who created it via
@@ -423,6 +698,8 @@ alter table bookings enable row level security;
 alter table notifications enable row level security;
 alter table rental_settings enable row level security;
 alter table profiles enable row level security;
+alter table security_events enable row level security;
+alter table product_scans enable row level security;
 
 -- profiles: satıcı yalnızca kendi kaydını görür. Kullanıcı adı → e-posta
 -- eşlemesi girişte service role anahtarıyla okunduğu için başka politika yok;
@@ -571,3 +848,18 @@ create policy "notifications_update_owner" on notifications
         and products.owner_id = (select auth.uid())
     )
   );
+
+-- security_events: yalnızca superuser okur. Yazma politikası yok — kayıtları
+-- sadece sunucudaki service role açar, dolayısıyla bir saldırgan kendi izini
+-- silemez ya da sahte olay üretemez.
+create policy "security_events_select_superuser" on security_events
+  for select to authenticated using (is_superuser());
+
+-- product_scans: satıcı kendi ürünlerinin okutulmasını görür, superuser
+-- hepsini. Burada da yazma politikası yok: kayıt `record_product_scan()`
+-- üzerinden geçtiği için kimse elle sayı şişiremiyor.
+create policy "product_scans_select_owner" on product_scans
+  for select to authenticated using (owner_id = (select auth.uid()));
+
+create policy "product_scans_select_superuser" on product_scans
+  for select to authenticated using (is_superuser());

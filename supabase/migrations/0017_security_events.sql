@@ -51,6 +51,10 @@ alter table security_events enable row level security;
 -- Yalnızca superuser okur. Yazma politikası yok: kayıtları sadece sunucu
 -- tarafındaki service role açar, dolayısıyla bir saldırgan kendi izini
 -- silemez ya da sahte olay üretemez.
+-- Önce düşürülüyor: dosyanın geri kalanı tekrar çalıştırılmaya dayanıklı
+-- (`if not exists`, `create or replace`), politika da öyle olsun.
+drop policy if exists "security_events_select_superuser" on security_events;
+
 create policy "security_events_select_superuser" on security_events
   for select to authenticated using (is_superuser());
 

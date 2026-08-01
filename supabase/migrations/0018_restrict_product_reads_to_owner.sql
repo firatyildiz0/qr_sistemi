@@ -18,6 +18,8 @@
 -- 1. Tablo okuması sahibine ait
 -- ---------------------------------------------------------------------------
 drop policy if exists "products_select_public" on products;
+-- Yenisi de düşürülüyor: dosya tekrar çalıştırılabilsin.
+drop policy if exists "products_select_owner" on products;
 
 create policy "products_select_owner" on products
   for select to authenticated using (owner_id = (select auth.uid()));

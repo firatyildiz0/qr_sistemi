@@ -37,38 +37,43 @@ export async function resolveScannedCode(raw: string): Promise<ScanResult> {
 
   const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
 
-  const { data: product } = await supabase
+  // Tablo yalnızca sahibine açık (bkz. 0018), ama sahiplik burada da açıkça
+  // karşılaştırılıyor — panel bağlantısını vermeden önce tek bir politikaya
+  // güvenmiyoruz. Satır gelmediğinde ürün ya başkasınındır ya da hiç yoktur;
+  // ikisini ayırmak için herkese açık görünüme bakılıyor, aksi hâlde
+  // başkasının etiketini okutan satıcıya "böyle bir ürün yok" denirdi.
+  const { data: row } = await supabase
     .from("products")
     .select("id, name, owner_id")
     .eq("id", productId)
-    .single();
+    .maybeSingle();
 
-  if (!product) {
-    return { ok: false, error: "Bu QR koda ait bir ürün bulunamadı." };
-  }
+  const owned = row && user && row.owner_id === user.id ? row : null;
 
-  if (!user) {
+  if (!owned) {
+    const { data } = await supabase.rpc("product_public", { p_id: productId });
+    const other = data?.[0];
+
+    if (!other) {
+      return { ok: false, error: "Bu QR koda ait bir ürün bulunamadı." };
+    }
+
     return {
       ok: false,
-      error: "Ürün paneline gitmek için giriş yapmalısınız.",
-      publicHref: `/product/${product.id}`,
+      error: user
+        ? "Bu ürün size ait değil, herkese açık sayfasını görüntüleyebilirsiniz."
+        : "Ürün paneline gitmek için giriş yapmalısınız.",
+      publicHref: `/product/${other.id}`,
     };
   }
 
-  // /admin/products/[id] 404'ler when the viewer is not the owner, so send
-  // other people to the public page instead of a dead end.
-  if (product.owner_id !== user.id) {
-    return {
-      ok: false,
-      error: "Bu ürün size ait değil, herkese açık sayfasını görüntüleyebilirsiniz.",
-      publicHref: `/product/${product.id}`,
-    };
-  }
-
+  // Buraya gelindiyse satır RLS'ten geçmiş demektir: tarayan kişi hem oturum
+  // açmış hem de ürünün sahibi. Eskiden burada duran "giriş yaptın mı" ve
+  // "sahibi misin" kontrolleri artık politikanın kendisinde.
   return {
     ok: true,
-    productId: product.id,
-    productName: product.name,
-    href: `/admin/products/${product.id}`,
+    productId: owned.id,
+    productName: owned.name,
+    href: `/admin/products/${owned.id}`,
   };
 }

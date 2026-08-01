@@ -1,7 +1,10 @@
 import Image from "next/image";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { Booking } from "@/lib/types";
+import { recordProductScan } from "@/lib/scans";
+import type { Booking, Product, PublicProduct } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { availabilityOf, type BookingOccupancy } from "@/lib/bookings";
 import {
@@ -28,7 +31,11 @@ export default async function ProductDetailPage({
     {
       data: { user },
     },
-    { data: product },
+    // Tablodan okuma yalnızca sahibine açık (bkz. 0018), ama sahiplik aşağıda
+    // ayrıca karşılaştırılıyor. Tek bir politikanın ziyaretçiyle rezervasyon
+    // formu arasında duran yegâne şey olmasını istemiyoruz: politika bir gün
+    // gevşerse bu sayfa yine de formu göstermemeli.
+    { data: row },
     // Ziyaretçi satıcı değilse RLS bunu okutmaz ve varsayılanlar döner — sorun
     // değil, çünkü kayıtlı rezervasyonların bloke aralığı zaten kendi
     // kolonlarında yazılı. Süreler yalnızca satıcının formundaki canlı
@@ -36,14 +43,45 @@ export default async function ProductDetailPage({
     turnaround,
   ] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("products").select("*").eq("id", id).single(),
+    supabase
+      .from("products")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle<Product>(),
     getTurnaround(),
   ]);
 
+  const owned = row && user && row.owner_id === user.id ? row : null;
+
+  // Sahibi değilse ürünün herkese açık görünümü: ad, açıklama, fiyat, stok ve
+  // görseller var; sahibin kim olduğu yok.
+  const product: Product | PublicProduct | null =
+    owned ??
+    (await supabase.rpc("product_public", { p_id: id })).data?.[0] ??
+    null;
+
   if (!product) notFound();
 
-  const isOwner = user?.id === product.owner_id;
+  const isOwner = owned !== null;
   const images: string[] = (product.images ?? []).slice(0, 2);
+
+  // QR okutma kaydı. Etiketin götürdüğü tek yer bu sayfa olduğu için ziyaret
+  // sayısı okutma sayısı demek — ama yalnızca sahibi olmayanlar için: satıcının
+  // kendi ürününe bakması müşteri ilgisi değil.
+  //
+  // `after()`: kayıt yanıt gönderildikten sonra atılıyor, müşteri istatistik
+  // yazılmasını beklemiyor. Sunucu bileşeninde `headers()` geri çağırmanın
+  // *içinden* okunamıyor, o yüzden değerler burada okunup içeri veriliyor.
+  if (!isOwner) {
+    const list = await headers();
+    const ip =
+      list.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      list.get("x-real-ip") ||
+      null;
+    const userAgent = list.get("user-agent")?.slice(0, 300) ?? null;
+
+    after(() => recordProductScan(id, { ip, userAgent }));
+  }
 
   // Rezervasyon satırları artık yalnızca satıcıya açık: içlerinde müşterinin
   // adı, telefonu ve adresi var, oysa bu sayfayı QR'ı okutan herkes görüyor.
@@ -57,15 +95,15 @@ export default async function ProductDetailPage({
   let groups: Record<string, GroupMember[]> = {};
   let occupancy: BookingOccupancy[];
 
-  if (isOwner) {
+  if (owned) {
     const [{ data: rows }, ownerCatalog, ownerGroups] = await Promise.all([
       supabase
         .from("bookings")
         .select("*")
         .eq("product_id", id)
         .order("start_date", { ascending: true }),
-      getOwnerCatalog(supabase, product.owner_id, turnaround),
-      getBookingGroups(supabase, product.owner_id),
+      getOwnerCatalog(supabase, owned.owner_id, turnaround),
+      getBookingGroups(supabase, owned.owner_id),
     ]);
 
     bookings = (rows ?? []) as Booking[];

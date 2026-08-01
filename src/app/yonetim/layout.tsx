@@ -3,7 +3,7 @@ import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import AccessGuard from "@/components/admin/AccessGuard";
 import Wordmark from "@/components/Wordmark";
-import { IconLogOut, IconShield, IconUsers } from "@/components/icons";
+import { IconChart, IconLogOut, IconShield, IconUsers } from "@/components/icons";
 
 export default function YonetimLayout({ children }: { children: React.ReactNode }) {
   // Satıcı paneliyle aynı gerekçe: layout hiçbir şeyi beklemiyor, erişim
@@ -33,7 +33,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
         </form>
       </header>
 
-      {/* İki sayfalık bir panel; aktif sekmeyi işaretlemek için istemci
+      {/* Üç sayfalık bir panel; aktif sekmeyi işaretlemek için istemci
           bileşenine geçmeye değmiyor, bağlantılar yeterli. */}
       <nav className="border-b border-border bg-surface px-4 sm:px-8">
         <div className="mx-auto flex w-full max-w-4xl gap-1">
@@ -43,6 +43,13 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
           >
             <IconUsers className="h-4 w-4" />
             Kullanıcılar
+          </Link>
+          <Link
+            href="/yonetim/istatistik"
+            className="flex items-center gap-2 px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <IconChart className="h-4 w-4" />
+            İstatistik
           </Link>
           <Link
             href="/yonetim/guvenlik"

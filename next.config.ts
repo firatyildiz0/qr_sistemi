@@ -7,17 +7,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
  * Tarayıcının kendi korumalarını açan başlıklar. Hiçbiri uygulamanın davranışını
  * değiştirmiyor; yalnızca saldırganın elini bağlıyorlar.
  *
- * Burada bilinçli olarak tam bir `Content-Security-Policy` yok: Next'in ürettiği
- * satır içi script'ler istek başına nonce istiyor, o da `proxy.ts` içinden
- * üretilmeli. Yarım yamalak bir CSP paneli çalışmaz hale getireceği için
- * yalnızca script'lerden bağımsız olan `frame-ancestors` direktifi burada.
+ * Asıl `Content-Security-Policy` burada değil `proxy.ts` içinde: nonce istek
+ * başına üretilmek zorunda, bu dosya ise derleme sırasında bir kez okunuyor.
+ * Buradakiler istekten bağımsız, sabit başlıklar.
  */
 const securityHeaders = [
   // Panel bir iframe'e gömülüp tıklama hırsızlığına (clickjacking) alet
-  // edilmesin. İkisi birlikte: eski tarayıcılar `X-Frame-Options` anlıyor,
-  // yenileri CSP direktifini tercih ediyor.
+  // edilmesin. CSP'nin `frame-ancestors` direktifi proxy'de zaten var; bu
+  // başlık onu anlamayan eski tarayıcılar için ve proxy'nin kapsamadığı
+  // yollar (API uçları) için duruyor.
   { key: "X-Frame-Options", value: "DENY" },
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
 
   // Yüklenen ürün görselini tarayıcı "aslında script'miş" diye yorumlamasın.
   { key: "X-Content-Type-Options", value: "nosniff" },

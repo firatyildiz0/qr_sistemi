@@ -14,6 +14,13 @@ export type Product = {
   created_at: string;
 };
 
+/**
+ * Ürünün herkese açık görünümü — `product_public()` fonksiyonunun döndürdüğü
+ * alanlar. QR'ı okutan müşterinin gördüğü her şey burada; sahibin kim olduğu
+ * (`owner_id`) ve kaydın ne zaman açıldığı dışarı çıkmıyor.
+ */
+export type PublicProduct = Omit<Product, "owner_id" | "created_at">;
+
 export type Booking = {
   id: string;
   product_id: string;

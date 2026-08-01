@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { plusJakartaSans, archivoNarrow } from "@/lib/fonts";
 import { DEFAULT_PREFERENCES, PREFERENCES_SCRIPT } from "@/lib/preferences";
 import "./globals.css";
@@ -36,11 +37,16 @@ export const viewport: Viewport = {
   themeColor: "#0f2a22",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Next kendi script etiketlerine nonce'u otomatik ekliyor, ama aşağıdaki ham
+  // `<script>` onun ürettiği bir etiket değil — nonce'u elle almazsa CSP onu
+  // engeller ve tercihler uygulanmadan önce sayfa yanlış temayla boyanır.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     // The layout stays static: it renders the default preferences as attributes
     // and the inline script below corrects them from the cookie before the
@@ -58,7 +64,7 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${archivoNarrow.variable} h-full antialiased`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: PREFERENCES_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: PREFERENCES_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col bg-paper text-ink font-display">
         {children}

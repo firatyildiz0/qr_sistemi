@@ -7,11 +7,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const [{ id }, supabase] = await Promise.all([params, createClient()]);
-  const { data: product } = await supabase
-    .from("products")
-    .select("name")
-    .eq("id", id)
-    .single();
+
+  // Ürün tablosu artık sahibine kapalı (bkz. 0018), o yüzden ad herkese açık
+  // görünümden alınıyor. Etiketin üstüne yalnızca ürünün adı basılıyor — o da
+  // aynı kimlikle açılan ürün sayfasında zaten yazıyor.
+  const { data } = await supabase.rpc("product_public", { p_id: id });
+  const product = data?.[0];
 
   if (!product) return new NextResponse("Not found", { status: 404 });
 

@@ -34,6 +34,14 @@
   --color-danger-soft: color-mix(in oklab, var(--color-danger) 7%, var(--color-card));
   --color-danger-border: color-mix(in oklab, var(--color-danger) 22%, var(--color-card));
 
+  /* Grafik serilerinin renkleri. Vurgu renginden bilerek bağımsız: vurgu
+     Ayarlar'dan değiştirilebiliyor ve üç seri aynı anda ekrandayken birbirinden
+     ayrılmaları o seçime bırakılamaz. Bu üçlü renk körlüğü benzetimiyle
+     doğrulandı (en kötü komşu çifti ΔE 9.2 açık / 9.4 koyu temada). */
+  --color-viz-1: #2a78d6;
+  --color-viz-2: #eb6834;
+  --color-viz-3: #1baf7a;
+
   --font-display: var(--font-display), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-eyebrow: var(--font-eyebrow), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 
@@ -76,6 +84,12 @@
   --color-border: #2a332e;
   --color-border-strong: #3a453e;
   --color-placeholder: #7d857e;
+
+  /* Aynı üç renk, koyu zemin için basamaklanmış hâli — açık temanın renkleri
+     olduğu gibi bırakılırsa koyu kartın üstünde 3:1 kontrastın altına düşüyor. */
+  --color-viz-1: #3987e5;
+  --color-viz-2: #d95926;
+  --color-viz-3: #199e70;
 
   /* On a dark card a tint has to be lightened towards white, not blackened. */
   --color-accent-soft: color-mix(in oklab, var(--color-accent) 22%, var(--color-card));

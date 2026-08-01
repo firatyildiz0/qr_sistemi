@@ -373,10 +373,37 @@ as $$
     and b.status <> 'cancelled';
 $$;
 
+-- Kimliği bilinen tek bir ürünün herkese açık görünümü. Liste döndürmüyor,
+-- filtrelenemiyor: geçerli bir UUID bilmeden hiçbir şey alınamaz, o da QR
+-- etiketinin üstünde zaten yazıyor. `owner_id` bilinçli olarak dönmüyor —
+-- uygulama sahipliği "satır tablodan geldi mi" diye anlıyor.
+create or replace function product_public(p_id uuid)
+returns table (
+  id uuid,
+  name text,
+  description text,
+  features text[],
+  daily_price numeric,
+  stock integer,
+  images text[]
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id, p.name, p.description, p.features, p.daily_price, p.stock, p.images
+  from products p
+  where p.id = p_id;
+$$;
+
 -- `security definer` fonksiyonların yetkisi açıkça veriliyor: varsayılan
 -- `public` grubu alınıp yerine yalnızca gerçekten çağıracak roller konuyor.
 revoke all on function product_availability(uuid) from public;
 grant execute on function product_availability(uuid) to anon, authenticated;
+
+revoke all on function product_public(uuid) from public;
+grant execute on function product_public(uuid) to anon, authenticated;
 
 revoke all on function owns_product(uuid) from public;
 grant execute on function owns_product(uuid) to authenticated;
@@ -444,8 +471,14 @@ create policy "rental_settings_update_owner" on rental_settings
   with check (owner_id = (select auth.uid()) and is_approved());
 
 -- products: public read, owner-only write
-create policy "products_select_public" on products
-  for select using (true);
+-- products: okuma sahibine ait, yazma zaten öyleydi. QR'ı okutan müşteri tek
+-- bir ürünü kimliğiyle `product_public()` üzerinden görüyor.
+--
+-- Bu politika da eskiden `using (true)` idi; o hâliyle bütün satıcıların ürün,
+-- fiyat ve stok listesi tek istekte indirilebiliyordu (bkz. 0018). Müşteri
+-- verisi değil ama ticari veri, ve ziyaretçinin bütün listeye hiç ihtiyacı yok.
+create policy "products_select_owner" on products
+  for select to authenticated using (owner_id = (select auth.uid()));
 
 create policy "products_insert_authenticated" on products
   for insert to authenticated

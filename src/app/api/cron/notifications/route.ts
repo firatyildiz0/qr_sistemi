@@ -54,9 +54,13 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const tomorrow = tomorrowDateString();
 
-  // Günlük bakım: güvenlik kayıtları 90 günden eskiyse silinsin. Zaten her sabah
-  // çalışan tek zamanlanmış iş burası, ayrı bir cron açmaya değmez.
-  await supabase.rpc("prune_security_events");
+  // Günlük bakım: güvenlik kayıtları 90, QR okutma kayıtları 400 günden eskiyse
+  // silinsin. Zaten her sabah çalışan tek zamanlanmış iş burası, ayrı bir cron
+  // açmaya değmez.
+  await Promise.all([
+    supabase.rpc("prune_security_events"),
+    supabase.rpc("prune_product_scans"),
+  ]);
 
   const { data: bookings, error } = await supabase
     .from("bookings")

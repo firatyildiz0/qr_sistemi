@@ -1,0 +1,6 @@
+{
+  "tip": "guvenlik",
+  "baslik": "Müşteri bilgilerine erişen ana parola için iki ek koruma",
+  "aciklama": "Sistemin en yetkili parolası, yanlışlıkla ziyaretçilerin tarayıcısına gönderilebilecek bir yere yazılırsa artık sürüm hiç hazırlanamıyor; eskiden böyle bir hata sessizce yayına çıkabilirdi. Ayrıca bu parola artık ziyaretçi sayaçlarının çalışmasına bağlı değil, yani gerektiğinde hiçbir şey bozulmadan değiştirilebiliyor.",
+  "dikkat": "İsteğe bağlı ama önerilir: Vercel'de HASH_PEPPER adında yeni bir ortam değişkeni oluşturup içine uzun ve rastgele bir metin yazın (.env.local.example'da nasıl üretileceği yazıyor). Eklemezseniz de her şey çalışır. Aynı ekranda SUPABASE_SERVICE_ROLE_KEY'i 'Sensitive' olarak işaretlemeniz de önerilir."
+}

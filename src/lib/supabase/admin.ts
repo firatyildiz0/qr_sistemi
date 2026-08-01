@@ -1,7 +1,11 @@
+// Bu satır bir yorum değil, bir kilit: modül bir Client Component'ten import
+// edilirse derleme hata verir. Aşağıdaki anahtar RLS'i tamamen aşıyor, yani
+// tarayıcı paketine bir kez girse bütün müşteri verisi herkese açılırdı — ve
+// bunu kimse fark etmezdi, çünkü uygulama çalışmaya devam ederdi.
+import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 // Service-role client for server-only, RLS-bypassing operations (the cron job).
-// Never import this from a Client Component.
 export function createAdminClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

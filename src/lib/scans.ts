@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hashPepper } from "@/lib/pepper";
 
 /**
  * QR okutmalarının kaydı.
@@ -25,15 +26,13 @@ const BOT_PATTERN =
 /**
  * Ziyaretçinin tekrar kontrolü için kullanılan tek yönlü özet.
  *
- * Tuz olarak service role anahtarı kullanılıyor: yalnızca sunucuda bulunan,
- * her ortamda zaten tanımlı bir gizli değer. Tuzsuz bir SHA-256, IP adresi
- * uzayı küçük olduğu için kaba kuvvetle geri çevrilebilirdi.
+ * Tuzun neden ayrı bir gizli değer olduğu lib/pepper.ts'de anlatılıyor.
  */
 function visitorHash(productId: string, ip: string | null, userAgent: string | null) {
   if (!ip) return null;
 
   return createHash("sha256")
-    .update(`${productId}|${ip}|${userAgent ?? ""}|${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`)
+    .update(`${productId}|${ip}|${userAgent ?? ""}|${hashPepper()}`)
     .digest("hex");
 }
 

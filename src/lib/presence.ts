@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { hashPepper } from "@/lib/pepper";
 
 /**
  * Anlık etkin kullanıcı sayısı.
@@ -40,7 +41,7 @@ export function presenceKey(userId: string | null, ip: string | null): string | 
   if (!ip) return null;
 
   const hash = createHash("sha256")
-    .update(`${ip}|${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`)
+    .update(`${ip}|${hashPepper()}`)
     .digest("hex");
 
   return `v:${hash}`;

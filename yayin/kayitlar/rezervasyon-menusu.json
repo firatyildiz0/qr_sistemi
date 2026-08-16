@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Menüdeki \"Müşteriler\" artık \"Rezervasyonlar\"",
+  "aciklama": "Menüde bu ekranın adı \"Müşteriler\"di, oysa oraya kimin kim olduğuna değil kiralamaların durumuna bakmak için giriliyor. Hem bilgisayarda hem telefonda adı \"Rezervasyonlar\" oldu, simgesi de takvime döndü.",
+  "dikkat": null
+}

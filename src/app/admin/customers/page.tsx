@@ -4,7 +4,7 @@ import { groupCustomers, matchesQuery } from "@/lib/customers";
 import CustomerList from "@/components/admin/CustomerList";
 import { IconSearch } from "@/components/icons";
 
-export const metadata = { title: "Müşteriler" };
+export const metadata = { title: "Rezervasyonlar" };
 
 export default async function CustomersPage({
   searchParams,
@@ -35,7 +35,7 @@ export default async function CustomersPage({
   return (
     <div className="flex flex-1 flex-col">
       <header className="page-header flex flex-col gap-3 border-b border-border bg-paper px-4 py-4 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-0">
-        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Müşteriler</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Rezervasyonlar</h1>
         <form
           action="/admin/customers"
           className="relative flex w-full items-center rounded-md border border-border bg-card sm:w-72"

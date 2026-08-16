@@ -57,7 +57,7 @@ export default async function CustomerDetailPage({
     <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-8">
       <div className="mb-6 flex items-center gap-1.5 text-sm text-ink-muted">
         <Link href="/admin/customers" className="link-underline text-ink-muted hover:text-accent-hover">
-          Müşteriler
+          Rezervasyonlar
         </Link>
         <IconChevronRight className="h-3.5 w-3.5" />
         <span className="text-ink">{customer.name}</span>

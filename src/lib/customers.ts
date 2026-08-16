@@ -13,6 +13,8 @@ export type CustomerBooking = {
   id: string;
   productId: string;
   productName: string;
+  /** Ürünün kapak görseli; yüklenmemişse null. */
+  imageUrl: string | null;
   dailyPrice: number | null;
   startDate: string;
   endDate: string;
@@ -45,6 +47,23 @@ export function normalizePhone(phone: string | null | undefined): string | null 
   const digits = phone.replace(/\D/g, "");
   if (!digits) return null;
   return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+/**
+ * `wa.me` biçimi: ülke kodlu, başında sıfır ve ayraç yok.
+ *
+ * Kayıtlı numaralar satıcının yazdığı gibi duruyor — "0532 274 10 10",
+ * "5322741010", "+90 532…" hepsi geçerli. Bağlantı ise tek bir biçimi kabul
+ * ediyor, o yüzden buradan geçiyor. Ülke kodu tanınmayan bir uzunluk gelirse
+ * rakamlar olduğu gibi bırakılır: yanlış bir kod uydurmaktansa WhatsApp'ın
+ * "böyle bir numara yok" demesi yeğ.
+ */
+export function whatsappNumber(phone: string | null | undefined): string | null {
+  const digits = phone?.replace(/\D/g, "") ?? "";
+  if (!digits) return null;
+  if (digits.length === 10) return `90${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `90${digits.slice(1)}`;
+  return digits;
 }
 
 function normalizeName(name: string) {
@@ -81,7 +100,11 @@ export function customerKey(booking: {
 }
 
 type BookingWithProduct = Booking & {
-  products: { name: string; daily_price: number | null } | null;
+  products: {
+    name: string;
+    daily_price: number | null;
+    images?: string[] | null;
+  } | null;
 };
 
 /**
@@ -104,6 +127,7 @@ export function groupCustomers(
       id: row.id,
       productId: row.product_id,
       productName: row.products?.name ?? "Silinmiş ürün",
+      imageUrl: row.products?.images?.[0] ?? null,
       dailyPrice: price,
       startDate: row.start_date,
       endDate: row.end_date,

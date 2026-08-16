@@ -8,16 +8,21 @@ import {
   displayStatus,
   formatDateRange,
   nightsBetween,
+  occupancySpan,
 } from "@/lib/bookings";
 import { formatPrice } from "@/lib/format";
+import { getOwnerCatalog } from "@/lib/catalog";
+import { getTurnaround } from "@/lib/settings";
 import type { Booking, Product } from "@/lib/types";
 import BookingCalendar from "@/components/booking/BookingCalendar";
+import BookingAddItems from "@/components/admin/BookingAddItems";
+import PhoneActions from "@/components/admin/PhoneActions";
+import ProductThumb, { coverImage } from "@/components/admin/ProductThumb";
 import { formatAddress } from "@/lib/turkiye";
 import {
   IconCalendar,
   IconChevronRight,
   IconMapPin,
-  IconPhone,
   IconShield,
   IconTag,
 } from "@/components/icons";
@@ -59,6 +64,16 @@ export default async function BookingDetailPage({
   const address = formatAddress(booking);
   const days = nightsBetween(booking.start_date, booking.end_date) + 1;
   const total = product.daily_price != null ? product.daily_price * days : null;
+  const dateRange = formatDateRange(booking.start_date, booking.end_date);
+
+  // Bitmiş ve iptal edilmiş siparişe ürün eklenmiyor — sunucu da reddediyor,
+  // burada düğme hiç çıkmıyor. Katalog yalnızca eklenebiliyorsa çekiliyor:
+  // satıcının bütün ürünlerinin müsaitliğini hesaplamak ucuz değil.
+  const canAddItems = status !== "cancelled" && status !== "completed";
+  const turnaround = canAddItems ? await getTurnaround() : null;
+  const catalog = turnaround
+    ? await getOwnerCatalog(supabase, product.owner_id, turnaround)
+    : null;
 
   // Toplu alım: aynı anda kiralanan öbür ürünler kendi satırlarında duruyor.
   // Satıcı bu sayfaya tek bir ürün için gelse de siparişin tamamını —ve asıl
@@ -66,14 +81,20 @@ export default async function BookingDetailPage({
   const { data: siblings } = booking.group_id
     ? await supabase
         .from("bookings")
-        .select("id, product_id, products(name, daily_price)")
+        .select("id, product_id, products(name, daily_price, images)")
         .eq("group_id", booking.group_id)
         .neq("status", "cancelled")
     : { data: null };
 
   const groupLines = new Map<
     string,
-    { name: string; dailyPrice: number | null; quantity: number; bookingId: string }
+    {
+      name: string;
+      dailyPrice: number | null;
+      imageUrl: string | null;
+      quantity: number;
+      bookingId: string;
+    }
   >();
 
   for (const row of siblings ?? []) {
@@ -88,11 +109,13 @@ export default async function BookingDetailPage({
     const related = row.products as unknown as {
       name: string;
       daily_price: number | null;
+      images: string[] | null;
     } | null;
 
     groupLines.set(productId, {
       name: related?.name ?? "Silinmiş ürün",
       dailyPrice: related?.daily_price ?? null,
+      imageUrl: coverImage(related?.images),
       quantity: 1,
       bookingId: row.id as string,
     });
@@ -137,12 +160,12 @@ export default async function BookingDetailPage({
             </div>
             <div>
               <dt className="field-label">Telefon</dt>
-              <dd className="flex items-center gap-1.5 text-ink">
+              <dd className="text-ink">
                 {booking.customer_phone ? (
-                  <>
-                    <IconPhone className="h-3.5 w-3.5 text-ink-muted" />
-                    {booking.customer_phone}
-                  </>
+                  <PhoneActions
+                    phone={booking.customer_phone}
+                    name={booking.customer_name}
+                  />
                 ) : (
                   <span className="text-ink-muted">—</span>
                 )}
@@ -165,7 +188,7 @@ export default async function BookingDetailPage({
               <dt className="field-label">Kiralama tarihleri</dt>
               <dd className="flex items-center gap-1.5 text-ink">
                 <IconCalendar className="h-3.5 w-3.5 text-ink-muted" />
-                {formatDateRange(booking.start_date, booking.end_date)}
+                {dateRange}
                 <span className="text-ink-muted">({days} gün)</span>
               </dd>
             </div>
@@ -193,13 +216,22 @@ export default async function BookingDetailPage({
 
         <section className="card">
           <h2 className="mb-4 text-lg font-semibold text-ink">Kiralanan ürün</h2>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <h3 className="text-lg font-semibold text-ink">{product.name}</h3>
-            {product.daily_price != null && (
-              <span className="pill pill-accent shrink-0">
-                {formatPrice(product.daily_price)}/gün
-              </span>
-            )}
+          {/* Görsel adın yanında: satıcı siparişi ürünün resminden tanıyor,
+              adı okumadan önce. */}
+          <div className="flex items-start gap-3">
+            <ProductThumb
+              src={coverImage(product.images)}
+              className="h-14 w-14"
+              sizes="56px"
+            />
+            <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3">
+              <h3 className="text-lg font-semibold text-ink">{product.name}</h3>
+              {product.daily_price != null && (
+                <span className="pill pill-accent shrink-0">
+                  {formatPrice(product.daily_price)}/gün
+                </span>
+              )}
+            </div>
           </div>
 
           {product.description && (
@@ -238,8 +270,13 @@ export default async function BookingDetailPage({
 
             <ul className="divide-y divide-border">
               {[...groupLines.entries()].map(([id, line]) => (
-                <li key={id} className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="min-w-0">
+                <li key={id} className="flex items-center gap-3 py-2.5">
+                  <ProductThumb
+                    src={line.imageUrl}
+                    className="h-10 w-10"
+                    sizes="40px"
+                  />
+                  <span className="min-w-0 flex-1">
                     <Link
                       href={`/admin/bookings/${line.bookingId}`}
                       className="link-underline block truncate text-sm font-medium text-ink"
@@ -269,6 +306,25 @@ export default async function BookingDetailPage({
                 </span>
               </div>
             )}
+          </section>
+        )}
+
+        {/* Ürün sayfasındaki kiralama satırında da olan kısayol, rezervasyonun
+            kendi ekranında. Telefondan çalışan satıcı buraya müşteri üzerinden
+            geliyor ve ürünün sayfasını ayrıca bulmak zorunda kalıyordu. */}
+        {canAddItems && catalog && turnaround && (
+          <section className="card">
+            <h2 className="mb-1 text-lg font-semibold text-ink">Siparişe ürün ekle</h2>
+            <p className="mb-4 text-sm text-ink-muted">
+              Müşteri bilgileri ve tarihler bu rezervasyondan devralınır.
+            </p>
+            <BookingAddItems
+              bookingId={booking.id}
+              customerName={booking.customer_name}
+              dateRange={dateRange}
+              catalog={catalog}
+              span={occupancySpan(booking, turnaround)}
+            />
           </section>
         )}
 

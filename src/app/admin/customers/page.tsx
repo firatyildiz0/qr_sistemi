@@ -22,7 +22,7 @@ export default async function CustomersPage({
   // reads on bookings, so this filter is what does the scoping here.
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, products!inner(name, daily_price, owner_id)")
+    .select("*, products!inner(name, daily_price, owner_id, images)")
     .eq("products.owner_id", user?.id ?? "")
     .order("start_date", { ascending: false });
 

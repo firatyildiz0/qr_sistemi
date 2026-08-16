@@ -308,6 +308,9 @@ function revalidateBooking(productIds: string[]) {
   // The panel home lists every booking, so it goes stale on any change here.
   revalidatePath("/admin");
   revalidatePath("/admin/customers", "layout");
+  // Rezervasyon ekranı da: siparişe oradan ürün eklenebiliyor, eklenen kalem
+  // aynı ekrandaki toplu sipariş listesinde görünmeli.
+  revalidatePath("/admin/bookings", "layout");
 }
 
 const MAX_ADDRESS_LENGTH = 500;

@@ -5,13 +5,19 @@ import { displayStatus } from "@/lib/bookings";
 import type { Booking } from "@/lib/types";
 import QrScanner from "@/components/scan/QrScanner";
 import BookingHistory, { type BookingHistoryRow } from "@/components/admin/BookingHistory";
+import { coverImage } from "@/components/admin/ProductThumb";
 
 export const metadata: Metadata = {
   title: "Ana sayfa · RentQR",
 };
 
 type BookingWithProduct = Booking & {
-  products: { id: string; name: string; owner_id: string } | null;
+  products: {
+    id: string;
+    name: string;
+    owner_id: string;
+    images: string[] | null;
+  } | null;
 };
 
 export default async function AdminHomePage() {
@@ -21,7 +27,7 @@ export default async function AdminHomePage() {
   // product name, so the list needs a single round trip.
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, products!inner(id, name, owner_id)")
+    .select("*, products!inner(id, name, owner_id, images)")
     .eq("products.owner_id", user?.id ?? "")
     .order("created_at", { ascending: false });
 
@@ -29,6 +35,7 @@ export default async function AdminHomePage() {
     id: b.id,
     productId: b.product_id,
     productName: b.products?.name ?? "Silinmiş ürün",
+    productImageUrl: coverImage(b.products?.images),
     customerName: b.customer_name,
     customerPhone: b.customer_phone,
     startDate: b.start_date,

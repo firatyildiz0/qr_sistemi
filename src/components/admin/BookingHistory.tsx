@@ -6,18 +6,15 @@ import type { BookingStatus } from "@/lib/types";
 import { bookingStatusLabel, bookingStatusPill, formatDateRange } from "@/lib/bookings";
 import { deleteBooking } from "@/app/product/[id]/actions";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import {
-  IconCalendar,
-  IconChevronRight,
-  IconPackage,
-  IconPhone,
-  IconTrash,
-} from "@/components/icons";
+import PhoneActions from "@/components/admin/PhoneActions";
+import ProductThumb from "@/components/admin/ProductThumb";
+import { IconCalendar, IconChevronRight, IconTrash } from "@/components/icons";
 
 export type BookingHistoryRow = {
   id: string;
   productId: string;
   productName: string;
+  productImageUrl: string | null;
   customerName: string;
   customerPhone: string | null;
   startDate: string;
@@ -118,28 +115,28 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
                 className="absolute inset-0 rounded-[inherit]"
               />
 
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-ink">{b.customerName}</p>
-                  <span className={`pill ${bookingStatusPill[b.status]}`}>
-                    {bookingStatusLabel[b.status]}
-                  </span>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
-                  <span className="flex items-center gap-1.5">
-                    <IconPackage className="h-3.5 w-3.5" />
-                    {b.productName}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <IconCalendar className="h-3.5 w-3.5" />
-                    {formatDateRange(b.startDate, b.endDate)}
-                  </span>
-                  {b.customerPhone && (
-                    <span className="flex items-center gap-1.5">
-                      <IconPhone className="h-3.5 w-3.5" />
-                      {b.customerPhone}
+              {/* Görsel adın önünde: satır listede gözle taranıyor, ürünü
+                  okumadan tanımak sırayı hızlandırıyor. */}
+              <div className="flex min-w-0 items-start gap-3">
+                <ProductThumb src={b.productImageUrl} />
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-ink">{b.customerName}</p>
+                    <span className={`pill ${bookingStatusPill[b.status]}`}>
+                      {bookingStatusLabel[b.status]}
                     </span>
-                  )}
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
+                    <span className="truncate">{b.productName}</span>
+                    <span className="flex items-center gap-1.5">
+                      <IconCalendar className="h-3.5 w-3.5" />
+                      {formatDateRange(b.startDate, b.endDate)}
+                    </span>
+                    {b.customerPhone && (
+                      <PhoneActions phone={b.customerPhone} name={b.customerName} />
+                    )}
+                  </div>
                 </div>
               </div>
 

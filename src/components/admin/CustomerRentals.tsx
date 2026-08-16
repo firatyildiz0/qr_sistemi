@@ -6,7 +6,8 @@ import type { CustomerBooking } from "@/lib/customers";
 import type { BookingStatus } from "@/lib/types";
 import { bookingStatusLabel, bookingStatusPill, formatDateRange } from "@/lib/bookings";
 import { formatPrice } from "@/lib/format";
-import { IconCalendar, IconChevronRight, IconPackage } from "@/components/icons";
+import ProductThumb from "@/components/admin/ProductThumb";
+import { IconCalendar, IconChevronRight } from "@/components/icons";
 
 type Filter = "all" | BookingStatus;
 
@@ -69,22 +70,23 @@ export default function CustomerRentals({ bookings }: { bookings: CustomerBookin
               className="fade-slide-up card card-hover flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
               style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
             >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="flex items-center gap-1.5 font-semibold text-ink">
-                    <IconPackage className="h-4 w-4 text-ink-muted" />
-                    {booking.productName}
-                  </p>
-                  <span className={`pill ${bookingStatusPill[booking.status]}`}>
-                    {bookingStatusLabel[booking.status]}
-                  </span>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
-                  <span className="flex items-center gap-1.5">
-                    <IconCalendar className="h-3.5 w-3.5" />
-                    {formatDateRange(booking.startDate, booking.endDate)}
-                  </span>
-                  <span>{booking.days} gün</span>
+              <div className="flex min-w-0 items-start gap-3">
+                <ProductThumb src={booking.imageUrl} />
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-ink">{booking.productName}</p>
+                    <span className={`pill ${bookingStatusPill[booking.status]}`}>
+                      {bookingStatusLabel[booking.status]}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
+                    <span className="flex items-center gap-1.5">
+                      <IconCalendar className="h-3.5 w-3.5" />
+                      {formatDateRange(booking.startDate, booking.endDate)}
+                    </span>
+                    <span>{booking.days} gün</span>
+                  </div>
                 </div>
               </div>
 

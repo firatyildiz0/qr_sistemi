@@ -114,7 +114,10 @@ function TabLink({ item, active }: { item: NavItem; active: boolean }) {
         />
       )}
       <item.icon className="h-5 w-5" />
-      <span className="text-[10px] font-semibold">{item.label}</span>
+      {/* Dar sekmede ad kırpılır, alt satıra taşıp çubuğu bozmaz. */}
+      <span className="max-w-full truncate px-1 text-[10px] font-semibold">
+        {item.shortLabel ?? item.label}
+      </span>
       <TabPendingBar />
     </Link>
   );

@@ -1,17 +1,22 @@
 import type { SVGProps } from "react";
 import {
   IconBell,
+  IconCalendar,
   IconChart,
   IconGrid,
   IconHome,
   IconLifebuoy,
   IconSettings,
-  IconUsers,
 } from "@/components/icons";
 
 export type NavItem = {
   href: string;
   label: string;
+  /**
+   * Mobil sekme çubuğundaki ad. Sekmeye ekranın beşte biri düşüyor, uzun bir ad
+   * oraya sığmıyor; verilmezse `label` kullanılır.
+   */
+  shortLabel?: string;
   icon: (props: SVGProps<SVGSVGElement>) => React.ReactElement;
   /** Only the exact path counts as active — otherwise every /admin/* would light up "Ana sayfa". */
   exact?: boolean;
@@ -32,7 +37,16 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Ana sayfa", icon: IconHome, exact: true, primary: true },
   { href: "/admin/products", label: "Ürünler", icon: IconGrid, primary: true },
-  { href: "/admin/customers", label: "Müşteriler", icon: IconUsers, primary: true },
+  // Ekran müşteri profilleri değil rezervasyonlar için açılıyor: satıcı buraya
+  // "kim bu kişi" diye değil "bu kiralama ne durumda" diye geliyor. Ad ve simge
+  // de o yüzden takvime bakıyor.
+  {
+    href: "/admin/customers",
+    label: "Rezervasyonlar",
+    shortLabel: "Rezervasyon",
+    icon: IconCalendar,
+    primary: true,
+  },
   { href: "/admin/dashboard", label: "İstatistik", icon: IconChart },
   { href: "/admin/notifications", label: "Bildirimler", icon: IconBell, unread: true },
   { href: "/admin/support", label: "Destek", icon: IconLifebuoy },

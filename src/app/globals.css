@@ -601,7 +601,11 @@ summary,
   .status-stamp {
     display: flex;
     flex: none;
-    width: 104px;
+    /* En uzun etiket ("teslim edildi") tek satıra sığsın diye; sığmadığı
+       durumda da min-height bütün damgaları aynı boyda tutuyor, yoksa iki
+       satıra düşen tek bir damga sütunun hizasını bozuyor. */
+    width: 116px;
+    min-height: 58px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -627,17 +631,31 @@ summary,
     border-color: color-mix(in oklab, var(--status) 58%, var(--color-card));
     background: color-mix(in oklab, var(--status) 22%, var(--color-card));
   }
-  /* Dar ekranda sütun hizası zaten kayboluyor (satır alt alta diziliyor), o
-     yüzden damga yatay ve kendi genişliğinde bir şeride dönüşüyor: sabit 104
-     piksel, telefonda sil düğmesinin yanında yer kaplamaktan başka işe
-     yaramıyordu. */
-  @media (width < 40rem) {
-    .status-stamp {
-      width: auto;
-      flex-direction: row;
-      gap: 7px;
-      padding: 6px 12px;
-    }
+  /* Damganın telefondaki karşılığı: aynı renk, aynı ikon, tek satır.
+     Telefonda kart zaten alt alta diziliyor, yani hizalanacak bir sütun yok;
+     damga orada sadece yer kaplıyor ve durumu kartın en altına itiyordu. Çip
+     ise müşteri adının hizasında, kartın sağ üst köşesinde duruyor — telefonu
+     eline alan satıcı önce kimin ve hangi durumda olduğunu görüyor. */
+  .status-chip {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-family: var(--font-eyebrow);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid color-mix(in oklab, var(--status) 40%, var(--color-card));
+    background: color-mix(in oklab, var(--status) 16%, var(--color-card));
+    color: color-mix(in oklab, var(--status) 80%, var(--color-ink));
+  }
+  .status-chip.tone-cancelled {
+    border-color: color-mix(in oklab, var(--status) 60%, var(--color-card));
+    background: color-mix(in oklab, var(--status) 24%, var(--color-card));
   }
 
   /* Rozet: durumun yanında başka bilgi de olan, damgaya yer olmayan yerler

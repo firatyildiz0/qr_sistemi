@@ -45,10 +45,25 @@ export default async function YayinPage() {
         <Kurulum mesaj={durum.kurulum} />
       ) : (
         <>
+          {durum.uyarilar.length > 0 && (
+            <div className="card mt-8 border-warning/40 bg-warning/10 text-sm">
+              <p className="font-semibold text-ink">
+                Bu liste eksik olabilir
+              </p>
+              <ul className="mt-2 space-y-1 text-ink-muted">
+                {durum.uyarilar.map((u) => (
+                  <li key={u}>{u}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {durum.degisiklikler.length === 0 ? (
             <p className="card mt-8 flex items-center gap-3 text-sm text-ink-muted">
               <IconCheckCircle className="h-4 w-4 shrink-0" />
-              Canlı en güncel halde. Bekleyen iş yok.
+              {durum.uyarilar.length > 0
+                ? "Bekleyen iş görünmüyor, ama yukarıdaki yüzünden bundan emin olamıyoruz."
+                : "Canlı en güncel halde. Bekleyen iş yok."}
             </p>
           ) : (
             <section className="mt-8">

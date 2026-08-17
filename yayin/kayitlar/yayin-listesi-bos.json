@@ -1,0 +1,6 @@
+{
+  "tip": "hata",
+  "baslik": "Yayın ekranı bekleyen işleri göstermiyordu",
+  "aciklama": "Hazır bekleyen işler olmasına rağmen ekran \"Canlı en güncel halde, bekleyen iş yok\" diyordu. Artık bekleyen her iş listede görünüyor; bir işin bilgileri okunamazsa iş listeden düşmüyor, ekranın başında bunun uyarısı çıkıyor.",
+  "dikkat": null
+}

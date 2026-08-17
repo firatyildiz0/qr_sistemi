@@ -66,7 +66,6 @@ export type Degisiklik = {
   dikkat: string | null;
   tip: DegisiklikTipi | null;
   tarih: string;
-  commitAdedi: number;
 };
 
 /** Verilen bir karar: canlıya alınmış ya da reddedilmiş bir iş. */
@@ -87,6 +86,11 @@ export type YayinDurumu =
       degisiklikler: Degisiklik[];
       onaylananlar: Karar[];
       reddedilenler: Karar[];
+      /**
+       * Okunamayan şeyler. Boş değilse ekrandaki liste eksik olabilir, o yüzden
+       * "bekleyen iş yok" demeye hakkımız yok.
+       */
+      uyarilar: string[];
       repo: string;
     };
 
@@ -126,11 +130,7 @@ async function detayOku(yanit: Response): Promise<string> {
   }
 }
 
-type Ref = { ref: string };
-type Karsilastirma = {
-  ahead_by: number;
-  commits: { sha: string; commit: { message: string; committer: { date: string } } }[];
-};
+type Ref = { ref: string; object: { sha: string } };
 
 /** Dosyanın metni ve sha'sı. Sha yalnızca üzerine yazarken/silerken gerekiyor. */
 type Dosya = { metin: string; sha: string };
@@ -245,16 +245,23 @@ async function redKayitlari(repo: string, token: string): Promise<Karar[]> {
     .sort((a, b) => b.tarih.localeCompare(a.tarih));
 }
 
-type Commit = { commit: { message: string; committer: { date: string } } };
+type Commit = {
+  sha: string;
+  commit: { message: string; committer: { date: string } };
+};
 
 /**
- * Canlıya alınmış işler: `main`'deki birleştirme commit'leri. Onay tarihi de
- * oradan geliyor, çünkü onay tam olarak o commit'in atıldığı andır.
+ * `main`'in son commit'leri. Hem onay geçmişi hem de "bu iş zaten canlıda mı"
+ * sorusu buradan cevaplanıyor: liste bir dalın atalarını da içerdiği için, bir
+ * dalın ucu bu listedeyse o iş canlıya çoktan girmiş demektir.
  *
  * Yalnızca son birkaç yüz commit taranıyor; panel "ne oldu" sorusunun cevabı,
  * deponun tamamının dökümü değil.
  */
-async function onayKayitlari(repo: string, token: string): Promise<Karar[]> {
+async function anaDalCommitleri(
+  repo: string,
+  token: string,
+): Promise<{ commitler: Commit[]; eksikSayfa: boolean }> {
   const yanitlar = await Promise.all(
     Array.from({ length: GECMIS_SAYFA_ADEDI }, (_, i) =>
       github(`/repos/${repo}/commits?sha=${CANLI_DALI}&per_page=100&page=${i + 1}`, token),
@@ -262,16 +269,34 @@ async function onayKayitlari(repo: string, token: string): Promise<Karar[]> {
   );
 
   const commitler: Commit[] = [];
+  let eksikSayfa = false;
   for (const yanit of yanitlar) {
-    if (!yanit.ok) continue;
+    if (!yanit.ok) {
+      eksikSayfa = true;
+      continue;
+    }
     try {
       const sayfa = (await yanit.json()) as Commit[];
       if (Array.isArray(sayfa)) commitler.push(...sayfa);
+      else eksikSayfa = true;
     } catch {
       // Okunamayan sayfa geçmişi kısaltır, ekranı boşaltmaz.
+      eksikSayfa = true;
     }
   }
 
+  return { commitler, eksikSayfa };
+}
+
+/**
+ * Canlıya alınmış işler: `main`'deki birleştirme commit'leri. Onay tarihi de
+ * oradan geliyor, çünkü onay tam olarak o commit'in atıldığı andır.
+ */
+async function onayKayitlari(
+  repo: string,
+  token: string,
+  commitler: Commit[],
+): Promise<Karar[]> {
   // Commit'ler yeniden eskiye sıralı geliyor. Aynı dal iki kez birleştiyse
   // ilk gördüğümüz, yani en son onay geçerli.
   const gorulen = new Set<string>();
@@ -299,11 +324,34 @@ async function onayKayitlari(repo: string, token: string): Promise<Karar[]> {
   );
 }
 
+/** Bir commit'in özeti ve tarihi. Dalın ucunu tarihlendirmek için. */
+async function commitOku(
+  repo: string,
+  token: string,
+  sha: string,
+): Promise<Commit | null> {
+  const yanit = await github(`/repos/${repo}/commits/${sha}`, token);
+  if (!yanit.ok) return null;
+
+  try {
+    const govde = (await yanit.json()) as Commit;
+    return govde.commit?.committer?.date ? govde : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Panelin gördüğü her şey: bekleyen işler, canlıya alınanlar, reddedilenler.
  *
  * Bekleyenlerin sıralaması yalnızca sunum için: aralarında bağımlılık yok,
  * hangisi önce onaylanırsa o gider.
+ *
+ * Buradaki kural: bir iş yalnızca hakkında **karar verildiği için** listeden
+ * düşer — canlıya alınmıştır ya da reddedilmiştir. Okunamamak karar değildir.
+ * Künyesi, tarihi, hatta hiçbir şeyi okunamayan bir dal yine de listede kalır;
+ * eksik kalan ne varsa `uyarilar`a yazılır. Aksi halde ekran, aslında bekleyen
+ * işler varken "bekleyen iş yok" der ki bu, verebileceği en kötü cevaptır.
  */
 export async function yayinDurumu(): Promise<YayinDurumu> {
   const yapilandirma = ayarlar();
@@ -330,43 +378,62 @@ export async function yayinDurumu(): Promise<YayinDurumu> {
     };
   }
 
-  const dallar = ((await dalYaniti.json()) as Ref[]).map((r) =>
-    r.ref.replace("refs/heads/", ""),
-  );
+  let dallar: { dal: string; sha: string }[];
+  try {
+    dallar = ((await dalYaniti.json()) as Ref[]).map((r) => ({
+      dal: r.ref.replace("refs/heads/", ""),
+      sha: r.object.sha,
+    }));
+  } catch {
+    return {
+      kurulum:
+        "GitHub'ın verdiği dal listesi okunamadı. Biraz sonra tekrar deneyin.",
+    };
+  }
 
-  const [onaylananlar, reddedilenler] = await Promise.all([
-    onayKayitlari(repo, token),
+  const uyarilar: string[] = [];
+
+  const [{ commitler, eksikSayfa }, reddedilenler] = await Promise.all([
+    anaDalCommitleri(repo, token),
     redKayitlari(repo, token),
   ]);
+  if (eksikSayfa) {
+    uyarilar.push("Canlının geçmişi tam okunamadı; aşağıdaki liste eksik olabilir.");
+  }
+
+  const onaylananlar = await onayKayitlari(repo, token, commitler);
   const reddedilenDallar = new Set(reddedilenler.map((k) => k.dal));
+  // Bir dalın ucu canlının geçmişindeyse o iş zaten canlıda. Commit listesi
+  // atalarıyla birlikte geliyor, yani birleşmiş her dalın ucu burada bulunur.
+  const canlidakiler = new Set(commitler.map((c) => c.sha));
 
   // Dallar birbirinden bağımsız, o yüzden hepsi aynı anda sorulabilir.
   const sonuclar = await Promise.all(
-    dallar.map(async (dal): Promise<Degisiklik | null> => {
+    dallar.map(async ({ dal, sha }): Promise<Degisiklik | null> => {
       // Reddedilen iş dalında duruyor ama beklemiyor: karar verildi.
       if (reddedilenDallar.has(dal)) return null;
-
-      const yanit = await github(
-        `/repos/${repo}/compare/${CANLI_DALI}...${encodeURIComponent(dal)}`,
-        token,
-      );
-      if (!yanit.ok) return null;
-
-      const { ahead_by, commits } = (await yanit.json()) as Karsilastirma;
       // Birleşmiş ama silinmemiş dal: canlıda zaten var, listelemeye gerek yok.
-      if (ahead_by === 0) return null;
+      if (canlidakiler.has(sha)) return null;
 
-      const kayit = await kaydiGetir(repo, token, dal);
-      const sonCommit = commits[commits.length - 1];
+      const [kayit, sonCommit] = await Promise.all([
+        kaydiGetir(repo, token, dal),
+        commitOku(repo, token, sha),
+      ]);
+
+      if (!kayit) {
+        uyarilar.push(`"${dal}" işinin açıklaması okunamadı.`);
+      }
 
       return {
         dal,
-        baslik: kayit?.baslik ?? sonCommit.commit.message.split("\n")[0],
+        baslik:
+          kayit?.baslik ?? sonCommit?.commit.message.split("\n")[0] ?? dal,
         aciklama: kayit?.aciklama ?? "",
         dikkat: kayit?.dikkat ?? null,
         tip: kayit?.tip ?? null,
-        tarih: sonCommit.commit.committer.date,
-        commitAdedi: ahead_by,
+        // Tarihi de okuyamadıysak iş yine listede kalsın: sıralaması bozulur,
+        // görünmez olması ise onu canlıya alınamaz yapardı.
+        tarih: sonCommit?.commit.committer.date ?? new Date().toISOString(),
       };
     }),
   );
@@ -375,7 +442,7 @@ export async function yayinDurumu(): Promise<YayinDurumu> {
     .filter((d): d is Degisiklik => d !== null)
     .sort((a, b) => a.tarih.localeCompare(b.tarih));
 
-  return { degisiklikler, onaylananlar, reddedilenler, repo };
+  return { degisiklikler, onaylananlar, reddedilenler, uyarilar, repo };
 }
 
 /**

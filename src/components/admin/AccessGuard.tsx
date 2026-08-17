@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { getProfile, homePathFor, type ProfileRole } from "@/lib/profile";
+import { getSubscription } from "@/lib/subscription";
 
 /**
  * Panelin kapısı: onaylanmamış hesabı giriş ekranına, yanlış paneldeki
- * kullanıcıyı kendi paneline yollar.
+ * kullanıcıyı kendi paneline, abonesi olmayan satıcıyı ödeme ekranına yollar.
  *
  * Kapı tek yönlü: superuser satıcı panelini de açabiliyor (orada kendi
  * ürünlerini yönetiyor — RLS hepsini `owner_id`'sine bağlı tuttuğu için
@@ -21,6 +22,19 @@ export default async function AccessGuard({ expect }: { expect: ProfileRole }) {
   if (!profile || profile.status !== "approved") redirect("/login");
   if (profile.role !== expect && profile.role !== "superuser") {
     redirect(homePathFor(profile));
+  }
+
+  // Abonelik yalnızca satıcı panelinin şartı: `/yonetim` paneli ücretli değil
+  // (bkz. `can_write`, 0025).
+  //
+  // Bu yalnızca yönlendirme. Aboneliği bitmiş biri buradan geçse bile
+  // veritabanındaki yazma politikaları onu durduruyor — ekran kilitli, veri de
+  // kilitli, ikisi ayrı katmanda.
+  if (expect === "seller") {
+    const subscription = await getSubscription();
+    // Satır hiç yoksa da erişim yok: 0025 çalıştırılmamış ya da abonelik
+    // henüz açılmamış demek. Fail-closed.
+    if (!subscription?.active) redirect("/abonelik");
   }
 
   return null;

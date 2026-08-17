@@ -60,6 +60,11 @@ export async function GET(request: NextRequest) {
   // silinsin, kapanmış sekmelerden kalan etkinlik satırları da temizlensin.
   // Zaten her sabah çalışan tek zamanlanmış iş burası, ayrı bir cron açmaya
   // değmez.
+  //
+  // `expire_subscriptions` erişimi kapatan şey *değil* — onu tarihe bakan
+  // `has_subscription()` yapıyor, yani bu iş hiç çalışmasa da abonesi biten
+  // kimse panele giremez. Buradaki çağrı yalnızca durumu okunur kılıyor:
+  // `/yonetim`'deki liste "deneme sürüyor" yazmasın.
   await Promise.all([
     supabase.rpc("prune_security_events"),
     supabase.rpc("prune_product_scans"),
@@ -68,6 +73,7 @@ export async function GET(request: NextRequest) {
     // Başlangıç tarihi geçmiş talepler artık onaylanamaz; bekleyen listede
     // durmaları satıcıyı yanıltırdı.
     supabase.rpc("expire_booking_requests"),
+    supabase.rpc("expire_subscriptions"),
   ]);
 
   if (INSTAGRAM_AKTIF) await instagramBelirteclerimiTazele(supabase);

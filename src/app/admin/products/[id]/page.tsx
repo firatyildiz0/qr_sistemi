@@ -74,7 +74,11 @@ export default async function EditProductPage({
         </div>
 
         <div className="space-y-6">
-          <QRCodeCard productId={id} productName={product.name} />
+          <QRCodeCard
+            productId={id}
+            productName={product.name}
+            productBarcode={product.barcode ?? null}
+          />
           <DeleteProductButton productId={id} />
         </div>
       </div>

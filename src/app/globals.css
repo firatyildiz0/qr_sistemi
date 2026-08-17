@@ -16,6 +16,10 @@
   --color-success: #1f8a5f;
   --color-warning: #b8790a;
   --color-danger: #ba1a1a;
+  /* Rezervasyon durumlarının rengi. Vurgu renginden bilerek bağımsız: vurgu
+     Ayarlar'dan değiştirilebiliyor, oysa "yaklaşan" her satıcıda turuncu
+     olmalı — durum rengi bir tercih değil, okunacak bir işaret. */
+  --color-status-upcoming: #d85f0c;
   --color-border: #e1dfd9;
   --color-border-strong: #d8d5cc;
   --color-border-dark: rgba(255, 255, 255, 0.12);
@@ -81,6 +85,7 @@
   --color-success: #35c48d;
   --color-warning: #e0a726;
   --color-danger: #ff6b6b;
+  --color-status-upcoming: #ff8a3d;
   --color-border: #2a332e;
   --color-border-strong: #3a453e;
   --color-placeholder: #7d857e;
@@ -564,6 +569,112 @@ summary,
   .pill-accent {
     background: var(--color-accent-soft);
     color: var(--color-accent-strong);
+  }
+
+  /* ---------------------------------------------------------------------
+     Rezervasyon durumu
+     ---------------------------------------------------------------------
+     Durumun rengi tek bir değişkende (--status) duruyor; aşağıdaki iki
+     görünüm de onu okuyor. Böylece "yaklaşan turuncudur" bilgisi tek yerde
+     yazılı, damga ile rozet birbirinden ayrı düşemiyor.
+
+     Renkler karta ve mürekkebe doğru karıştırılıyor: zemin koyu temada kartı
+     açar, açık temada koyultur; yazı da tersi yönde kayıp iki temada da
+     okunur kalır. Sabit bir açık/koyu çift yazmaya gerek kalmıyor. */
+  .tone-upcoming {
+    --status: var(--color-status-upcoming);
+  }
+  .tone-active {
+    --status: var(--color-success);
+  }
+  .tone-completed {
+    --status: var(--color-ink-muted);
+  }
+  .tone-cancelled {
+    --status: var(--color-danger);
+  }
+
+  /* Damga: listelerde durumun asıl gösterimi. Satırın içinde değil sağ
+     kenarında, hepsi aynı genişlikte ve aynı hizada durduğu için liste
+     yukarıdan aşağı tarandığında göz tek bir sütunu takip ediyor — durumu
+     her satırın içinde ayrıca aramak gerekmiyor. */
+  .status-stamp {
+    display: flex;
+    flex: none;
+    width: 104px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 8px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    border: 1px solid color-mix(in oklab, var(--status) 34%, var(--color-card));
+    background: color-mix(in oklab, var(--status) 14%, var(--color-card));
+    color: color-mix(in oklab, var(--status) 78%, var(--color-ink));
+  }
+  .status-stamp span {
+    font-family: var(--font-eyebrow);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.15;
+    /* Sayfa lang="tr" olduğu için tarayıcı "iptal" → "İPTAL" çeviriyor. */
+    text-transform: uppercase;
+  }
+  /* İptal en yüksek sesli olan: satıcının kaçırmaması gereken tek durum bu. */
+  .status-stamp.tone-cancelled {
+    border-color: color-mix(in oklab, var(--status) 58%, var(--color-card));
+    background: color-mix(in oklab, var(--status) 22%, var(--color-card));
+  }
+  /* Dar ekranda sütun hizası zaten kayboluyor (satır alt alta diziliyor), o
+     yüzden damga yatay ve kendi genişliğinde bir şeride dönüşüyor: sabit 104
+     piksel, telefonda sil düğmesinin yanında yer kaplamaktan başka işe
+     yaramıyordu. */
+  @media (width < 40rem) {
+    .status-stamp {
+      width: auto;
+      flex-direction: row;
+      gap: 7px;
+      padding: 6px 12px;
+    }
+  }
+
+  /* Rozet: durumun yanında başka bilgi de olan, damgaya yer olmayan yerler
+     (ürün sayfasındaki kiralama kartı, rezervasyon detayının başlığı). */
+  .pill-status {
+    gap: 6px;
+    padding: 3px 11px 3px 9px;
+    font-weight: 700;
+    border: 1px solid color-mix(in oklab, var(--status) 42%, var(--color-card));
+    background: color-mix(in oklab, var(--status) 16%, var(--color-card));
+    color: color-mix(in oklab, var(--status) 80%, var(--color-ink));
+  }
+  /* Renk körlüğünde rozetleri ayıran ikinci işaret: nokta yalnızca süs değil,
+     dolgusu duruma göre değişiyor (bekleyen halka, süren dolu). */
+  .pill-status::before {
+    content: "";
+    height: 7px;
+    width: 7px;
+    flex: none;
+    border-radius: 999px;
+    background: currentColor;
+  }
+  .pill-status.tone-upcoming::before {
+    background: transparent;
+    box-shadow: inset 0 0 0 2px currentColor;
+  }
+  .pill-status.tone-completed {
+    font-weight: 600;
+  }
+  .pill-status.tone-cancelled {
+    background: color-mix(in oklab, var(--status) 24%, var(--color-card));
+    border-color: color-mix(in oklab, var(--status) 60%, var(--color-card));
+  }
+  /* Diğerlerinden ayrılan üçüncü işaret: iptalin noktası çarpı gibi çizili. */
+  .pill-status.tone-cancelled::before {
+    border-radius: 2px;
+    transform: rotate(45deg);
   }
 
   /* Engellemeyen uyarı kutusu: kayıt yine de yapılabilir, ama satıcının

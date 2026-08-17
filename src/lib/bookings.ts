@@ -369,11 +369,29 @@ export const bookingStatusLabel: Record<BookingStatus, string> = {
   cancelled: "iptal edildi",
 };
 
+/**
+ * Durumun rengini taşıyan sınıf. Renkler vurgu renginden bağımsız (bkz.
+ * globals.css): "yaklaşan" her satıcıda turuncu, "iptal edildi" her satıcıda
+ * kırmızı — satıcı listeyi okumadan tarıyor ve durum bir tercih değil, bir
+ * işaret. Damga da rozet de aynı sınıfı giyiyor.
+ */
+export const bookingStatusTone: Record<BookingStatus, string> = {
+  upcoming: "tone-upcoming",
+  active: "tone-active",
+  completed: "tone-completed",
+  cancelled: "tone-cancelled",
+};
+
+/**
+ * Satır içi rozet. Listelerde durum artık sağdaki damgada (bkz.
+ * `BookingStatusStamp`); rozet, damgaya yer olmayan yerlerde kalıyor —
+ * ürün sayfasındaki kiralama kartı ve rezervasyon detayının başlığı.
+ */
 export const bookingStatusPill: Record<BookingStatus, string> = {
-  upcoming: "pill-accent",
-  active: "pill-success",
-  completed: "pill-muted",
-  cancelled: "pill-danger",
+  upcoming: "pill-status tone-upcoming",
+  active: "pill-status tone-active",
+  completed: "pill-status tone-completed",
+  cancelled: "pill-status tone-cancelled",
 };
 
 export function nightsBetween(startDate: string, endDate: string) {

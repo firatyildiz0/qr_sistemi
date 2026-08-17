@@ -18,6 +18,10 @@ const QR_BOX = 360;
 const QR_MARGIN_MODULES = 2;
 const NAME_FONT_SIZE = 20;
 const NAME_GAP = 44;
+// Etiket numarası adın altında ve ondan büyük: rafta okunan şey isim değil
+// numara. PNG etiketiyle aynı sıralama (bkz. QrDownloadButtons).
+const BARCODE_FONT_SIZE = 26;
+const BARCODE_GAP = 34;
 
 // Helvetica'nın WinAnsi kodlamasında Türkçe'ye özgü harfler yok; kullanılmayan
 // kodları /Differences ile bu glifllere bağlıyoruz.
@@ -74,8 +78,15 @@ function fitName(name: string, maxWidth: number) {
   return `${text}...`;
 }
 
-/** QR kodu ve altında ürün adını içeren, vektörel tek sayfalık A4 PDF üretir. */
-export async function productQrPdf(productId: string, productName: string) {
+/**
+ * QR kodu ve altında ürün adını — varsa onun da altında etiket numarasını —
+ * içeren, vektörel tek sayfalık A4 PDF üretir.
+ */
+export async function productQrPdf(
+  productId: string,
+  productName: string,
+  productBarcode: string | null = null
+) {
   const { modules } = QRCode.create(productUrl(productId), {
     errorCorrectionLevel: "M",
   });
@@ -103,7 +114,16 @@ export async function productQrPdf(productId: string, productName: string) {
     ? `BT\n/F1 ${NAME_FONT_SIZE} Tf\n${nameX.toFixed(2)} ${nameY.toFixed(2)} Td\n(${pdfString(name)}) Tj\nET\n`
     : "";
 
-  const content = `0 0 0 rg\n${rects.join("\n")}\nf\n${nameBlock}`;
+  // Numara kısaltılmıyor: yarısı basılmış bir etiket numarası hiç basılmamış
+  // gibidir. Zaten en fazla 32 karakter (bkz. 0022) ve sayfaya rahat sığıyor.
+  const barcode = productBarcode?.trim() ?? "";
+  const barcodeX = (A4_WIDTH - estimateWidth(barcode, BARCODE_FONT_SIZE)) / 2;
+  const barcodeY = nameY - BARCODE_GAP;
+  const barcodeBlock = barcode
+    ? `BT\n/F1 ${BARCODE_FONT_SIZE} Tf\n${barcodeX.toFixed(2)} ${barcodeY.toFixed(2)} Td\n(${pdfString(barcode)}) Tj\nET\n`
+    : "";
+
+  const content = `0 0 0 rg\n${rects.join("\n")}\nf\n${nameBlock}${barcodeBlock}`;
 
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",

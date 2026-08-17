@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Her ürüne otomatik barkod numarası, QR etiketine basılıyor",
+  "aciklama": "Artık her ürünün bir barkod numarası var: yeni ürün eklerken numarayı sistem kendiliğinden üretiyor, mevcut ürünlerinizin hepsine de tek seferde numara verildi. İsterseniz numarayı elle kendiniz de yazabilirsiniz. QR kodu PNG ya da PDF olarak indirdiğinizde numara etikette ürün adının hemen altında çıkıyor, böylece rafta duran etiket okutulmadan tanınıyor. Ayrıca rezervasyon listelerinde durum, satırın sağ kenarında ikonlu ve renkli kendi kutusunda gösteriliyor: yaklaşan turuncu, aktif yeşil, teslim edildi gri, iptal edildi kırmızı. Hepsi aynı hizada durduğu için listeyi yukarıdan aşağı süzerken tek bir sütuna bakmanız yetiyor.",
+  "dikkat": "Canlıya almadan önce Supabase SQL editöründen önce 0022, sonra 0024 numaralı migration'ı çalıştır. 0024 mevcut ürünlerin hepsine numara dağıtıyor; ikisi çalışmadan barkod alanı kaydedilemez."
+}

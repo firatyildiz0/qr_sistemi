@@ -89,12 +89,76 @@ create table if not exists products (
   daily_price numeric,
   stock integer not null default 1,
   images text[] not null default '{}',
+  -- Etiket numarası. QR etiketinin üstüne ürün adının altına basılır. Satıcı
+  -- kendi numarasını yazabilir; yazmazsa aşağıdaki trigger rastgele bir tane
+  -- üretir, yani numarasız ürün oluşamaz. Bkz. 0022 ve 0024.
+  barcode text,
   created_at timestamptz not null default now(),
   constraint products_stock_non_negative check (stock >= 0),
-  constraint products_images_max_two check (coalesce(array_length(images, 1), 0) <= 2)
+  constraint products_images_max_two check (coalesce(array_length(images, 1), 0) <= 2),
+  constraint products_barcode_shape
+    check (barcode is null or barcode ~ '^[A-Za-z0-9][A-Za-z0-9._/-]{0,31}$')
 );
 
 create index if not exists products_owner_id_idx on products(owner_id);
+
+-- Aynı satıcıda numara tekrarlanamaz; farklı satıcılar bağımsız numaralandırır.
+create unique index if not exists products_owner_barcode_key
+  on products(owner_id, barcode)
+  where barcode is not null;
+
+-- Boş bırakılan etiket numarasını üretir: altı hane, satıcı içinde tekil.
+-- Rastgele, çünkü sıra numarası eş zamanlı iki eklemede aynı sayıya oturur ve
+-- katalog büyüklüğünü dışarı sızdırır. Gerekçesinin tamamı 0024'te.
+create or replace function allocate_product_barcode(p_owner uuid, p_exclude uuid)
+returns text
+language plpgsql
+as $$
+declare
+  candidate text;
+  tries int := 0;
+begin
+  loop
+    -- İlk hane 1-9: baştaki sıfır etiketten Excel'e taşınırken kayboluyor.
+    candidate := (floor(random() * 9 + 1)::int)::text
+              || lpad(floor(random() * 100000)::int::text, 5, '0');
+
+    exit when not exists (
+      select 1
+      from products p
+      where p.owner_id = p_owner
+        and p.barcode = candidate
+        and (p_exclude is null or p.id <> p_exclude)
+    );
+
+    tries := tries + 1;
+    if tries >= 50 then
+      raise exception 'Barkod numarası üretilemedi (satıcı %).', p_owner;
+    end if;
+  end loop;
+
+  return candidate;
+end;
+$$;
+
+create or replace function assign_product_barcode()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.barcode is null then
+    new.barcode := allocate_product_barcode(new.owner_id, new.id);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists products_assign_barcode on products;
+
+create trigger products_assign_barcode
+  before insert or update on products
+  for each row
+  execute function assign_product_barcode();
 
 create table if not exists bookings (
   id uuid primary key default gen_random_uuid(),

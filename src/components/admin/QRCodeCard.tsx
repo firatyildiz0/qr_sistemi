@@ -4,9 +4,12 @@ import QrDownloadButtons from "@/components/admin/QrDownloadButtons";
 export default async function QRCodeCard({
   productId,
   productName,
+  productBarcode,
 }: {
   productId: string;
   productName: string;
+  /** Etikete basılan numara; girilmemişse null. */
+  productBarcode: string | null;
 }) {
   const dataUrl = await productQrDataUrl(productId);
 
@@ -22,7 +25,26 @@ export default async function QRCodeCard({
           <img src={dataUrl} alt="Ürün QR kodu" className="h-full w-full" />
         </div>
       </div>
-      <QrDownloadButtons productId={productId} productName={productName} qrDataUrl={dataUrl} />
+      {/* İndirilen etikette ne yazacağı burada görünüyor: ad, altında numara. */}
+      <p className="mt-3 truncate text-center text-sm font-semibold text-ink" title={productName}>
+        {productName}
+      </p>
+      {productBarcode ? (
+        <p className="mt-0.5 text-center font-mono text-base font-bold tracking-widest text-ink">
+          {productBarcode}
+        </p>
+      ) : (
+        <p className="mt-0.5 text-center text-xs text-ink-muted">
+          Barkod numarası girilmedi
+        </p>
+      )}
+
+      <QrDownloadButtons
+        productId={productId}
+        productName={productName}
+        productBarcode={productBarcode}
+        qrDataUrl={dataUrl}
+      />
     </div>
   );
 }

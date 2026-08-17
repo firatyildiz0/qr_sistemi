@@ -23,11 +23,17 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#0f2a22",
     categories: ["business", "productivity"],
     icons: [
-      { src: "/icons/192", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "any" },
-      // Maskeleme yapan başlatıcılar simgenin kenarlarını kırpar; işaret güvenli
-      // alanın içinde durduğu için aynı görsel ikisine de yetiyor.
-      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Maskeleme yapan başlatıcılar simgenin kenarlarını kırpar; ayrı dosya
+      // gerekiyor: rozet güvenli alana sığacak kadar küçük duruyor ve çevresi
+      // manifest'in arka plan rengiyle dolu.
+      {
+        src: "/icons/icon-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
     ],
     // Simgeye uzun basınca çıkan kısayollar — telefonun kendi menüsünden
     // panelin iki ana işine doğrudan giriş.

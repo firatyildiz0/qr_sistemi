@@ -206,7 +206,7 @@
     width: 4.5rem;
   }
 
-  /* Labels, the wordmark and the account text all collapse away together. */
+  /* Labels, the logo and the account text all collapse away together. */
   :root[data-sidebar="collapsed"] .sidebar-label {
     display: none;
   }
@@ -1066,28 +1066,6 @@ summary,
     }
   }
 
-  /* Logodaki renk dalgası (bkz. components/Wordmark.tsx). Her harf 95ms arayla
-     başlıyor, yani dalga soldan sağa ilerliyor.
-
-     Keyframe'de bilerek yalnızca ara adımlar var: 0% ve 100% yazılmadığında
-     tarayıcı bunları elemanın kendi rengiyle dolduruyor. Dalga hem o renkten
-     çıkıp ona dönüyor (logo kenar çubuğunda beyaz, açık zeminde koyu — ikisi de
-     çalışıyor) hem de gecikme boyunca ve animasyon kapatıldığında harf doğal
-     rengiyle duruyor; `both` fill'e ya da ayrı bir sıfırlamaya gerek kalmıyor. */
-  .wordmark-letter {
-    display: inline-block;
-    animation: wordmark-wave 1.15s cubic-bezier(0.37, 0, 0.28, 1);
-    animation-delay: calc(var(--i) * 95ms);
-  }
-  @keyframes wordmark-wave {
-    28% {
-      color: var(--color-accent);
-    }
-    56% {
-      color: var(--color-success);
-    }
-  }
-
   .modal-backdrop {
     background: var(--app-backdrop);
     backdrop-filter: blur(4px);
@@ -1161,7 +1139,6 @@ summary,
     .drift,
     .qr-pulse-ring,
     .check-draw,
-    .wordmark-letter,
     .modal-backdrop,
     .modal-panel,
     .live-dot {
@@ -1183,7 +1160,6 @@ summary,
   :root[data-motion="reduced"] .drift,
   :root[data-motion="reduced"] .qr-pulse-ring,
   :root[data-motion="reduced"] .check-draw,
-  :root[data-motion="reduced"] .wordmark-letter,
   :root[data-motion="reduced"] .modal-backdrop,
   :root[data-motion="reduced"] .modal-panel,
   :root[data-motion="reduced"] .live-dot {

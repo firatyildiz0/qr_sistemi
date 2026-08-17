@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import QRCode from "qrcode";
 import { IconCalendar } from "@/components/icons";
-import Wordmark from "@/components/Wordmark";
+import Logo from "@/components/Logo";
 
 /**
  * Giriş ve üye ol sayfalarının ortak sol paneli.
@@ -96,9 +96,7 @@ export default function AuthAside() {
       />
       <div className="relative z-10 w-full max-w-md">
         {/* Not a link: with the landing page parked, "/" only comes back here. */}
-        <span className="font-display text-xl font-extrabold">
-          <Wordmark />
-        </span>
+        <Logo className="h-14 w-14" sizes="56px" />
         <h1 className="mt-8 text-3xl font-bold leading-tight sm:text-4xl">
           Kiralamalarınızı tek bir yerden yönetin
         </h1>

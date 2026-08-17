@@ -369,11 +369,24 @@ export const bookingStatusLabel: Record<BookingStatus, string> = {
   cancelled: "iptal edildi",
 };
 
+/**
+ * Durum rozetinin sınıfı. Renkler vurgu renginden bağımsız (bkz. globals.css):
+ * "yaklaşan" her satıcıda turuncu, "iptal edildi" her satıcıda kırmızı — satıcı
+ * listeyi okumadan tarıyor ve durum bir tercih değil, bir işaret.
+ */
 export const bookingStatusPill: Record<BookingStatus, string> = {
-  upcoming: "pill-accent",
-  active: "pill-success",
-  completed: "pill-muted",
-  cancelled: "pill-danger",
+  upcoming: "pill-status pill-upcoming",
+  active: "pill-status pill-active",
+  completed: "pill-status pill-completed",
+  cancelled: "pill-status pill-cancelled",
+};
+
+/** Aynı rengin satır kenarındaki karşılığı: listede göz önce ona çarpıyor. */
+export const bookingStatusRow: Record<BookingStatus, string> = {
+  upcoming: "row-status row-status-upcoming",
+  active: "row-status row-status-active",
+  completed: "row-status row-status-completed",
+  cancelled: "row-status row-status-cancelled",
 };
 
 export function nightsBetween(startDate: string, endDate: string) {

@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { CustomerBooking } from "@/lib/customers";
 import type { BookingStatus } from "@/lib/types";
-import { bookingStatusLabel, bookingStatusPill, formatDateRange } from "@/lib/bookings";
+import {
+  bookingStatusLabel,
+  bookingStatusPill,
+  bookingStatusRow,
+  formatDateRange,
+} from "@/lib/bookings";
 import { formatPrice } from "@/lib/format";
 import ProductThumb from "@/components/admin/ProductThumb";
 import { IconCalendar, IconChevronRight } from "@/components/icons";
@@ -67,7 +72,9 @@ export default function CustomerRentals({ bookings }: { bookings: CustomerBookin
           <li key={booking.id}>
             <Link
               href={`/admin/bookings/${booking.id}`}
-              className="fade-slide-up card card-hover flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              className={`fade-slide-up card card-hover flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
+                bookingStatusRow[booking.status]
+              }`}
               style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
             >
               <div className="flex min-w-0 items-start gap-3">

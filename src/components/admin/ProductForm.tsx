@@ -31,6 +31,28 @@ export default function ProductForm({
         <input id="name" name="name" required defaultValue={product?.name} className="input" />
       </div>
 
+      {/* Etikete basılan numara. Ürün adının hemen altında duruyor çünkü QR
+          etiketinde de öyle çıkıyor — form etiketin sırasını taklit ediyor. */}
+      <div>
+        <label htmlFor="barcode" className="field-label">
+          Barkod numarası (opsiyonel)
+        </label>
+        <input
+          id="barcode"
+          name="barcode"
+          maxLength={32}
+          inputMode="text"
+          autoComplete="off"
+          placeholder="001"
+          defaultValue={product?.barcode ?? ""}
+          className="input font-mono tracking-wide"
+        />
+        <p className="mt-1.5 text-xs text-ink-muted">
+          QR kodu indirdiğinizde etikete ürün adının altına bu numara basılır. Her
+          ürüne farklı bir numara verin.
+        </p>
+      </div>
+
       <ImageUploader
         initialImages={product?.images ?? []}
         onBusyChange={handleBusyChange}

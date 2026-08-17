@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { BookingStatus } from "@/lib/types";
-import { bookingStatusLabel, bookingStatusPill, formatDateRange } from "@/lib/bookings";
+import {
+  bookingStatusLabel,
+  bookingStatusPill,
+  bookingStatusRow,
+  formatDateRange,
+} from "@/lib/bookings";
 import { deleteBooking } from "@/app/product/[id]/actions";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import PhoneActions from "@/components/admin/PhoneActions";
@@ -25,12 +30,14 @@ export type BookingHistoryRow = {
 
 type Filter = "all" | BookingStatus;
 
-const filters: { key: Filter; label: string }[] = [
-  { key: "all", label: "Tümü" },
-  { key: "active", label: "Aktif" },
-  { key: "upcoming", label: "Yaklaşan" },
-  { key: "completed", label: "Teslim edildi" },
-  { key: "cancelled", label: "İptal edildi" },
+// Sayının rengi filtre şeridini aynı zamanda bir renk anahtarına çeviriyor:
+// satırlardaki turuncunun "yaklaşan", kırmızının "iptal" olduğu buradan okunuyor.
+const filters: { key: Filter; label: string; countClass: string }[] = [
+  { key: "all", label: "Tümü", countClass: "text-ink-muted" },
+  { key: "active", label: "Aktif", countClass: "text-success" },
+  { key: "upcoming", label: "Yaklaşan", countClass: "text-status-upcoming" },
+  { key: "completed", label: "Teslim edildi", countClass: "text-ink-muted" },
+  { key: "cancelled", label: "İptal edildi", countClass: "text-danger" },
 ];
 
 // Pinned to a fixed zone so the server render and the browser agree — the
@@ -81,7 +88,7 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
               }`}
             >
               {f.label}
-              <span className={selected ? "text-white/70" : "text-ink-muted"}>
+              <span className={`font-semibold ${selected ? "text-white/70" : f.countClass}`}>
                 {counts[f.key]}
               </span>
             </button>
@@ -106,7 +113,9 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
             // de onun üstünde kalıyor.
             <div
               key={b.id}
-              className="fade-slide-up card card-hover relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              className={`fade-slide-up card card-hover relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
+                bookingStatusRow[b.status]
+              }`}
               style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
             >
               <Link

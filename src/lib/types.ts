@@ -11,15 +11,22 @@ export type Product = {
   daily_price: number | null;
   stock: number;
   images: string[] | null;
+  /**
+   * Satıcının kendi etiket numarası ("001", "A-14"). QR etiketine ürün adının
+   * altına basılır, böylece rafta duran etiket okutulmadan da tanınır.
+   * Girilmediğinde null — etikette o satır hiç çıkmaz.
+   */
+  barcode: string | null;
   created_at: string;
 };
 
 /**
  * Ürünün herkese açık görünümü — `product_public()` fonksiyonunun döndürdüğü
  * alanlar. QR'ı okutan müşterinin gördüğü her şey burada; sahibin kim olduğu
- * (`owner_id`) ve kaydın ne zaman açıldığı dışarı çıkmıyor.
+ * (`owner_id`), kaydın ne zaman açıldığı ve satıcının kendi etiket numarası
+ * (`barcode`) dışarı çıkmıyor.
  */
-export type PublicProduct = Omit<Product, "owner_id" | "created_at">;
+export type PublicProduct = Omit<Product, "owner_id" | "created_at" | "barcode">;
 
 export type Booking = {
   id: string;

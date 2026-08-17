@@ -9,6 +9,7 @@ import type { Booking, BookingStatus } from "@/lib/types";
 import {
   bookingStatusLabel,
   bookingStatusPill,
+  bookingStatusRow,
   computeOccupancySpan,
   datesInRange,
   daysByState,
@@ -347,7 +348,10 @@ export default function BookingRow({
   }
 
   return (
-    <div className="fade-slide-up card" style={{ animationDelay: `${delay}ms` }}>
+    <div
+      className={`fade-slide-up card ${bookingStatusRow[status]}`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">

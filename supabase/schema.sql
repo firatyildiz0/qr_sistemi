@@ -89,12 +89,22 @@ create table if not exists products (
   daily_price numeric,
   stock integer not null default 1,
   images text[] not null default '{}',
+  -- Satıcının kendi etiket numarası ("001", "A-14"). QR etiketinin üstüne
+  -- ürün adının altına basılır. Opsiyonel; bkz. 0022.
+  barcode text,
   created_at timestamptz not null default now(),
   constraint products_stock_non_negative check (stock >= 0),
-  constraint products_images_max_two check (coalesce(array_length(images, 1), 0) <= 2)
+  constraint products_images_max_two check (coalesce(array_length(images, 1), 0) <= 2),
+  constraint products_barcode_shape
+    check (barcode is null or barcode ~ '^[A-Za-z0-9][A-Za-z0-9._/-]{0,31}$')
 );
 
 create index if not exists products_owner_id_idx on products(owner_id);
+
+-- Aynı satıcıda numara tekrarlanamaz; farklı satıcılar bağımsız numaralandırır.
+create unique index if not exists products_owner_barcode_key
+  on products(owner_id, barcode)
+  where barcode is not null;
 
 create table if not exists bookings (
   id uuid primary key default gen_random_uuid(),

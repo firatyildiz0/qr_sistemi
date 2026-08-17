@@ -9,6 +9,16 @@ const PADDING = 40;
 const NAME_FONT_SIZE = 38;
 const LINE_HEIGHT = 48;
 const MAX_LINES = 2;
+const NAME_GAP = 24;
+// Etiket numarası adın hemen altında ve ondan biraz büyük: rafta okunan şey
+// isim değil numara. Eşit genişlikli yazı tipi rakamları hizalı tutuyor.
+const BARCODE_FONT_SIZE = 44;
+const BARCODE_GAP = 14;
+const BARCODE_LINE_HEIGHT = 54;
+
+const nameFont = (size = NAME_FONT_SIZE) =>
+  `bold ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
+const barcodeFont = `bold ${BARCODE_FONT_SIZE}px ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace`;
 
 function slugify(name: string) {
   return (
@@ -57,13 +67,17 @@ function wrap(ctx: CanvasRenderingContext2D, name: string, maxWidth: number) {
 export default function QrDownloadButtons({
   productId,
   productName,
+  productBarcode,
   qrDataUrl,
 }: {
   productId: string;
   productName: string;
+  /** Etiketin üstüne adın altına basılacak numara; girilmemişse boş. */
+  productBarcode: string | null;
   qrDataUrl: string;
 }) {
   const [busy, setBusy] = useState(false);
+  const barcode = productBarcode?.trim() ?? "";
 
   async function downloadPng() {
     setBusy(true);
@@ -72,13 +86,19 @@ export default function QrDownloadButtons({
       image.src = qrDataUrl;
       await image.decode();
 
+      const maxTextWidth = CANVAS_WIDTH - PADDING * 2;
       const measure = document.createElement("canvas").getContext("2d")!;
-      measure.font = `bold ${NAME_FONT_SIZE}px system-ui, "Segoe UI", Arial, sans-serif`;
-      const lines = wrap(measure, productName, CANVAS_WIDTH - PADDING * 2);
+      measure.font = nameFont();
+      const lines = wrap(measure, productName, maxTextWidth);
+
+      const nameTop = PADDING + QR_SIZE + NAME_GAP;
+      const barcodeTop = nameTop + lines.length * LINE_HEIGHT + BARCODE_GAP;
 
       const canvas = document.createElement("canvas");
       canvas.width = CANVAS_WIDTH;
-      canvas.height = PADDING * 2 + QR_SIZE + 24 + lines.length * LINE_HEIGHT;
+      canvas.height =
+        (barcode ? barcodeTop + BARCODE_LINE_HEIGHT : nameTop + lines.length * LINE_HEIGHT) +
+        PADDING;
       const ctx = canvas.getContext("2d")!;
 
       ctx.fillStyle = "#ffffff";
@@ -88,12 +108,26 @@ export default function QrDownloadButtons({
       ctx.drawImage(image, (CANVAS_WIDTH - QR_SIZE) / 2, PADDING, QR_SIZE, QR_SIZE);
 
       ctx.fillStyle = "#000000";
-      ctx.font = `bold ${NAME_FONT_SIZE}px system-ui, "Segoe UI", Arial, sans-serif`;
+      ctx.font = nameFont();
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       lines.forEach((line, index) => {
-        ctx.fillText(line, CANVAS_WIDTH / 2, PADDING + QR_SIZE + 24 + index * LINE_HEIGHT);
+        ctx.fillText(line, CANVAS_WIDTH / 2, nameTop + index * LINE_HEIGHT);
       });
+
+      if (barcode) {
+        // Numara kısaltılmıyor — yarısı basılmış bir etiket numarası hiç
+        // basılmamış gibidir. Sığmadığında yazı küçültülüyor.
+        ctx.font = barcodeFont;
+        const width = ctx.measureText(barcode).width;
+        if (width > maxTextWidth) {
+          ctx.font = barcodeFont.replace(
+            `${BARCODE_FONT_SIZE}px`,
+            `${Math.floor((BARCODE_FONT_SIZE * maxTextWidth) / width)}px`
+          );
+        }
+        ctx.fillText(barcode, CANVAS_WIDTH / 2, barcodeTop);
+      }
 
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
       if (!blob) return;
@@ -101,7 +135,8 @@ export default function QrDownloadButtons({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${slugify(productName)}-qr.png`;
+      // Numara dosya adının başında: etiketler klasörde numara sırasına diziliyor.
+      link.download = `${barcode ? `${slugify(barcode)}-` : ""}${slugify(productName)}-qr.png`;
       link.click();
       URL.revokeObjectURL(url);
     } finally {

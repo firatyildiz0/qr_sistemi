@@ -43,6 +43,7 @@ import ProductPicker, {
   itemsPayload,
   type PickedItem,
 } from "@/components/booking/ProductPicker";
+import PhoneActions from "@/components/admin/PhoneActions";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import PriceField from "@/components/PriceField";
 import { formatPrice } from "@/lib/format";
@@ -51,7 +52,6 @@ import {
   IconMapPin,
   IconPackage,
   IconPencil,
-  IconPhone,
   IconPlus,
   IconShield,
   IconTrash,
@@ -366,10 +366,10 @@ export default function BookingRow({
             {formatDateRange(booking.start_date, booking.end_date)}
           </span>
           {booking.customer_phone && (
-            <span className="flex items-center gap-1.5">
-              <IconPhone className="h-3.5 w-3.5" />
-              {booking.customer_phone}
-            </span>
+            <PhoneActions
+              phone={booking.customer_phone}
+              name={booking.customer_name}
+            />
           )}
           {region && (
             <span className="flex min-w-0 items-center gap-1.5" title={formatAddress(booking) ?? undefined}>

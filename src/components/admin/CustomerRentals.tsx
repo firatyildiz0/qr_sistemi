@@ -4,13 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { CustomerBooking } from "@/lib/customers";
 import type { BookingStatus } from "@/lib/types";
-import {
-  bookingStatusLabel,
-  bookingStatusPill,
-  bookingStatusRow,
-  formatDateRange,
-} from "@/lib/bookings";
+import { formatDateRange } from "@/lib/bookings";
 import { formatPrice } from "@/lib/format";
+import BookingStatusStamp from "@/components/booking/BookingStatusStamp";
 import ProductThumb from "@/components/admin/ProductThumb";
 import { IconCalendar, IconChevronRight } from "@/components/icons";
 
@@ -72,21 +68,14 @@ export default function CustomerRentals({ bookings }: { bookings: CustomerBookin
           <li key={booking.id}>
             <Link
               href={`/admin/bookings/${booking.id}`}
-              className={`fade-slide-up card card-hover flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
-                bookingStatusRow[booking.status]
-              }`}
+              className="fade-slide-up card card-hover flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
               style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
             >
               <div className="flex min-w-0 items-start gap-3">
                 <ProductThumb src={booking.imageUrl} />
 
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-ink">{booking.productName}</p>
-                    <span className={`pill ${bookingStatusPill[booking.status]}`}>
-                      {bookingStatusLabel[booking.status]}
-                    </span>
-                  </div>
+                  <p className="font-semibold text-ink">{booking.productName}</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
                     <span className="flex items-center gap-1.5">
                       <IconCalendar className="h-3.5 w-3.5" />
@@ -97,12 +86,15 @@ export default function CustomerRentals({ bookings }: { bookings: CustomerBookin
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-3 self-start sm:self-center">
+              {/* Damga sondan bir önceki: arkasında yalnızca sabit genişlikli
+                  ok kaldığı için bütün satırlarda aynı hizaya oturuyor. */}
+              <div className="flex shrink-0 flex-wrap items-center gap-3 self-start sm:self-center">
                 {booking.total != null && (
                   <span className="text-sm font-semibold text-ink">
                     {formatPrice(booking.total)}
                   </span>
                 )}
+                <BookingStatusStamp status={booking.status} />
                 <IconChevronRight className="h-4 w-4 text-ink-muted" />
               </div>
             </Link>

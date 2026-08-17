@@ -3,13 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { BookingStatus } from "@/lib/types";
-import {
-  bookingStatusLabel,
-  bookingStatusPill,
-  bookingStatusRow,
-  formatDateRange,
-} from "@/lib/bookings";
+import { formatDateRange } from "@/lib/bookings";
 import { deleteBooking } from "@/app/product/[id]/actions";
+import BookingStatusStamp from "@/components/booking/BookingStatusStamp";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import PhoneActions from "@/components/admin/PhoneActions";
 import ProductThumb from "@/components/admin/ProductThumb";
@@ -113,9 +109,7 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
             // de onun üstünde kalıyor.
             <div
               key={b.id}
-              className={`fade-slide-up card card-hover relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
-                bookingStatusRow[b.status]
-              }`}
+              className="fade-slide-up card card-hover relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
               style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
             >
               <Link
@@ -130,12 +124,7 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
                 <ProductThumb src={b.productImageUrl} />
 
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-ink">{b.customerName}</p>
-                    <span className={`pill ${bookingStatusPill[b.status]}`}>
-                      {bookingStatusLabel[b.status]}
-                    </span>
-                  </div>
+                  <p className="font-semibold text-ink">{b.customerName}</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
                     <span className="truncate">{b.productName}</span>
                     <span className="flex items-center gap-1.5">
@@ -150,7 +139,12 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
               </div>
 
               {/* pointer-events: üstteki katman tıklamayı yutmasın diye kolon
-                  geçirgen, yalnızca düğme tıklanabilir. */}
+                  geçirgen, yalnızca düğme tıklanabilir.
+
+                  Damga sondan bir önceki: arkasında yalnızca sabit genişlikli
+                  ok kaldığı için bütün satırlarda aynı hizaya oturuyor, liste
+                  boyunca da tek bir durum sütunu oluşuyor. Tarihin uzunluğu
+                  satırdan satıra değiştiği için damga başta olsaydı kayardı. */}
               <div className="pointer-events-none relative flex shrink-0 flex-wrap items-center gap-3 self-start text-xs text-ink-muted sm:self-center">
                 <span>{createdFormat.format(new Date(b.createdAt))} tarihinde oluşturuldu</span>
                 <button
@@ -161,6 +155,7 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
                   <IconTrash className="h-3.5 w-3.5" />
                   Sil
                 </button>
+                <BookingStatusStamp status={b.status} />
                 <IconChevronRight className="h-4 w-4" />
               </div>
             </div>

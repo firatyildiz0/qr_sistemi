@@ -574,14 +574,74 @@ summary,
   /* ---------------------------------------------------------------------
      Rezervasyon durumu
      ---------------------------------------------------------------------
-     Satıcı listeyi okumuyor, tarıyor: bir siparişin iptal mi yoksa yolda mı
-     olduğu yazıyı okumadan da anlaşılmalı. O yüzden durum rozeti sıradan
-     pill'den daha yüksek sesle konuşuyor — dolgu, kenarlık ve renkli bir nokta
-     birlikte.
+     Durumun rengi tek bir değişkende (--status) duruyor; aşağıdaki iki
+     görünüm de onu okuyor. Böylece "yaklaşan turuncudur" bilgisi tek yerde
+     yazılı, damga ile rozet birbirinden ayrı düşemiyor.
 
-     Üç değer de aynı formülden türüyor, yalnızca --status değişiyor: zemin
-     karta doğru karışır (koyu temada aynı karışım kartı açar, açık temada
-     koyultur), yazı ise mürekkebe doğru karışıp iki temada da okunur kalır. */
+     Renkler karta ve mürekkebe doğru karıştırılıyor: zemin koyu temada kartı
+     açar, açık temada koyultur; yazı da tersi yönde kayıp iki temada da
+     okunur kalır. Sabit bir açık/koyu çift yazmaya gerek kalmıyor. */
+  .tone-upcoming {
+    --status: var(--color-status-upcoming);
+  }
+  .tone-active {
+    --status: var(--color-success);
+  }
+  .tone-completed {
+    --status: var(--color-ink-muted);
+  }
+  .tone-cancelled {
+    --status: var(--color-danger);
+  }
+
+  /* Damga: listelerde durumun asıl gösterimi. Satırın içinde değil sağ
+     kenarında, hepsi aynı genişlikte ve aynı hizada durduğu için liste
+     yukarıdan aşağı tarandığında göz tek bir sütunu takip ediyor — durumu
+     her satırın içinde ayrıca aramak gerekmiyor. */
+  .status-stamp {
+    display: flex;
+    flex: none;
+    width: 104px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 8px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    border: 1px solid color-mix(in oklab, var(--status) 34%, var(--color-card));
+    background: color-mix(in oklab, var(--status) 14%, var(--color-card));
+    color: color-mix(in oklab, var(--status) 78%, var(--color-ink));
+  }
+  .status-stamp span {
+    font-family: var(--font-eyebrow);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.15;
+    /* Sayfa lang="tr" olduğu için tarayıcı "iptal" → "İPTAL" çeviriyor. */
+    text-transform: uppercase;
+  }
+  /* İptal en yüksek sesli olan: satıcının kaçırmaması gereken tek durum bu. */
+  .status-stamp.tone-cancelled {
+    border-color: color-mix(in oklab, var(--status) 58%, var(--color-card));
+    background: color-mix(in oklab, var(--status) 22%, var(--color-card));
+  }
+  /* Dar ekranda sütun hizası zaten kayboluyor (satır alt alta diziliyor), o
+     yüzden damga yatay ve kendi genişliğinde bir şeride dönüşüyor: sabit 104
+     piksel, telefonda sil düğmesinin yanında yer kaplamaktan başka işe
+     yaramıyordu. */
+  @media (width < 40rem) {
+    .status-stamp {
+      width: auto;
+      flex-direction: row;
+      gap: 7px;
+      padding: 6px 12px;
+    }
+  }
+
+  /* Rozet: durumun yanında başka bilgi de olan, damgaya yer olmayan yerler
+     (ürün sayfasındaki kiralama kartı, rezervasyon detayının başlığı). */
   .pill-status {
     gap: 6px;
     padding: 3px 11px 3px 9px;
@@ -600,37 +660,21 @@ summary,
     border-radius: 999px;
     background: currentColor;
   }
-
-  .pill-upcoming {
-    --status: var(--color-status-upcoming);
-  }
-  .pill-upcoming::before {
+  .pill-status.tone-upcoming::before {
     background: transparent;
     box-shadow: inset 0 0 0 2px currentColor;
   }
-  .pill-active {
-    --status: var(--color-success);
-  }
-  .pill-completed {
-    --status: var(--color-ink-muted);
+  .pill-status.tone-completed {
     font-weight: 600;
   }
-  /* İptal en yüksek sesli olan: satıcının kaçırmaması gereken tek durum bu. */
-  .pill-cancelled {
-    --status: var(--color-danger);
+  .pill-status.tone-cancelled {
     background: color-mix(in oklab, var(--status) 24%, var(--color-card));
     border-color: color-mix(in oklab, var(--status) 60%, var(--color-card));
   }
   /* Diğerlerinden ayrılan üçüncü işaret: iptalin noktası çarpı gibi çizili. */
-  .pill-cancelled::before {
+  .pill-status.tone-cancelled::before {
     border-radius: 2px;
     transform: rotate(45deg);
-  }
-
-  /* İptal edilmiş satırın zemini. Rengi taşıyan tek satır türü bu: iptal
-     listede atlanacak kayıt, gerisi rozete bırakılıyor. */
-  .row-cancelled {
-    background: color-mix(in oklab, var(--color-danger) 5%, var(--color-card));
   }
 
   /* Engellemeyen uyarı kutusu: kayıt yine de yapılabilir, ama satıcının

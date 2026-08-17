@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { getProfile } from "@/lib/profile";
-import { canliyaAl, yayinDurumu } from "@/lib/github";
+import {
+  canliyaAl,
+  reddet as reddetVeKaydet,
+  reddiGeriAl,
+  yayinDurumu,
+} from "@/lib/github";
 
 /**
  * Hata mesajı fırlatılmıyor, döndürülüyor.
@@ -14,26 +19,43 @@ import { canliyaAl, yayinDurumu } from "@/lib/github";
  */
 export type YayinSonucu = { tamam: true } | { tamam: false; mesaj: string };
 
-/** Bir işi canlıya alır. */
-export async function yayinla(dal: string): Promise<YayinSonucu> {
-  // Sayfanın `/yonetim` altında olması yetki değildir — bu işlem herkesin
-  // gönderebileceği bir POST ucu, kontrol burada yapılmak zorunda.
+/** Reddederken yazılabilecek en uzun not. */
+const SEBEP_SINIRI = 500;
+
+/**
+ * Yetkiyi ve dalın gerçekten o listede olduğunu doğrular.
+ *
+ * Gelen dal adına güvenmiyoruz. İstemci hangi işi kastettiğini söyler, hangi
+ * dallara dokunulabileceğine sunucu karar verir: aksi halde bu uçlar, depodaki
+ * herhangi bir dalı canlıya birleştiren düğmeler olurdu.
+ */
+async function dogrula(
+  dal: string,
+  liste: "bekleyen" | "reddedilen",
+): Promise<string | null> {
+  // Sayfanın `/yonetim` altında olması yetki değildir — bu işlemler herkesin
+  // gönderebileceği POST uçları, kontrol burada yapılmak zorunda.
   const me = await getProfile();
   if (me?.role !== "superuser" || me.status !== "approved") {
-    return { tamam: false, mesaj: "Bu işlem için yetkiniz yok." };
+    return "Bu işlem için yetkiniz yok.";
   }
 
-  // Gelen dal adına güvenmiyoruz. İstemci hangi işi kastettiğini söyler, hangi
-  // dalların canlıya alınabilir olduğuna sunucu karar verir: aksi halde bu uç,
-  // depodaki herhangi bir dalı canlıya birleştiren bir düğme olurdu.
   const durum = await yayinDurumu();
-  if ("kurulum" in durum) return { tamam: false, mesaj: durum.kurulum };
-  if (!durum.degisiklikler.some((d) => d.dal === dal)) {
-    return {
-      tamam: false,
-      mesaj: "Bu iş yayın listesinde değil. Sayfayı yenileyin.",
-    };
+  if ("kurulum" in durum) return durum.kurulum;
+
+  const kaynak =
+    liste === "bekleyen" ? durum.degisiklikler : durum.reddedilenler;
+  if (!kaynak.some((d) => d.dal === dal)) {
+    return "Bu iş listede değil. Sayfayı yenileyin.";
   }
+
+  return null;
+}
+
+/** Bir işi canlıya alır. */
+export async function yayinla(dal: string): Promise<YayinSonucu> {
+  const engel = await dogrula(dal, "bekleyen");
+  if (engel) return { tamam: false, mesaj: engel };
 
   try {
     await canliyaAl(dal);
@@ -41,6 +63,42 @@ export async function yayinla(dal: string): Promise<YayinSonucu> {
     return {
       tamam: false,
       mesaj: e instanceof Error ? e.message : "Canlıya alınamadı.",
+    };
+  }
+
+  revalidatePath("/yonetim/yayin");
+  return { tamam: true };
+}
+
+/** Bir işi reddeder. İş silinmez, yalnızca bekleyenler listesinden çıkar. */
+export async function reddet(dal: string, sebep: string): Promise<YayinSonucu> {
+  const engel = await dogrula(dal, "bekleyen");
+  if (engel) return { tamam: false, mesaj: engel };
+
+  try {
+    await reddetVeKaydet(dal, sebep.trim().slice(0, SEBEP_SINIRI) || null);
+  } catch (e) {
+    return {
+      tamam: false,
+      mesaj: e instanceof Error ? e.message : "İş reddedilemedi.",
+    };
+  }
+
+  revalidatePath("/yonetim/yayin");
+  return { tamam: true };
+}
+
+/** Reddedilmiş bir işi yeniden bekleyenler listesine alır. */
+export async function geriAl(dal: string): Promise<YayinSonucu> {
+  const engel = await dogrula(dal, "reddedilen");
+  if (engel) return { tamam: false, mesaj: engel };
+
+  try {
+    await reddiGeriAl(dal);
+  } catch (e) {
+    return {
+      tamam: false,
+      mesaj: e instanceof Error ? e.message : "Karar geri alınamadı.",
     };
   }
 

@@ -6,10 +6,16 @@ import AdminSidebarNav from "@/components/admin/AdminSidebarNav";
 import MobileTabBar from "@/components/admin/MobileTabBar";
 import QrScanFab from "@/components/scan/QrScanFab";
 import Wordmark from "@/components/Wordmark";
-import { IconBell, IconChevronLeft, IconLogOut } from "@/components/icons";
+import { IconBell, IconChevronLeft, IconLogOut, IconShield } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
 
-export type Identity = { email: string; initial: string; name: string; greeting: string };
+export type Identity = {
+  email: string;
+  initial: string;
+  name: string;
+  greeting: string;
+  isSuperuser: boolean;
+};
 
 export default function AdminShell({
   identityPromise,
@@ -84,6 +90,11 @@ export default function AdminShell({
         </div>
 
         <div className="sidebar-foot mt-auto border-t border-white/10 p-6">
+          {/* Yalnızca superuser'da çiziliyor; satıcının gireceği bir yer değil. */}
+          <Suspense fallback={null}>
+            <YonetimLink promise={identityPromise} />
+          </Suspense>
+
           <div className="sidebar-account flex items-center gap-3">
             <Suspense fallback={<AccountFallback />}>
               <Account promise={identityPromise} />
@@ -130,6 +141,26 @@ function UnreadDot({ promise }: { promise: Promise<number> }) {
       aria-label={`${count} okunmamış bildirim`}
       className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-deep"
     />
+  );
+}
+
+/**
+ * Superuser'ın yönetim paneline dönüş kapısı. Kenar çubuğunun gezinme listesine
+ * değil dibine, hesap satırının üstüne konuyor: bu bir panel sayfası değil,
+ * panelden çıkış. `sidebar-label` ile rail daraldığında yazı da kayboluyor.
+ */
+function YonetimLink({ promise }: { promise: Promise<Identity> }) {
+  const { isSuperuser } = use(promise);
+  if (!isSuperuser) return null;
+
+  return (
+    <Link
+      href="/yonetim"
+      className="mb-4 flex items-center gap-3 rounded-md px-1 py-1.5 text-sm font-medium text-white/60 transition hover:bg-white/10 hover:text-white"
+    >
+      <IconShield className="h-4 w-4 shrink-0" />
+      <span className="sidebar-label truncate">Yönetim paneli</span>
+    </Link>
   );
 }
 

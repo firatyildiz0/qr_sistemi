@@ -7,6 +7,7 @@ import {
   IconBolt,
   IconChart,
   IconGauge,
+  IconGrid,
   IconLogOut,
   IconShield,
   IconUsers,
@@ -79,6 +80,17 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
           >
             <IconBolt className="h-4 w-4" />
             Yayın
+          </Link>
+
+          {/* Yönetim sayfası değil, panelden çıkış: superuser'ın kendi satıcı
+              hesabına geçtiği yer. Sıranın sonunda ve ayrı duruyor ki bir
+              yönetim sekmesi sanılmasın. */}
+          <Link
+            href="/admin"
+            className="ml-auto flex items-center gap-2 px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <IconGrid className="h-4 w-4" />
+            Satıcı paneli
           </Link>
         </div>
       </nav>

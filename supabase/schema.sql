@@ -60,6 +60,173 @@ as $$
   );
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Abonelik (premium üyelik) — bkz. 0025
+-- ---------------------------------------------------------------------------
+-- Onay ("bu hesap gerçek mi") ve abonelik ("ödemesi yapıldı mı") ayrı tutuluyor,
+-- çünkü ayrı sebeplerle kapanıyorlar: reddedilen hesap geri dönmez, ödemesi
+-- geciken hesap ödeyince yerinden devam eder.
+--
+-- Satıcı başına tek satır. Abonelik geçmişi iyzico'da; burada yalnızca "şu an
+-- erişimi var mı" sorusunu yanıtlayacak kadarı duruyor.
+create table if not exists subscriptions (
+  owner_id uuid primary key references auth.users(id) on delete cascade,
+
+  -- trialing : deneme sürüyor, kart istenmedi
+  -- active   : ödeme alındı, dönem sonuna kadar erişim var
+  -- past_due : yenileme başarısız — erişim ödenmiş dönemin sonuna kadar sürer
+  -- canceled : kullanıcı iptal etti; dönem sonuna kadar erişim yine sürer
+  -- expired  : dönem de bitti, erişim yok
+  -- lifetime : ödeme beklenmiyor (kurucu, demo, muaf hesaplar)
+  status text not null default 'trialing'
+    check (status in ('trialing', 'active', 'past_due', 'canceled', 'expired', 'lifetime')),
+
+  -- Deneme kartsız olduğu için iyzico'nun `trialPeriodDays` alanı
+  -- kullanılmıyor; süreyi biz tutuyoruz.
+  trial_ends_at timestamptz,
+
+  -- Erişimin asıl ölçütü: iptal de, ödeme hatası da bu tarihi geriye
+  -- çekmiyor, çünkü o dönemin parası alınmış.
+  current_period_end timestamptz,
+
+  price_try numeric(10, 2),
+
+  iyzico_subscription_ref text unique,
+  iyzico_customer_ref text,
+  iyzico_plan_ref text,
+
+  -- Başlatılan ama tamamlanmamış ödeme formunun token'ı. Ödeme dönüşünde hangi
+  -- hesabın ödediğini bu belirliyor — geri dönüş isteğinin gövdesi değil.
+  pending_checkout_token text unique,
+
+  last_event_at timestamptz,
+  last_failure_reason text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint subscriptions_trial_needs_date
+    check (status <> 'trialing' or trial_ends_at is not null)
+);
+
+create index if not exists subscriptions_status_idx on subscriptions(status);
+create index if not exists subscriptions_period_end_idx
+  on subscriptions(current_period_end);
+
+-- `is_approved()` ile aynı gerekçeyle definer ve parametresiz: politikanın
+-- içinden çağrıldığı için RLS'i atlaması gerekiyor, parametre almadığı için de
+-- kimse başkasının abonelik durumunu sorgulayamıyor.
+create or replace function has_subscription()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from subscriptions s
+    where s.owner_id = auth.uid()
+      and (
+        s.status = 'lifetime'
+        or (s.status = 'trialing' and s.trial_ends_at > now())
+        or (s.status in ('active', 'past_due', 'canceled')
+            and s.current_period_end is not null
+            and s.current_period_end > now())
+      )
+  );
+$$;
+
+-- Yazma izninin tek kapısı; aşağıdaki bütün yazma politikaları bunu çağırıyor.
+-- Superuser muaf: paneli yöneten hesap kendi ürününü satmıyor.
+create or replace function can_write()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select is_approved() and (is_superuser() or has_subscription());
+$$;
+
+-- Deneme onayla birlikte başlıyor. Tetikleyici tabloda, uygulamada değil: onay
+-- bir `profiles` update'i ile veriliyor ve ileride başka bir yerden de
+-- verilebilir.
+create or replace function start_trial_on_approval()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status <> 'approved' or new.role <> 'seller' then
+    return new;
+  end if;
+
+  -- Yalnızca onaya *geçiş* anında. `old`'a iç içe `if` ile, sadece UPDATE
+  -- dalında dokunuluyor: PL/pgSQL birleşik boole ifadelerinde kısa devre
+  -- garantisi vermiyor ve INSERT tetiklenmesinde `old` atanmamış olurdu.
+  if tg_op = 'UPDATE' then
+    if old.status = 'approved' then
+      return new;
+    end if;
+  end if;
+
+  insert into subscriptions (owner_id, status, trial_ends_at, price_try)
+  values (new.id, 'trialing', now() + interval '14 days', 999.00)
+  -- Reddedilip yeniden onaylanan hesap ikinci bir deneme kazanmasın.
+  on conflict (owner_id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_start_trial on profiles;
+
+create trigger profiles_start_trial
+  after insert or update of status on profiles
+  for each row
+  execute function start_trial_on_approval();
+
+create or replace function touch_subscription()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists subscriptions_touch on subscriptions;
+
+create trigger subscriptions_touch
+  before update on subscriptions
+  for each row
+  execute function touch_subscription();
+
+-- Süresi dolanları okunur kılıyor. Erişim bu iş çalışmasa da doğru kapanıyor
+-- (`has_subscription` tarihe bakıyor); bu yalnızca `/yonetim` listesinin
+-- "deneme sürüyor" yazmaması için. Günlük cron çağırıyor.
+create or replace function expire_subscriptions()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count integer;
+begin
+  update subscriptions
+  set status = 'expired'
+  where status in ('trialing', 'past_due', 'canceled')
+    and coalesce(current_period_end, trial_ends_at) < now();
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
 create or replace function handle_new_user()
 returns trigger
 language plpgsql
@@ -754,6 +921,11 @@ grant execute on function touch_presence(text, text) to service_role;
 revoke all on function prune_presence() from public, anon, authenticated;
 grant execute on function prune_presence() to service_role;
 
+-- Süresi dolan abonelikleri işaretliyor; cron dışında kimsenin çağırmasına
+-- gerek yok.
+revoke all on function expire_subscriptions() from public, anon, authenticated;
+grant execute on function expire_subscriptions() to service_role;
+
 -- İstatistikleri panel çağırıyor; yetkiyi fonksiyonun içindeki is_superuser()
 -- veriyor, o yüzden authenticated'a açık kalıyorlar.
 revoke all on function admin_stats_buckets(text, integer) from public, anon;
@@ -782,6 +954,7 @@ alter table rental_settings enable row level security;
 alter table profiles enable row level security;
 alter table security_events enable row level security;
 alter table product_scans enable row level security;
+alter table subscriptions enable row level security;
 -- active_sessions: ne okuma ne yazma politikası var. Satırlara tek tek kimsenin
 -- ihtiyacı yok; panel yalnızca `admin_presence()`'ın döndürdüğü sayıyı görüyor,
 -- yazma da service role'den geçiyor.
@@ -812,26 +985,49 @@ create policy "profiles_update_superuser" on profiles
   using (is_superuser())
   with check (is_superuser());
 
+-- subscriptions: satıcı kendi satırını okur (ödeme ekranı "denemeniz 3 gün
+-- sonra bitiyor" diyebilsin), superuser hepsini okur ve elle düzeltebilir
+-- (havale ile ödeyen müşteri, muaf hesap).
+--
+-- Satıcının kendi satırına *yazma* politikası bilinçli olarak yok: durumu
+-- değiştiren tek şey iyzico'dan gelen webhook, o da service role ile yazıyor.
+-- Kullanıcının kendini `lifetime` yapabildiği bir yol olmasın.
+create policy "subscriptions_select_own" on subscriptions
+  for select to authenticated using (owner_id = (select auth.uid()));
+
+create policy "subscriptions_select_superuser" on subscriptions
+  for select to authenticated using (is_superuser());
+
+create policy "subscriptions_update_superuser" on subscriptions
+  for update to authenticated
+  using (is_superuser())
+  with check (is_superuser());
+
 -- rental_settings: satıcının kendi işletme ayarı. Ne başkası okur ne yazar.
 create policy "rental_settings_select_owner" on rental_settings
   for select to authenticated using (owner_id = (select auth.uid()));
 
--- is_approved(): onay bekleyen hesap veri yazamaz. Girişte oturumu kapatmak
--- yalnızca bizim arayüzümüzü korur; onaylanmamış biri Supabase API'sine
--- doğrudan token alıp istek atabilir, asıl kapı burası.
+-- can_write() = onaylı **ve** (superuser ya da abonesi çalışıyor). Onay
+-- bekleyen ya da ödemesi bitmiş hesap veri yazamaz. Girişte oturumu kapatmak
+-- ya da ödeme ekranına yönlendirmek yalnızca bizim arayüzümüzü korur; böyle
+-- bir hesap Supabase API'sine doğrudan token alıp istek atabilir, asıl kapı
+-- burası.
 --
 -- Şart her yazma politikasında, yalnızca insert'lerde değil: onaylıyken veri
--- oluşturup sonra reddedilen bir hesabın satırları duruyor ve sahiplik şartı
--- hâlâ sağlanıyor. `using` tarafındaki is_approved() o satırları onaysız
--- hesap için tamamen görünmez kılıyor.
+-- oluşturup sonra reddedilen (ya da aboneliği biten) bir hesabın satırları
+-- duruyor ve sahiplik şartı hâlâ sağlanıyor. `using` tarafındaki can_write() o
+-- satırları yetkisiz hesap için tamamen görünmez kılıyor.
+--
+-- **Okuma** politikalarına dokunulmuyor: aboneliği biten satıcı verisini
+-- görmeye devam ediyor, yalnızca değiştiremiyor. Verisini rehin almıyoruz.
 create policy "rental_settings_insert_owner" on rental_settings
   for insert to authenticated
-  with check (owner_id = (select auth.uid()) and is_approved());
+  with check (owner_id = (select auth.uid()) and can_write());
 
 create policy "rental_settings_update_owner" on rental_settings
   for update to authenticated
-  using (owner_id = (select auth.uid()) and is_approved())
-  with check (owner_id = (select auth.uid()) and is_approved());
+  using (owner_id = (select auth.uid()) and can_write())
+  with check (owner_id = (select auth.uid()) and can_write());
 
 -- products: public read, owner-only write
 -- products: okuma sahibine ait, yazma zaten öyleydi. QR'ı okutan müşteri tek
@@ -845,16 +1041,16 @@ create policy "products_select_owner" on products
 
 create policy "products_insert_authenticated" on products
   for insert to authenticated
-  with check (owner_id = (select auth.uid()) and is_approved());
+  with check (owner_id = (select auth.uid()) and can_write());
 
 create policy "products_update_owner" on products
   for update to authenticated
-  using (owner_id = (select auth.uid()) and is_approved())
-  with check (owner_id = (select auth.uid()) and is_approved());
+  using (owner_id = (select auth.uid()) and can_write())
+  with check (owner_id = (select auth.uid()) and can_write());
 
 create policy "products_delete_owner" on products
   for delete to authenticated
-  using (owner_id = (select auth.uid()) and is_approved());
+  using (owner_id = (select auth.uid()) and can_write());
 
 -- bookings: satır müşterinin adını, telefonunu ve açık adresini taşıyor, o
 -- yüzden okuması da yazması da ürünün sahibine ait. Herkese açık ürün sayfası
@@ -870,7 +1066,7 @@ create policy "bookings_select_owner" on bookings
 
 create policy "bookings_insert_owner" on bookings
   for insert to authenticated with check (
-    is_approved()
+    can_write()
     and exists (
       select 1 from products
       where products.id = bookings.product_id
@@ -880,14 +1076,14 @@ create policy "bookings_insert_owner" on bookings
 
 create policy "bookings_update_owner" on bookings
   for update to authenticated using (
-    is_approved()
+    can_write()
     and exists (
       select 1 from products
       where products.id = bookings.product_id
         and products.owner_id = (select auth.uid())
     )
   ) with check (
-    is_approved()
+    can_write()
     and exists (
       select 1 from products
       where products.id = bookings.product_id
@@ -900,7 +1096,7 @@ create policy "bookings_update_owner" on bookings
 -- nothing else to delete.
 create policy "bookings_delete_owner" on bookings
   for delete to authenticated using (
-    is_approved()
+    can_write()
     and exists (
       select 1 from products
       where products.id = bookings.product_id

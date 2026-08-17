@@ -58,10 +58,16 @@ export async function GET(request: NextRequest) {
   // silinsin, kapanmış sekmelerden kalan etkinlik satırları da temizlensin.
   // Zaten her sabah çalışan tek zamanlanmış iş burası, ayrı bir cron açmaya
   // değmez.
+  //
+  // `expire_subscriptions` erişimi kapatan şey *değil* — onu tarihe bakan
+  // `has_subscription()` yapıyor, yani bu iş hiç çalışmasa da abonesi biten
+  // kimse panele giremez. Buradaki çağrı yalnızca durumu okunur kılıyor:
+  // `/yonetim`'deki liste "deneme sürüyor" yazmasın.
   await Promise.all([
     supabase.rpc("prune_security_events"),
     supabase.rpc("prune_product_scans"),
     supabase.rpc("prune_presence"),
+    supabase.rpc("expire_subscriptions"),
   ]);
 
   const { data: bookings, error } = await supabase

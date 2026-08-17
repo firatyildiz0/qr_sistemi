@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { IYZICO_CSP_SOURCES } from "@/lib/iyzico-origins";
 
 /**
  * Her sayfa isteği için tek kullanımlık bir nonce.
@@ -30,27 +31,46 @@ function makeNonce(): string {
  * kullanıyor, Turbopack sıcak yenilemeyi websocket üzerinden yapıyor ve dev
  * sunucusu stilleri satır içi basıyor. Üçü de üretimde geçerli değil.
  */
-function contentSecurityPolicy(nonce: string): string {
+function contentSecurityPolicy(nonce: string, payment: boolean): string {
   const isDev = process.env.NODE_ENV === "development";
   // Tarayıcı Supabase'e doğrudan gidiyor: oturum yenileme ve ürün görseli
   // yükleme (ImageUploader) istemci tarafında çalışıyor.
   const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 
+  // Ödeme ekranındaki esneme. Yalnızca /abonelik için geçerli: iyzico'nun formu
+  // kendi paketini ve iframe'ini kendi alan adlarından yüklüyor, bunlar
+  // `strict-dynamic` kapsamına girmiyor.
+  const iyzico = payment ? IYZICO_CSP_SOURCES : "";
+
   return [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
-    `style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
+    // iyzico'nun paketi formu çizerken kendi stillerini satır içi basıyor;
+    // nonce'u ona geçiremediğimiz için ödeme ekranında `unsafe-inline`
+    // gerekiyor. Yalnızca o tek sayfada, ve o sayfada bizim hiç kullanıcı
+    // içeriği çizilmiyor.
+    `style-src 'self' ${payment || isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`} ${iyzico}`,
     `style-src-attr 'unsafe-inline'`,
     // blob:/data: kamera ile QR okuma ve üretilen QR görseli için.
-    `img-src 'self' blob: data: ${supabase}`,
-    `font-src 'self'`,
-    `connect-src 'self' ${supabase}${isDev ? " ws: wss:" : ""}`,
+    `img-src 'self' blob: data: ${supabase} ${iyzico}`,
+    `font-src 'self' ${iyzico}`,
+    `connect-src 'self' ${supabase}${isDev ? " ws: wss:" : ""} ${iyzico}`,
+    // Ödeme formu bir iframe içinde açılıyor; onun dışında hiçbir yerde
+    // çerçeveye izin yok.
+    `frame-src ${payment ? iyzico : "'none'"}`,
     `object-src 'none'`,
     `base-uri 'self'`,
-    `form-action 'self'`,
+    // 3D Secure akışı formu bankanın/iyzico'nun sayfasına gönderiyor. Bu
+    // gönderim iframe'in *içinden* olsa da bazı tarayıcılar üst sayfanın
+    // politikasını uyguluyor, o yüzden ödeme ekranında iyzico'ya izin var.
+    `form-action 'self' ${iyzico}`,
     `frame-ancestors 'none'`,
     `upgrade-insecure-requests`,
-  ].join("; ");
+  ]
+    // Esneme kapalıyken yukarıdaki şablonlar çift boşluk bırakıyor; başlığı
+    // temiz tutmak için sıkıştırılıyor.
+    .map((directive) => directive.replace(/\s+/g, " ").trim())
+    .join("; ");
 }
 
 /** Oturum kontrolünün gerektiği yollar. Gerisi için Supabase'e hiç gidilmiyor. */
@@ -58,6 +78,9 @@ function needsSession(pathname: string): boolean {
   return (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/yonetim") ||
+    // Ödeme ekranı da oturum istiyor: kimin abone olduğunu bilmeden form
+    // başlatılamaz.
+    pathname.startsWith("/abonelik") ||
     pathname === "/login" ||
     pathname === "/signup"
   );
@@ -65,7 +88,12 @@ function needsSession(pathname: string): boolean {
 
 export async function proxy(request: NextRequest) {
   const nonce = makeNonce();
-  const csp = contentSecurityPolicy(nonce);
+  // CSP'nin iyzico esnemesi yalnızca ödeme ekranında. Yolu burada ölçmek,
+  // esnemenin başka bir sayfaya sızmasını imkânsız kılıyor.
+  const csp = contentSecurityPolicy(
+    nonce,
+    request.nextUrl.pathname.startsWith("/abonelik")
+  );
 
   // Nonce hem isteğe hem yanıta yazılıyor: Next render sırasında istek
   // başlığındaki CSP'den nonce'u okuyup kendi script etiketlerine kendisi
@@ -119,7 +147,12 @@ export async function proxy(request: NextRequest) {
   // Rol ve onay durumu JWT'de değil veritabanında; onları layout'lardaki
   // AccessGuard kontrol ediyor. Buradaki kapı yalnızca "oturum var mı".
   const isAdminRoute =
-    pathname.startsWith("/admin") || pathname.startsWith("/yonetim");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/yonetim") ||
+    // Ödeme ekranı da oturum arkasında: `/abonelik/tamamlandi` hariç, çünkü
+    // ödeme dönüşünde tarayıcı üçüncü taraf bağlamından geliyor ve oturum
+    // çerezi gönderilmeyebilir — o uç kimliği token'dan çözüyor.
+    (pathname.startsWith("/abonelik") && pathname !== "/abonelik/tamamlandi");
   // Giriş ve üye ol: oturum açıkken ikisinin de yapacağı bir şey yok.
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
 

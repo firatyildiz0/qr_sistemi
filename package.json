@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "kaydet": "node yayin/kaydet.mjs"
+    "kaydet": "node yayin/kaydet.mjs",
+    "iyzico:plan": "node scripts/iyzico-plan.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.69.0",

@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Panele giriş artık aylık abonelik gerektiriyor",
+  "aciklama": "Yeni hesaplar onaylandığında 14 gün boyunca kart bilgisi vermeden paneli kullanabiliyor. Süre dolduktan sonra panel kilitleniyor ve kullanıcı aylık 999 TL'lik ödeme ekranına yönlendiriliyor; ödemesi olmayan ürün ekleyemiyor, rezervasyon açamıyor, ayar değiştiremiyor. Kayıtlı verileri silinmiyor, görmeye devam ediyor ve ödediği an kaldığı yerden devam ediyor. Bugün sistemi kullanan mevcut hesaplar ücretsiz erişimle işaretlendi.",
+  "dikkat": "Canlıya almadan önce dört adım: (1) 0025 numaralı migration'ı Supabase SQL editöründen çalıştır. (2) iyzico anahtarlarını Vercel'e ekle: IYZICO_API_KEY, IYZICO_SECRET_KEY, IYZICO_MERCHANT_ID ve IYZICO_ENV=production. (3) 'npm run iyzico:plan' komutunu çalıştır, çıkan kodu IYZICO_PRICING_PLAN_REF olarak ekle. (4) iyzico panelinde webhook adresini https://<alanadiniz>/api/iyzico/webhook olarak tanımla — bu adım atlanırsa ilk ay tahsil edilir ama sonraki aylar sisteme işlenmez. Bu adımlar tamamlanmadan ödeme ekranı kurulum notu gösterir, panel kilidi yine devrede olur."
+}

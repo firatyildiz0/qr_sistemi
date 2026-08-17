@@ -7,6 +7,7 @@ import {
   IconHome,
   IconLifebuoy,
   IconSettings,
+  IconStar,
 } from "@/components/icons";
 
 export type NavItem = {
@@ -51,6 +52,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/notifications", label: "Bildirimler", icon: IconBell, unread: true },
   { href: "/admin/support", label: "Destek", icon: IconLifebuoy },
   { href: "/admin/settings", label: "Ayarlar", icon: IconSettings },
+  // Panelin dışına çıkan tek girdi: ödeme ekranı `/admin` altında değil,
+  // çünkü orada olsaydı abonesi olmayanı oraya yönlendiren kapı kendi kendine
+  // döngüye girerdi (bkz. AccessGuard).
+  { href: "/abonelik", label: "Abonelik", icon: IconStar },
 ];
 
 export function isActive(item: NavItem, pathname: string): boolean {

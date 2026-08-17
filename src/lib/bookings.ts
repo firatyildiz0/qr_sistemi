@@ -381,12 +381,16 @@ export const bookingStatusPill: Record<BookingStatus, string> = {
   cancelled: "pill-status pill-cancelled",
 };
 
-/** Aynı rengin satır kenarındaki karşılığı: listede göz önce ona çarpıyor. */
+/**
+ * Satırın kendi zemini. Yalnızca iptal edilenlerde bir şey var: rozet neyin
+ * iptal olduğunu zaten söylüyor, ama iptal listede *atlanacak* satır olduğu
+ * için zeminden de belli olması işe yarıyor. Diğer durumlar sade kart.
+ */
 export const bookingStatusRow: Record<BookingStatus, string> = {
-  upcoming: "row-status row-status-upcoming",
-  active: "row-status row-status-active",
-  completed: "row-status row-status-completed",
-  cancelled: "row-status row-status-cancelled",
+  upcoming: "",
+  active: "",
+  completed: "",
+  cancelled: "row-cancelled",
 };
 
 export function nightsBetween(startDate: string, endDate: string) {

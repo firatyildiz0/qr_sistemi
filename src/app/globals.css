@@ -627,23 +627,10 @@ summary,
     transform: rotate(45deg);
   }
 
-  /* Rozetin rengini satırın tamamına taşıyan şerit: kart listesinde gözün
-     önce çarptığı şey rozet değil, kartın kenarı. */
-  .row-status {
-    border-left: 3px solid var(--status, var(--color-border));
-  }
-  .row-status-cancelled {
-    --status: var(--color-danger);
+  /* İptal edilmiş satırın zemini. Rengi taşıyan tek satır türü bu: iptal
+     listede atlanacak kayıt, gerisi rozete bırakılıyor. */
+  .row-cancelled {
     background: color-mix(in oklab, var(--color-danger) 5%, var(--color-card));
-  }
-  .row-status-upcoming {
-    --status: var(--color-status-upcoming);
-  }
-  .row-status-active {
-    --status: var(--color-success);
-  }
-  .row-status-completed {
-    --status: var(--color-border-strong);
   }
 
   /* Engellemeyen uyarı kutusu: kayıt yine de yapılabilir, ama satıcının

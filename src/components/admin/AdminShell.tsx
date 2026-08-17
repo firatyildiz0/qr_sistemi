@@ -5,7 +5,7 @@ import { Suspense, use } from "react";
 import AdminSidebarNav from "@/components/admin/AdminSidebarNav";
 import MobileTabBar from "@/components/admin/MobileTabBar";
 import QrScanFab from "@/components/scan/QrScanFab";
-import Wordmark from "@/components/Wordmark";
+import Logo from "@/components/Logo";
 import { IconBell, IconChevronLeft, IconLogOut, IconShield } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
 
@@ -37,8 +37,8 @@ export default function AdminShell({
           altındaki sekme çubuğunda. Burada kalanlar bir uygulamanın üst
           çubuğunda beklenen iki şey: kimlik ve bildirim zili. */}
       <header className="app-bar fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-border bg-deep px-4 md:hidden">
-        <Link href="/admin" className="font-display text-lg font-bold tracking-tight text-white">
-          <Wordmark />
+        <Link href="/admin" className="tab-press flex items-center">
+          <Logo className="h-8 w-8" sizes="32px" />
         </Link>
         <div className="flex items-center gap-1">
           <Link
@@ -64,17 +64,14 @@ export default function AdminShell({
       <aside className="sidebar relative z-auto hidden w-64 shrink-0 flex-col justify-between bg-deep transition-[width] duration-200 ease-out md:flex">
         <div>
           <div className="sidebar-head flex h-16 items-center justify-between px-6">
-            <Link
-              href="/admin"
-              className="sidebar-label font-display text-xl font-bold tracking-tight text-white"
-            >
-              <Wordmark />
+            <Link href="/admin" className="sidebar-label flex items-center">
+              <Logo className="h-9 w-9" sizes="36px" />
             </Link>
             <SidebarToggle />
           </div>
 
           {/* Logonun hemen altı. `sidebar-label` sayesinde rail daraldığında
-              wordmark ve hesap yazısıyla birlikte kaybolur. */}
+              logo ve hesap yazısıyla birlikte kaybolur. */}
           {/* Alt boşluğu nav'ın kendi `mt-8`'i veriyor. */}
           <div className="sidebar-label px-6">
             <Suspense fallback={<GreetingFallback />}>

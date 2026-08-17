@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import AccessGuard from "@/components/admin/AccessGuard";
-import Wordmark from "@/components/Wordmark";
+import Logo from "@/components/Logo";
 import {
   IconBolt,
   IconChart,
@@ -19,11 +19,8 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
   return (
     <div className="panel-scope flex min-h-screen flex-col bg-paper text-ink">
       <header className="flex h-16 items-center justify-between border-b border-border bg-deep px-4 sm:px-8">
-        <Link
-          href="/yonetim"
-          className="flex items-center gap-3 font-display text-xl font-bold tracking-tight text-white"
-        >
-          <Wordmark />
+        <Link href="/yonetim" className="flex items-center gap-3">
+          <Logo className="h-9 w-9" sizes="36px" />
           <span className="flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1 text-[11px] font-semibold tracking-wide text-white/80 uppercase">
             <IconShield className="h-3.5 w-3.5" />
             Yönetim

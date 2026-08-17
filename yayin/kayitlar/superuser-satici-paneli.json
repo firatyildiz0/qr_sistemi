@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Yönetici hesabı satıcı panelini de açabiliyor",
+  "aciklama": "Yönetici hesabıyla satıcı paneline girmeye çalışıldığında ekran hemen yönetim paneline geri dönüyordu. Artık iki panel de açılıyor: yönetim panelinin üst şeridindeki \"Satıcı paneli\" bağlantısı satıcı tarafına, satıcı panelinin menüsündeki \"Yönetim paneli\" bağlantısı geri getiriyor. Satıcı tarafında yönetici de yalnızca kendi ürünlerini ve rezervasyonlarını görüyor, başka bir hesabın verisi görünmüyor. Satıcı hesapları için bir şey değişmedi, yönetim paneli onlara kapalı kalmaya devam ediyor.",
+  "dikkat": null
+}

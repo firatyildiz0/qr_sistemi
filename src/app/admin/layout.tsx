@@ -19,6 +19,10 @@ async function loadIdentity(): Promise<Identity> {
     initial: email.charAt(0).toUpperCase(),
     name,
     greeting: greetingFor(),
+    // Yönetim paneline dönüş bağlantısı yalnızca superuser'a çizilsin diye.
+    // Kimliğin içinde geliyor çünkü kabuk zaten onu bekliyor; ayrı bir profil
+    // sorgusu açmaya gerek yok.
+    isSuperuser: profile?.role === "superuser",
   };
 }
 

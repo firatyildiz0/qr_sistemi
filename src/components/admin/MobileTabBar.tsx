@@ -6,7 +6,14 @@ import { Suspense, use, useEffect, useState } from "react";
 import QrScanSheet from "@/components/scan/QrScanSheet";
 import { NAV_ITEMS, isActive, type NavItem } from "@/components/admin/nav";
 import type { Identity } from "@/components/admin/AdminShell";
-import { IconChevronRight, IconLogOut, IconMenu, IconScan, IconX } from "@/components/icons";
+import {
+  IconChevronRight,
+  IconLogOut,
+  IconMenu,
+  IconScan,
+  IconShield,
+  IconX,
+} from "@/components/icons";
 
 const PRIMARY = NAV_ITEMS.filter((item) => item.primary);
 const SECONDARY = NAV_ITEMS.filter((item) => !item.primary);
@@ -239,6 +246,12 @@ function MenuSheet({
           ))}
         </div>
 
+        {/* Masaüstündeki kenar çubuğunun karşılığı: yalnızca superuser görüyor,
+            gezinme listesinin altında ayrı duruyor. */}
+        <Suspense fallback={null}>
+          <YonetimRow promise={identityPromise} onNavigate={onClose} />
+        </Suspense>
+
         <form action={signOutAction} className="mt-2 border-t border-border pt-3">
           <button
             type="submit"
@@ -252,6 +265,31 @@ function MenuSheet({
         </form>
       </div>
     </div>
+  );
+}
+
+function YonetimRow({
+  promise,
+  onNavigate,
+}: {
+  promise: Promise<Identity>;
+  onNavigate: () => void;
+}) {
+  const { isSuperuser } = use(promise);
+  if (!isSuperuser) return null;
+
+  return (
+    <Link
+      href="/yonetim"
+      onClick={onNavigate}
+      className="tab-press mt-2 flex items-center gap-3 rounded-lg border-t border-border px-2 py-3.5 pt-4 text-ink"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface">
+        <IconShield className="h-5 w-5" />
+      </span>
+      <span className="text-[15px] font-semibold">Yönetim paneli</span>
+      <IconChevronRight className="ml-auto h-4 w-4 text-ink-muted" />
+    </Link>
   );
 }
 

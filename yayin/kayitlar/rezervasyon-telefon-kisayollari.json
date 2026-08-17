@@ -1,6 +1,6 @@
 {
   "tip": "iyilestirme",
-  "baslik": "Rezervasyon listesindeki numaralara arama ve WhatsApp düğmeleri",
-  "aciklama": "Ürün sayfasındaki rezervasyon kartlarında müşterinin numarası yalnızca yazıyordu; aramak için numarayı seçip kopyalamak gerekiyordu. Artık numaranın yanında arama ve WhatsApp kısayolları var, müşteri ve rezervasyon ekranlarındaki gibi.",
+  "baslik": "Rezervasyon listelerindeki numaralara arama ve WhatsApp düğmeleri",
+  "aciklama": "Rezervasyonlar ekranındaki müşteri satırlarında ve ürün sayfasındaki rezervasyon kartlarında numara yalnızca yazıyordu; aramak için numarayı seçip kopyalamak gerekiyordu. Artık numaranın yanında arama ve WhatsApp kısayolları var. Satırın herhangi bir yerine dokununca yine müşteri açılıyor, seçim modunda ise kısayollar gizleniyor.",
   "dikkat": null
 }

@@ -7,6 +7,7 @@ import { deleteCustomers } from "@/app/admin/customers/actions";
 import { formatDateRange } from "@/lib/bookings";
 import { formatPrice } from "@/lib/format";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import PhoneActions from "@/components/admin/PhoneActions";
 import {
   IconCalendar,
   IconCheck,
@@ -105,12 +106,14 @@ export default function CustomerList({
       <ul className="flex flex-col gap-3">
         {customers.map((customer, i) => {
           const isSelected = selectedKeys.has(customer.key);
-          const body = <CustomerRow customer={customer} />;
 
           return (
             <li key={customer.key}>
+              {/* Satırın tamamı hâlâ tek bir hedef, ama sil düğmesi ve arama
+                  kısayolları onun içine giremez: bağlantı kartı kaplayan bir
+                  katman olarak duruyor, düğmeler de onun üstünde kalıyor. */}
               <div
-                className={`fade-slide-up card flex items-center gap-3 ${
+                className={`fade-slide-up card relative flex items-center gap-3 ${
                   isSelected ? "border-accent bg-accent-soft" : "card-hover"
                 }`}
                 style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
@@ -124,30 +127,36 @@ export default function CustomerList({
                     type="button"
                     role="checkbox"
                     aria-checked={isSelected}
+                    aria-label={`${customer.name} müşterisini seç`}
                     onClick={() => toggle(customer.key)}
-                    className="flex min-w-0 flex-1 items-center gap-4 text-left"
-                  >
-                    {body}
-                  </button>
+                    className="absolute inset-0 rounded-[inherit]"
+                  />
                 ) : (
                   <Link
                     href={`/admin/customers/${encodeURIComponent(customer.key)}`}
-                    className="flex min-w-0 flex-1 items-center gap-4"
-                  >
-                    {body}
-                    <IconChevronRight className="h-4 w-4 shrink-0 text-ink-muted" />
-                  </Link>
+                    aria-label={`${customer.name} müşterisini aç`}
+                    className="absolute inset-0 rounded-[inherit]"
+                  />
                 )}
 
+                <div className="flex min-w-0 flex-1 items-center gap-4">
+                  {/* Seçim sırasında dokunuş satırı işaretlemeli; kısayollar
+                      araya girmesin diye numara düz yazıya dönüyor. */}
+                  <CustomerRow customer={customer} phoneActions={!selecting} />
+                </div>
+
                 {!selecting && (
-                  <button
-                    type="button"
-                    onClick={() => setPending([customer])}
-                    aria-label={`${customer.name} müşterisini sil`}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-danger-soft hover:text-danger"
-                  >
-                    <IconTrash className="h-4 w-4" />
-                  </button>
+                  <>
+                    <IconChevronRight className="h-4 w-4 shrink-0 text-ink-muted" />
+                    <button
+                      type="button"
+                      onClick={() => setPending([customer])}
+                      aria-label={`${customer.name} müşterisini sil`}
+                      className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-danger-soft hover:text-danger"
+                    >
+                      <IconTrash className="h-4 w-4" />
+                    </button>
+                  </>
                 )}
               </div>
             </li>
@@ -215,7 +224,14 @@ function Checkbox({ checked }: { checked: boolean }) {
   );
 }
 
-function CustomerRow({ customer }: { customer: Customer }) {
+function CustomerRow({
+  customer,
+  /** Numaranın yanında arama ve WhatsApp kısayolları çıksın mı. */
+  phoneActions,
+}: {
+  customer: Customer;
+  phoneActions: boolean;
+}) {
   return (
     <>
       <span
@@ -241,12 +257,15 @@ function CustomerRow({ customer }: { customer: Customer }) {
             <IconPackage className="h-3.5 w-3.5" />
             {customer.bookings.length} kiralama
           </span>
-          {customer.phone && (
-            <span className="flex items-center gap-1.5">
-              <IconPhone className="h-3.5 w-3.5" />
-              {customer.phone}
-            </span>
-          )}
+          {customer.phone &&
+            (phoneActions ? (
+              <PhoneActions phone={customer.phone} name={customer.name} />
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <IconPhone className="h-3.5 w-3.5" />
+                {customer.phone}
+              </span>
+            ))}
           <span className="hidden items-center gap-1.5 sm:flex">
             <IconCalendar className="h-3.5 w-3.5" />
             {formatDateRange(customer.firstDate, customer.lastDate)}

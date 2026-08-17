@@ -35,15 +35,36 @@ function StatusIcon({
 }
 
 /**
- * Rezervasyon listelerinde durumun gösterimi: satırın sağ kenarında, ikon ve
- * büyük harflerle kendi kutusunda. Hepsi aynı genişlikte olduğu için liste
- * boyunca tek bir sütun oluşturuyor; satıcı durumları tek tek satırların
- * içinde aramak yerine o sütunu takip ediyor.
+ * Rezervasyon listelerinde durumun gösterimi. İki biçimi var, ikisi de aynı
+ * rengi ve ikonu taşıyor:
+ *
+ * - `stamp`: masaüstünde satırın sağ kenarında, sabit genişlikte bir kutu.
+ *   Hepsi aynı hizada durduğu için liste boyunca tek bir sütun oluşuyor ve
+ *   satıcı durumu her satırın içinde ayrıca aramıyor.
+ * - `chip`: telefonda müşteri adının hizasında, tek satırlık çip. Dar ekranda
+ *   kart zaten alt alta diziliyor, yani hizalanacak sütun yok; kutu orada
+ *   durumu kartın en altına itiyordu.
+ *
+ * Çağıran taraf ikisini birden basıp `className` ile hangisinin görüneceğini
+ * seçiyor (`sm:hidden` / `hidden sm:flex`). Gizli olan `display: none` olduğu
+ * için ekran okuyucu da durumu iki kez okumuyor.
  */
-export default function BookingStatusStamp({ status }: { status: BookingStatus }) {
+export default function BookingStatusStamp({
+  status,
+  variant = "stamp",
+  className = "",
+}: {
+  status: BookingStatus;
+  variant?: "stamp" | "chip";
+  className?: string;
+}) {
+  const chip = variant === "chip";
+
   return (
-    <span className={`status-stamp ${bookingStatusTone[status]}`}>
-      <StatusIcon status={status} className="h-[19px] w-[19px]" />
+    <span
+      className={`${chip ? "status-chip" : "status-stamp"} ${bookingStatusTone[status]} ${className}`}
+    >
+      <StatusIcon status={status} className={chip ? "h-3.5 w-3.5" : "h-[19px] w-[19px]"} />
       <span>{bookingStatusLabel[status]}</span>
     </span>
   );

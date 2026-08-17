@@ -123,12 +123,18 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
               <div className="flex min-w-0 items-start gap-3">
                 <ProductThumb src={b.productImageUrl} />
 
-                <div className="min-w-0">
-                  <p className="font-semibold text-ink">{b.customerName}</p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-ink">{b.customerName}</p>
+                    {/* Telefonda durum burada; masaüstünde sağdaki damgada. */}
+                    <BookingStatusStamp status={b.status} variant="chip" className="sm:hidden" />
+                  </div>
+                  {/* Telefonda alt alta: yan yana dizilince en uzun öğe (telefon
+                      numarası ve iki kısayol düğmesi) ekrandan taşıyordu. */}
+                  <div className="mt-1.5 flex flex-col gap-1 text-sm text-ink-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
                     <span className="truncate">{b.productName}</span>
                     <span className="flex items-center gap-1.5">
-                      <IconCalendar className="h-3.5 w-3.5" />
+                      <IconCalendar className="h-3.5 w-3.5 shrink-0" />
                       {formatDateRange(b.startDate, b.endDate)}
                     </span>
                     {b.customerPhone && (
@@ -145,8 +151,14 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
                   ok kaldığı için bütün satırlarda aynı hizaya oturuyor, liste
                   boyunca da tek bir durum sütunu oluşuyor. Tarihin uzunluğu
                   satırdan satıra değiştiği için damga başta olsaydı kayardı. */}
-              <div className="pointer-events-none relative flex shrink-0 flex-wrap items-center gap-3 self-start text-xs text-ink-muted sm:self-center">
-                <span>{createdFormat.format(new Date(b.createdAt))} tarihinde oluşturuldu</span>
+              {/* Telefonda kartın alt şeridi: solda ne zaman oluşturulduğu,
+                  sağda sil. Masaüstünde aynı öğeler satırın sağ ucundaki
+                  kolona dönüşüyor. */}
+              <div className="pointer-events-none relative flex w-full shrink-0 items-center justify-between gap-3 border-t border-border pt-3 text-xs text-ink-muted sm:w-auto sm:justify-end sm:self-center sm:border-0 sm:pt-0">
+                <span>
+                  {createdFormat.format(new Date(b.createdAt))}
+                  <span className="hidden sm:inline"> tarihinde oluşturuldu</span>
+                </span>
                 <button
                   type="button"
                   onClick={() => setPendingDelete(b)}
@@ -155,8 +167,9 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
                   <IconTrash className="h-3.5 w-3.5" />
                   Sil
                 </button>
-                <BookingStatusStamp status={b.status} />
-                <IconChevronRight className="h-4 w-4" />
+                <BookingStatusStamp status={b.status} className="hidden sm:flex" />
+                {/* Telefonda gereksiz: kartın tamamı zaten dokunulabilir. */}
+                <IconChevronRight className="hidden h-4 w-4 sm:block" />
               </div>
             </div>
           ))}

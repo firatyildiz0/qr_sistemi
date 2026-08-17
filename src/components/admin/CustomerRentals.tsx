@@ -74,11 +74,19 @@ export default function CustomerRentals({ bookings }: { bookings: CustomerBookin
               <div className="flex min-w-0 items-start gap-3">
                 <ProductThumb src={booking.imageUrl} />
 
-                <div className="min-w-0">
-                  <p className="font-semibold text-ink">{booking.productName}</p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-ink">{booking.productName}</p>
+                    {/* Telefonda durum burada; masaüstünde sağdaki damgada. */}
+                    <BookingStatusStamp
+                      status={booking.status}
+                      variant="chip"
+                      className="sm:hidden"
+                    />
+                  </div>
+                  <div className="mt-1.5 flex flex-col gap-1 text-sm text-ink-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
                     <span className="flex items-center gap-1.5">
-                      <IconCalendar className="h-3.5 w-3.5" />
+                      <IconCalendar className="h-3.5 w-3.5 shrink-0" />
                       {formatDateRange(booking.startDate, booking.endDate)}
                     </span>
                     <span>{booking.days} gün</span>
@@ -86,16 +94,25 @@ export default function CustomerRentals({ bookings }: { bookings: CustomerBookin
                 </div>
               </div>
 
-              {/* Damga sondan bir önceki: arkasında yalnızca sabit genişlikli
-                  ok kaldığı için bütün satırlarda aynı hizaya oturuyor. */}
-              <div className="flex shrink-0 flex-wrap items-center gap-3 self-start sm:self-center">
+              {/* Telefonda kartın alt şeridi (solda tutar), masaüstünde satırın
+                  sağ ucundaki kolon. Damga sondan bir önceki: arkasında
+                  yalnızca sabit genişlikli ok kaldığı için bütün satırlarda
+                  aynı hizaya oturuyor. */}
+              {/* Tutar yoksa telefonda gösterecek bir şey kalmıyor (damga da ok
+                  da masaüstüne ait): şerit tamamen gizleniyor, yoksa kartın
+                  altında boş bir çizgi kalırdı. */}
+              <div
+                className={`flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto sm:justify-end sm:self-center sm:border-0 sm:pt-0 ${
+                  booking.total != null ? "border-t border-border pt-3" : "hidden sm:flex"
+                }`}
+              >
                 {booking.total != null && (
                   <span className="text-sm font-semibold text-ink">
                     {formatPrice(booking.total)}
                   </span>
                 )}
-                <BookingStatusStamp status={booking.status} />
-                <IconChevronRight className="h-4 w-4 text-ink-muted" />
+                <BookingStatusStamp status={booking.status} className="hidden sm:flex" />
+                <IconChevronRight className="hidden h-4 w-4 text-ink-muted sm:block" />
               </div>
             </Link>
           </li>

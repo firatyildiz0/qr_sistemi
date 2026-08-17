@@ -62,23 +62,40 @@ function parseImages(raw: FormDataEntryValue[]): string[] {
 /**
  * Etiket numarası serbest metin ama etikete basılıyor: boşluk ve okunamayan
  * karakterler basılı numarayı işe yaramaz hale getirir, o yüzden veritabanı
- * kısıtıyla (bkz. 0022) aynı biçim burada da uygulanıyor. Boş bırakılırsa null
- * — numara zorunlu değil.
+ * kısıtıyla (bkz. 0022) aynı biçim burada da uygulanıyor.
  *
- * `undefined` "biçim tutmuyor" demek; null "numara yok".
+ * Boş bırakılması "numara yok" demek değil, "numarayı sen seç" demek: alan
+ * kayıttan çıkarılıyor, veritabanındaki trigger da yeni üründe rastgele bir
+ * numara üretiyor (bkz. 0024). Aynı sebeple düzenlemede boş bırakmak mevcut
+ * numarayı silmiyor — silseydi kaydet'e her basış etiketi geçersiz kılardı.
+ *
+ * `null` "alanı elleme", `undefined` "biçim tutmuyor" demek.
  */
 const BARCODE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,31}$/;
 
 const BARCODE_ERROR =
   "Barkod numarası harf ve rakamla başlamalı; yalnızca harf, rakam, tire, alt çizgi, nokta ve eğik çizgi içerebilir (en fazla 32 karakter).";
 
-const duplicateBarcodeError = (barcode: string) =>
-  `"${barcode}" barkod numarası başka bir üründe kullanılıyor. Her ürüne kendi numarasını verin.`;
+/**
+ * Elle yazılmış numara başka üründeyse satıcıya hangi numara olduğu söylenir.
+ * Numara boş bırakılmışken de buraya düşülebilir: veritabanının ürettiği
+ * numara, aynı anda eklenen başka bir ürünün numarasına denk gelmiş demektir.
+ * Anlatacak bir şey yok, tekrar denemek yetiyor.
+ */
+const duplicateBarcodeError = (barcode: string | null) =>
+  barcode === null
+    ? "Barkod numarası üretilirken çakışma oldu. Lütfen tekrar kaydedin."
+    : `"${barcode}" barkod numarası başka bir üründe kullanılıyor. Her ürüne kendi numarasını verin.`;
 
 function parseBarcode(raw: string): string | null | undefined {
   const barcode = raw.trim();
   if (!barcode) return null;
   return BARCODE_PATTERN.test(barcode) ? barcode : undefined;
+}
+
+/** Numara yazılmışsa kayda ekler, boş bırakılmışsa alanı hiç göndermez. */
+function barcodeField(barcode: string | null) {
+  return barcode === null ? {} : { barcode };
 }
 
 /** Aynı satıcıda numara tekrarlandığında dönen tekillik ihlali. */
@@ -157,14 +174,14 @@ export async function createProduct(
       daily_price: dailyPrice,
       stock,
       images,
-      barcode,
+      ...barcodeField(barcode),
     })
     .select("id")
     .single();
 
   if (error || !data) {
     if (error && isDuplicateBarcode(error)) {
-      return { error: duplicateBarcodeError(barcode!) };
+      return { error: duplicateBarcodeError(barcode) };
     }
     return { error: error?.message ?? "Ürün oluşturulamadı." };
   }
@@ -215,12 +232,12 @@ export async function updateProduct(
       daily_price: dailyPrice,
       stock,
       images,
-      barcode,
+      ...barcodeField(barcode),
     })
     .eq("id", productId);
 
   if (error) {
-    return { error: isDuplicateBarcode(error) ? duplicateBarcodeError(barcode!) : error.message };
+    return { error: isDuplicateBarcode(error) ? duplicateBarcodeError(barcode) : error.message };
   }
 
   await removeStoredImages(

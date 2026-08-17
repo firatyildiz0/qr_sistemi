@@ -35,7 +35,7 @@ export default function ProductForm({
           etiketinde de öyle çıkıyor — form etiketin sırasını taklit ediyor. */}
       <div>
         <label htmlFor="barcode" className="field-label">
-          Barkod numarası (opsiyonel)
+          Barkod numarası
         </label>
         <input
           id="barcode"
@@ -43,13 +43,15 @@ export default function ProductForm({
           maxLength={32}
           inputMode="text"
           autoComplete="off"
-          placeholder="001"
+          placeholder={product ? "" : "Otomatik atanır"}
           defaultValue={product?.barcode ?? ""}
           className="input font-mono tracking-wide"
         />
         <p className="mt-1.5 text-xs text-ink-muted">
-          QR kodu indirdiğinizde etikete ürün adının altına bu numara basılır. Her
-          ürüne farklı bir numara verin.
+          QR kodu indirdiğinizde etikete ürün adının altına bu numara basılır.{" "}
+          {product
+            ? "Boş bırakırsanız ürünün şu anki numarası korunur."
+            : "Boş bırakırsanız sistem rastgele bir numara üretir."}
         </p>
       </div>
 

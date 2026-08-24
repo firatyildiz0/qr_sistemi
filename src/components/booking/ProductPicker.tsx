@@ -9,7 +9,7 @@ import {
   unitsLeftInRange,
   type DateSpan,
 } from "@/lib/bookings";
-import QrScanner from "@/components/scan/QrScanner";
+import ScanPanel from "@/components/scan/ScanPanel";
 import {
   IconMinus,
   IconPackage,
@@ -271,12 +271,12 @@ export default function ProductPicker({
             setScanning(true);
             setNotice(null);
           }}
-          title="QR okutarak ürün ekle"
-          aria-label="QR okutarak ürün ekle"
+          title="Kamerayla ürün ekle"
+          aria-label="Kamerayla ürün ekle"
           className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs"
         >
           <IconScan className="h-3.5 w-3.5" />
-          QR ile ekle
+          Kamerayla ekle
         </button>
       </div>
 
@@ -341,7 +341,7 @@ export default function ProductPicker({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="QR okutarak ürün ekle"
+          aria-label="Kamerayla ürün ekle"
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
           <div
@@ -364,10 +364,10 @@ export default function ProductPicker({
             <p className="mb-3 text-sm text-ink-muted">
               Okutulan ürün rezervasyona eklenir; sayfadan ayrılmazsınız.
             </p>
-            {/* `onProduct` verildiği için okutulan kod ürün sayfasına
+            {/* `onProduct` verildiği için bulunan ürün kendi sayfasına
                 götürmüyor, sepete düşüyor: satıcı formu doldururken sayfadan
                 ayrılırsa girdiği her şey kaybolurdu. */}
-            <QrScanner
+            <ScanPanel
               autoStart
               onProduct={(product) => {
                 add(product.id);

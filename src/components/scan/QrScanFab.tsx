@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import QrScanSheet from "@/components/scan/QrScanSheet";
+import ScanSheet from "@/components/scan/ScanSheet";
 import { IconScan } from "@/components/icons";
 
 /**
  * The panel-wide scan shortcut on desktop: a button pinned to the corner of
- * every admin screen. It opens the same `QrScanSheet` the mobile tab bar does,
- * so a scan resolves through `resolveScannedCode` and lands on the owner's
- * product page either way.
+ * every admin screen. It opens the same `ScanSheet` the mobile tab bar does,
+ * so QR okutmak da ürünü kameraya göstermek de aynı ürün sayfasına çıkar.
  *
  * Mobilde gizli: orada tarayıcıyı sekme çubuğunun ortasındaki düğme açıyor ve
  * iki yüzen buton üst üste binerdi.
@@ -21,15 +20,15 @@ export default function QrScanFab() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="QR okut"
-        aria-label="QR okut"
+        title="Ürün bul"
+        aria-label="Ürün bul"
         className="btn btn-primary fixed bottom-8 right-8 z-40 hidden h-14 gap-2 rounded-full px-5 shadow-lg md:inline-flex"
       >
         <IconScan className="h-5 w-5" />
-        <span>QR okut</span>
+        <span>Ürün bul</span>
       </button>
 
-      {open && <QrScanSheet onClose={() => setOpen(false)} />}
+      {open && <ScanSheet onClose={() => setOpen(false)} />}
     </>
   );
 }

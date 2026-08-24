@@ -1,6 +1,6 @@
 {
   "tip": "ozellik",
-  "baslik": "Ürünü kameraya göstererek rezervasyon ekranını açma",
-  "aciklama": "Şimdiye kadar ürün sayfasına gitmenin tek yolu etiketteki QR kodu okutmaktı; etiket düşmüşse ya da ürünün içinde kaldıysa satıcı ürünü listeden aramak zorundaydı. Artık tarayıcıda ikinci bir sekme var: ürünün kendisini kameraya gösterdiğinizde, fotoğraflarıyla eşleşen ürünün rezervasyon ekranı QR okutmuşsunuz gibi açılıyor. Sistem emin olamadığında rastgele bir ürüne gitmiyor, en yakın üç ürünü dokunup seçmeniz için listeliyor. Yalnızca fotoğrafı yüklenmiş ürünler bu yolla bulunabiliyor.",
-  "dikkat": "Canlıya almadan önce 0025_product_image_signature.sql migration'ı Supabase SQL düzenleyicisinden çalıştırılmalı; kolon olmadan görselden arama sekmesi ürün listesini alamaz."
+  "baslik": "Tarayıcıya \"Görsel\" sekmesi eklendi (yakında)",
+  "aciklama": "Ürün tarayıcısında artık iki sekme var: bugüne kadarki QR okutma ve yanında \"Görsel\". Görsel sekmesi ürünün kendisini kameraya göstererek rezervasyon ekranını açmak için; hazırlığı sürdüğü için şimdilik \"Yakında\" yazıyor ve seçilemiyor. QR ile okutma hiç değişmedi, aynı şekilde çalışıyor.",
+  "dikkat": "Görsel arama açılmadan önce 0025_product_image_signature.sql migration'ı Supabase SQL düzenleyicisinden çalıştırılmalı. Sekme kapalıyken bu kolona dokunulmuyor, yani bu sürüm migration olmadan da sorunsuz çalışır."
 }

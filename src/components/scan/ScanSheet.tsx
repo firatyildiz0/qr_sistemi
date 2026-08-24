@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import QrScanner from "@/components/scan/QrScanner";
+import ScanPanel from "@/components/scan/ScanPanel";
 import { IconX } from "@/components/icons";
 
 /**
@@ -12,7 +12,7 @@ import { IconX } from "@/components/icons";
  * Mobilde tam ekran bir sayfa gibi açılıyor (uygulama hissiyatı), masaüstünde
  * ortalanmış bir kart olarak kalıyor.
  */
-export default function QrScanSheet({ onClose }: { onClose: () => void }) {
+export default function ScanSheet({ onClose }: { onClose: () => void }) {
   // The scanner is unmounted while closed, which is what releases the camera;
   // this only stops the page behind the sheet from scrolling.
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function QrScanSheet({ onClose }: { onClose: () => void }) {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="QR okut"
+      aria-label="Ürün bul"
       className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4"
     >
       <div
@@ -51,7 +51,7 @@ export default function QrScanSheet({ onClose }: { onClose: () => void }) {
           className="mx-auto mb-4 h-1 w-10 shrink-0 rounded-full bg-border-strong sm:hidden"
         />
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-ink">QR okut</h2>
+          <h2 className="text-lg font-semibold text-ink">Ürün bul</h2>
           <button
             type="button"
             onClick={onClose}
@@ -61,7 +61,7 @@ export default function QrScanSheet({ onClose }: { onClose: () => void }) {
             <IconX className="h-4 w-4" />
           </button>
         </div>
-        <QrScanner autoStart onResolved={onClose} />
+        <ScanPanel autoStart onResolved={onClose} />
       </div>
     </div>
   );

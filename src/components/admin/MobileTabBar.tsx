@@ -3,7 +3,7 @@
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, use, useEffect, useState } from "react";
-import QrScanSheet from "@/components/scan/QrScanSheet";
+import ScanSheet from "@/components/scan/ScanSheet";
 import { NAV_ITEMS, isActive, type NavItem } from "@/components/admin/nav";
 import type { Identity } from "@/components/admin/AdminShell";
 import {
@@ -22,11 +22,12 @@ const SECONDARY = NAV_ITEMS.filter((item) => !item.primary);
  * Mobilin ana gezinme yüzeyi: yerli uygulamalardaki gibi ekranın altına
  * sabitlenmiş bir sekme çubuğu. Masaüstündeki kenar çubuğunun mobil karşılığı
  * bir hamburger menü değil, çünkü menünün arkasına saklanan özellik
- * kullanılmıyor — burada en sık kullanılan üç ekran ve QR tarayıcı doğrudan
+ * kullanılmıyor — burada en sık kullanılan üç ekran ve ürün tarayıcı doğrudan
  * parmağın altında duruyor, kalanlar da tek dokunuşla açılan "Menü"de.
  *
- * Sekmelerin ortasındaki yükseltilmiş düğme panelin asıl işi olan QR okutmayı
- * taşıyor; bu yüzden dört sekmenin arasında değil, onların üstünde duruyor.
+ * Sekmelerin ortasındaki yükseltilmiş düğme panelin asıl işini — ürünü
+ * kamerayla bulmayı — taşıyor; bu yüzden dört sekmenin arasında değil,
+ * onların üstünde duruyor.
  */
 export default function MobileTabBar({
   identityPromise,
@@ -58,13 +59,13 @@ export default function MobileTabBar({
             <button
               type="button"
               onClick={() => setScanOpen(true)}
-              aria-label="QR okut"
+              aria-label="Ürün bul"
               className="tab-press absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-5 flex-col items-center justify-center rounded-full bg-accent text-white shadow-[0_8px_20px_-6px_var(--app-shadow)] ring-4 ring-card"
             >
               <IconScan className="h-6 w-6" />
             </button>
             <span className="absolute inset-x-0 bottom-2.5 text-center text-[10px] font-semibold text-ink-muted">
-              QR okut
+              Ürün bul
             </span>
           </div>
 
@@ -100,7 +101,7 @@ export default function MobileTabBar({
         />
       )}
 
-      {scanOpen && <QrScanSheet onClose={() => setScanOpen(false)} />}
+      {scanOpen && <ScanSheet onClose={() => setScanOpen(false)} />}
     </>
   );
 }

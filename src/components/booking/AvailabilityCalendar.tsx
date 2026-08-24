@@ -24,7 +24,7 @@ export default function AvailabilityCalendar({
   const days = daysByState(availability, stock);
 
   return (
-    <div className="rdp-theme card">
+    <div className="rdp-theme card p-4 sm:p-6">
       {stock <= 0 && (
         <p className="mb-3 text-sm text-danger">Bu ürün şu anda stokta yok.</p>
       )}

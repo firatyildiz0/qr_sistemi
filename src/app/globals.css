@@ -465,6 +465,49 @@ summary,
     border-color: var(--color-border-strong);
   }
 
+  /* Uzun formların altına yapışan işlem çubuğu. Telefonda "kaydet" düğmesi
+     formun en dibinde kalıyor, satıcı da ne seçtiğini görmek için yukarı,
+     kaydetmek için aşağı kaydırıp duruyordu. Çubuk seçimin özetini ve düğmeyi
+     ekranda tutuyor; masaüstünde (sm) akışa geri dönüyor. */
+  .action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: color-mix(in oklab, var(--color-card) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--color-border);
+    padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  }
+  @media (min-width: 640px) {
+    .action-bar {
+      position: static;
+      background: transparent;
+      backdrop-filter: none;
+      border-top: 0;
+      padding-bottom: 0;
+    }
+  }
+
+  /* Formun adımlarını numaralayan rozet. */
+  .step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    width: 22px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .step-badge.is-done {
+    background: var(--color-accent);
+    color: #ffffff;
+  }
+
   .field-label {
     display: block;
     font-size: 13px;
@@ -730,9 +773,19 @@ summary,
 .rdp-theme .rdp-root {
   --rdp-accent-color: var(--color-accent);
   --rdp-accent-background-color: var(--color-accent-muted);
-  --rdp-day-height: 40px;
-  --rdp-day-width: 40px;
+  /* Hücre satırın yüksekliği, düğme dokunulan kare. İkisi ayrı: kare 40px'te
+     kalırken satır 44px olunca aralık şeridi kesintisiz akıyor ama parmak
+     hâlâ 44px'lik bir alana basıyor. */
+  --rdp-day-height: 44px;
+  --rdp-day-width: 44px;
+  --rdp-day_button-height: 40px;
+  --rdp-day_button-width: 40px;
   --rdp-day_button-border-radius: 8px;
+  /* Ay değiştirme okları da parmakla basılıyor; 36px'lik varsayılan telefonda
+     ıskalanıyordu. */
+  --rdp-nav_button-height: 40px;
+  --rdp-nav_button-width: 40px;
+  --rdp-nav-height: 44px;
   --rdp-selected-border: 2px solid var(--color-accent);
   --rdp-today-color: var(--color-accent-hover);
   --rdp-outline: 2px solid var(--color-accent);
@@ -741,6 +794,37 @@ summary,
 }
 .rdp-theme .rdp-day_button:hover:not([disabled]) {
   background-color: var(--color-accent-soft);
+}
+
+/* Takvim kabının genişliğine yayılıyor.
+   Sabit 44px'lik yedi hücre (308px) dar telefonlarda kartın dışına taşıyor,
+   geniş ekranda ise sola sıkışıp yanında boşluk bırakıyordu. Sütunlar artık
+   kabı eşit bölüyor; dokunulan kare `--rdp-day_button-width`i aşmadığı için
+   masaüstünde görüntü aynı kalıyor, telefonda ise kare hücreyle birlikte
+   küçülüyor ve taşma olmuyor. */
+.rdp-theme .rdp-months {
+  max-width: none;
+  width: 100%;
+}
+.rdp-theme .rdp-month {
+  width: 100%;
+}
+.rdp-theme .rdp-month_grid {
+  width: 100%;
+  table-layout: fixed;
+}
+.rdp-theme .rdp-day {
+  width: auto;
+}
+.rdp-theme .rdp-day_button {
+  width: 100%;
+  max-width: var(--rdp-day_button-width);
+  margin-inline: auto;
+}
+/* Ay adı varsayılanda `large`; dar ekranda okların altına giriyordu. */
+.rdp-theme .rdp-month_caption {
+  font-size: 15px;
+  align-items: center;
 }
 
 /* Availability modifiers. These used to be duplicated in a <style> tag inside

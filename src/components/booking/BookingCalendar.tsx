@@ -16,7 +16,7 @@ export default function BookingCalendar({
   const to = new Date(endDate + "T00:00:00");
 
   return (
-    <div className="rdp-theme card">
+    <div className="rdp-theme card p-4 sm:p-6">
       <DayPicker
         locale={tr}
         defaultMonth={from}

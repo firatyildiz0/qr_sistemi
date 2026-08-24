@@ -90,11 +90,14 @@ export default function DeliveryPlan({
         Teslimat şekli
       </p>
 
-      <div className="flex flex-wrap gap-2">
+      {/* Telefonda iki seçenek ekranı eşit bölüyor: sarılan iki küçük etiket
+          hem zor basılıyor hem de hangisinin seçili olduğu bir bakışta
+          anlaşılmıyordu. */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {DELIVERY_MODES.map((option) => (
           <label
             key={option}
-            className={`relative flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+            className={`relative flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors sm:min-h-0 sm:justify-start ${
               mode === option
                 ? "border-accent bg-accent-soft font-semibold text-accent-strong"
                 : "border-border bg-card text-ink-muted hover:border-border-strong"
@@ -140,7 +143,7 @@ export default function DeliveryPlan({
                 <button
                   type="button"
                   onClick={() => onBlockedChange(null)}
-                  className="-my-1 flex shrink-0 items-center gap-1 rounded px-1.5 py-1 font-medium text-accent-strong transition-colors hover:bg-accent-soft"
+                  className="-my-1 flex min-h-9 shrink-0 items-center gap-1 rounded px-2 py-1 font-medium text-accent-strong transition-colors hover:bg-accent-soft"
                 >
                   <IconUndo className="h-3.5 w-3.5" />
                   Otomatiğe dön
@@ -226,22 +229,25 @@ function DateStepper({
   onShift: (days: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card py-1.5 pl-2.5 pr-1.5">
-      <div className="min-w-0">
+    // Telefonda etiket üstte, adımlayıcı altta tam genişlikte: aynı satıra
+    // sığdırılınca hem açıklama hem tarih kırpılıyor, düğmeler de kenara
+    // sıkışıyordu.
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-card p-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:py-1.5 sm:pl-2.5 sm:pr-1.5">
+      <div className="min-w-0 sm:flex-1">
         <p className="truncate text-xs font-medium text-ink">{label}</p>
         <p className="text-[11px] text-ink-muted">{hint}</p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-0.5">
         <StepButton
           label={`${label}: bir gün geri al`}
           disabled={!canDecrease}
           onClick={() => onShift(-1)}
         >
-          <IconMinus className="h-3.5 w-3.5" />
+          <IconMinus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
         </StepButton>
 
-        <span className="w-26 text-center text-xs font-semibold tabular-nums text-ink">
+        <span className="flex-1 text-center text-sm font-semibold tabular-nums text-ink sm:w-26 sm:flex-none sm:text-xs">
           {day(value)}
         </span>
 
@@ -250,7 +256,7 @@ function DateStepper({
           disabled={!canIncrease}
           onClick={() => onShift(1)}
         >
-          <IconPlus className="h-3.5 w-3.5" />
+          <IconPlus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
         </StepButton>
       </div>
     </div>
@@ -275,7 +281,7 @@ function StepButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface text-ink-muted transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-border disabled:hover:text-ink-muted"
+      className="tab-press flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-ink-muted transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-border disabled:hover:text-ink-muted sm:h-7 sm:w-7"
     >
       {children}
     </button>

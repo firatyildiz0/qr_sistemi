@@ -10,6 +10,7 @@ import {
   computeOccupancySpan,
   daysByState,
   formatDateRange,
+  nightsBetween,
   occupancySpanError,
   unavailableDays,
   unitsLeftInRange,
@@ -17,10 +18,16 @@ import {
   type DateSpan,
 } from "@/lib/bookings";
 import type { CatalogProduct } from "@/lib/catalog";
-import { deliveryModeForCity, type DeliveryMode, type Turnaround } from "@/lib/turnaround";
+import {
+  DELIVERY_MODE_LABEL,
+  deliveryModeForCity,
+  type DeliveryMode,
+  type Turnaround,
+} from "@/lib/turnaround";
 import AddressFields from "@/components/booking/AddressFields";
 import AvailabilityLegend from "@/components/booking/AvailabilityLegend";
 import DeliveryPlan from "@/components/booking/DeliveryPlan";
+import FormStep from "@/components/booking/FormStep";
 import ProductPicker, {
   basketError,
   itemsPayload,
@@ -58,6 +65,9 @@ export default function BookingForm({
   const [items, setItems] = useState<PickedItem[]>([
     { productId, quantity: 1 },
   ]);
+  // Ad kontrollü: adım başlığındaki özet ve alttaki çubuk müşterinin girilip
+  // girilmediğini ancak böyle bilebiliyor.
+  const [name, setName] = useState("");
   const [city, setCity] = useState("");
   // null = ilden türetilen varsayılan geçerli. Satıcı elle seçtiği anda
   // dolar ve il değişse bile seçim korunur.
@@ -75,6 +85,7 @@ export default function BookingForm({
     setPrevState(state);
     if (state.success) {
       setRange(undefined);
+      setName("");
       setCity("");
       setModeOverride(null);
       setBlockedOverride(null);
@@ -124,20 +135,41 @@ export default function BookingForm({
   // müsaitlik de ona göre sayılıyor.
   const basketProblem = basketError(catalog, items, blocked);
   const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
+  const rentalDays = startStr ? nightsBetween(startStr, endStr) + 1 : 0;
+  const customerReady = name.trim().length > 0 && city.length > 0;
+
+  // Bloke aralığının hatası zaten `DeliveryPlan`ın içinde, alanın hemen
+  // altında yazıyor; çubukta ikinci kez tekrarlanmasın.
+  const blocking = state.error ?? basketProblem;
+  const disabled =
+    pending || !startStr || outOfStock || blockedError !== null || basketProblem !== null;
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-5">
       <input type="hidden" name="start_date" value={startStr} />
       <input type="hidden" name="end_date" value={endStr} />
       <input type="hidden" name="items" value={JSON.stringify(itemsPayload(items))} />
 
-      <div>
+      <FormStep
+        index={1}
+        title="Kiralama tarihleri"
+        hint={
+          range?.from
+            ? "Bitiş gününü seçin."
+            : "Başlangıç ve bitiş gününe dokunun."
+        }
+        summary={
+          startStr && range?.to
+            ? `${formatDateRange(startStr, endStr)} · ${rentalDays} gün · bu tarihlerde ${unitsLeft} / ${stock} adet müsait`
+            : undefined
+        }
+      >
         {outOfStock && (
           <p className="mb-2 text-sm text-danger">
             Stok 0. Rezervasyon almak için önce stok adedini artırın.
           </p>
         )}
-        <div className="rdp-theme rounded-lg border border-border bg-card p-3">
+        <div className="rdp-theme rounded-lg border border-border bg-card p-2 sm:p-3">
           <DayPicker
             mode="range"
             locale={tr}
@@ -165,90 +197,152 @@ export default function BookingForm({
           />
           <AvailabilityLegend stock={stock} />
         </div>
-        {startStr && (
-          <p className="mt-2 count-up text-sm font-medium text-ink">
-            {formatDateRange(startStr, endStr)}
-            <span className="ml-2 font-normal text-ink-muted">
-              bu tarihlerde {unitsLeft} / {stock} adet müsait
-            </span>
-          </p>
-        )}
-      </div>
+      </FormStep>
 
-      <ProductPicker
-        products={catalog}
-        items={items}
-        onChange={setItems}
-        span={blocked}
-        anchorId={productId}
-      />
+      <FormStep
+        index={2}
+        title="Ürünler"
+        summary={
+          items.length > 0
+            ? `${items.length} ürün · ${totalUnits} adet`
+            : undefined
+        }
+        hint="Rezervasyona en az bir ürün ekleyin."
+      >
+        <ProductPicker
+          products={catalog}
+          items={items}
+          onChange={setItems}
+          span={blocked}
+          anchorId={productId}
+        />
+      </FormStep>
 
-      {/* Kendi state'ini tuttuğu için formun kayıt sonrası sıfırlaması buraya
-          ulaşmıyor; alanı yeniden kurmak temizliyor. */}
-      <PriceField
-        key={resetKey}
-        name="deposit_price"
-        label="Teminat (opsiyonel)"
-        defaultValue={null}
-        hint="Siparişin tamamı için alınan depozito; iade sırasında geri verilir."
-      />
+      <FormStep
+        index={3}
+        title="Müşteri"
+        hint="Ad ve il zorunlu: bloke süresi seçilen ile göre hesaplanıyor."
+        summary={customerReady ? `${name.trim()} · ${city}` : undefined}
+      >
+        <div className="space-y-3 rounded-lg border border-border bg-surface p-3">
+          <div>
+            <label htmlFor="customer_name" className="field-label">
+              Adı soyadı
+            </label>
+            <input
+              id="customer_name"
+              name="customer_name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+              required
+              className="input"
+            />
+          </div>
 
-      <div>
-        <label htmlFor="customer_name" className="field-label">
-          Adınız
-        </label>
-        <input id="customer_name" name="customer_name" required className="input" />
-      </div>
+          <div>
+            <label htmlFor="customer_phone" className="field-label">
+              Telefon (opsiyonel)
+            </label>
+            <input
+              id="customer_phone"
+              name="customer_phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              className="input"
+            />
+          </div>
 
-      <div>
-        <label htmlFor="customer_phone" className="field-label">
-          Telefon (opsiyonel)
-        </label>
-        <input id="customer_phone" name="customer_phone" type="tel" className="input" />
-      </div>
+          <AddressFields key={resetKey} onCityChange={setCity} />
+        </div>
+      </FormStep>
 
-      <AddressFields key={resetKey} onCityChange={setCity} />
+      <FormStep
+        index={4}
+        title="Teslimat ve teminat"
+        hint="Ürünün kaç gün elinizde olmayacağını buradan ayarlarsınız."
+        summary={
+          blocked
+            ? `${DELIVERY_MODE_LABEL[mode]} · ${formatDateRange(
+                blocked.start_date,
+                blocked.end_date
+              )} bloke`
+            : undefined
+        }
+      >
+        <div className="space-y-3">
+          <DeliveryPlan
+            city={city}
+            mode={mode}
+            onModeChange={selectMode}
+            rental={rental}
+            blocked={blocked}
+            manual={blockedOverride !== null}
+            onBlockedChange={setBlockedOverride}
+            error={blockedError}
+            turnaround={turnaround}
+            shipsLate={shipsLate}
+          />
 
-      <DeliveryPlan
-        city={city}
-        mode={mode}
-        onModeChange={selectMode}
-        rental={rental}
-        blocked={blocked}
-        manual={blockedOverride !== null}
-        onBlockedChange={setBlockedOverride}
-        error={blockedError}
-        turnaround={turnaround}
-        shipsLate={shipsLate}
-      />
+          {/* Kendi state'ini tuttuğu için formun kayıt sonrası sıfırlaması
+              buraya ulaşmıyor; alanı yeniden kurmak temizliyor. */}
+          <div className="rounded-lg border border-border bg-surface p-3">
+            <PriceField
+              key={resetKey}
+              name="deposit_price"
+              label="Teminat (opsiyonel)"
+              defaultValue={null}
+              hint="Siparişin tamamı için alınan depozito; iade sırasında geri verilir."
+            />
+          </div>
+        </div>
+      </FormStep>
 
-      {state.error && <p className="text-sm text-danger">{state.error}</p>}
-      {!state.error && basketProblem && (
-        <p className="text-sm text-danger">{basketProblem}</p>
-      )}
       {state.success && (
         <p className="flex items-center gap-1.5 text-sm text-success">
-          <IconCheckCircle className="h-4 w-4" /> Rezervasyon onaylandı. O zaman görüşürüz!
+          <IconCheckCircle className="h-4 w-4" /> Rezervasyon onaylandı. O zaman
+          görüşürüz!
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={
-          pending ||
-          !startStr ||
-          outOfStock ||
-          blockedError !== null ||
-          basketProblem !== null
-        }
-        className="btn btn-primary w-full sm:w-auto"
-      >
-        {pending
-          ? "Rezervasyon yapılıyor…"
-          : totalUnits > 1
-            ? `Rezervasyon ekle (${totalUnits} adet)`
-            : "Rezervasyon ekle"}
-      </button>
+      {/* Telefonda ekranın altına yapışıyor: özet de kaydet düğmesi de her an
+          görünür, satıcı formun dibine inmek zorunda kalmıyor. */}
+      <div className="action-bar -mx-4 px-4 pt-3 sm:mx-0 sm:px-0">
+        {blocking && (
+          <p className="mb-2 text-sm text-danger" role="alert">
+            {blocking}
+          </p>
+        )}
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <p className="min-w-0 text-xs text-ink-muted">
+            {startStr && range?.to ? (
+              <>
+                <span className="font-semibold text-ink">
+                  {formatDateRange(startStr, endStr)}
+                </span>{" "}
+                · {totalUnits} adet
+                {customerReady && ` · ${name.trim()}`}
+              </>
+            ) : (
+              "Takvimden kiralama tarihlerini seçin."
+            )}
+          </p>
+
+          <button
+            type="submit"
+            disabled={disabled}
+            className="btn btn-primary w-full sm:w-auto"
+          >
+            {pending
+              ? "Rezervasyon yapılıyor…"
+              : totalUnits > 1
+                ? `Rezervasyon ekle (${totalUnits} adet)`
+                : "Rezervasyon ekle"}
+          </button>
+        </div>
+      </div>
     </form>
   );
 }

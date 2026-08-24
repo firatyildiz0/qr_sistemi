@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Rezervasyon listesinde ürün görseli görünmüyordu",
+  "aciklama": "Rezervasyonlar ekranındaki listede her satırın başında adın baş harfi duruyordu, ürünün resmi yoktu. Artık ana sayfadaki liste gibi ürünün küçük görseli görünüyor; bir kişinin birden fazla ürünü varsa görselin köşesinde kalan ürün sayısı yazıyor.",
+  "dikkat": null
+}

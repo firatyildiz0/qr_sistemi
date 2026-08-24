@@ -7,6 +7,7 @@ import { deleteCustomers } from "@/app/admin/customers/actions";
 import { formatDateRange } from "@/lib/bookings";
 import { formatPrice } from "@/lib/format";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import ProductThumb from "@/components/admin/ProductThumb";
 import PhoneActions from "@/components/admin/PhoneActions";
 import {
   IconCalendar,
@@ -232,13 +233,27 @@ function CustomerRow({
   customer: Customer;
   phoneActions: boolean;
 }) {
+  // Kiralamalar en yeni başlangıç tarihi başta olacak şekilde sıralı geliyor.
+  const latest = customer.bookings[0];
+  const otherProducts = new Set(customer.bookings.map((b) => b.productId)).size - 1;
+
   return (
     <>
-      <span
-        aria-hidden="true"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-base font-semibold text-accent-strong"
-      >
-        {customer.name.charAt(0).toLocaleUpperCase("tr-TR")}
+      {/* Görsel adın önünde, panelin diğer rezervasyon listelerinde olduğu
+          gibi: satıcı satırı gözle tarıyor ve kiralamayı adından önce ürünün
+          resminden tanıyor. Bir kişinin birden çok ürünü olabiliyor; en yeni
+          kiralamanın ürünü öne geliyor, kalan ürün sayısı köşedeki rozete
+          dönüşüyor. */}
+      <span className="relative shrink-0">
+        <ProductThumb src={latest?.imageUrl ?? null} />
+        {otherProducts > 0 && (
+          <span
+            aria-hidden="true"
+            className="absolute -bottom-1 -right-1 rounded-full border border-card bg-accent px-1 text-[10px] font-semibold leading-4 text-white"
+          >
+            +{otherProducts}
+          </span>
+        )}
       </span>
 
       <div className="min-w-0 flex-1">

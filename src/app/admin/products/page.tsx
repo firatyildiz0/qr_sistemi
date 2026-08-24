@@ -4,7 +4,24 @@ import { getCurrentUser } from "@/lib/auth";
 import type { Booking } from "@/lib/types";
 import { displayStatus } from "@/lib/bookings";
 import ProductGrid from "@/components/admin/ProductGrid";
-import { IconPlus, IconSearch } from "@/components/icons";
+import ProductSearch from "@/components/admin/ProductSearch";
+import { IconPlus } from "@/components/icons";
+
+/**
+ * Ada ya da barkod numarasına göre arama.
+ *
+ * Satıcı elindeki etiketin numarasını da yazabiliyor: raftaki ürünü adıyla
+ * değil numarasıyla tanıyor olabilir. Numaranın bir parçası da yetiyor, ad
+ * aramasında olduğu gibi.
+ *
+ * Sorgu metni tırnak içine alınıp kaçırılıyor: bu filtrede virgül koşulları,
+ * parantez de gruplamayı ayırıyor, aramaya yazılan bir virgül tırnaksız
+ * geçseydi filtreyi bozardı.
+ */
+function searchFilter(q: string): string {
+  const term = `%${q}%`.replace(/[\\"]/g, (c) => `\\${c}`);
+  return `name.ilike."${term}",barcode.ilike."${term}"`;
+}
 
 export default async function AdminProductsPage({
   searchParams,
@@ -26,7 +43,7 @@ export default async function AdminProductsPage({
     .order("created_at", { ascending: false });
 
   if (q) {
-    productsQuery = productsQuery.ilike("name", `%${q}%`);
+    productsQuery = productsQuery.or(searchFilter(q));
   }
 
   // Joining through products lets this run alongside the products query instead
@@ -61,16 +78,7 @@ export default async function AdminProductsPage({
       <header className="page-header flex flex-col gap-3 border-b border-border bg-paper px-4 py-4 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-0">
         <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Ürünler</h1>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <form action="/admin/products" className="relative flex w-full items-center rounded-md border border-border bg-card sm:w-64">
-            <IconSearch className="pointer-events-none absolute left-3 h-4 w-4 text-ink-muted" />
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Ürün ara…"
-              className="w-full bg-transparent py-2.5 pl-10 pr-3 text-base text-ink placeholder:text-ink-muted focus:outline-none sm:text-sm"
-            />
-          </form>
+          <ProductSearch query={q ?? ""} />
           <Link href="/admin/products/new" className="btn btn-primary">
             <IconPlus className="h-4 w-4" />
             Ürün ekle

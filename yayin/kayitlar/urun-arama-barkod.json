@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Ürün aramada barkod numarası ve yazdıkça arama",
+  "aciklama": "Ürünler ekranındaki arama kutusu yalnızca ürün adına bakıyordu ve sonucu görmek için Enter'a basmak gerekiyordu. Artık etiketteki barkod numarasını (ya da bir parçasını) yazmak da yetiyor ve sonuçlar siz yazarken kendiliğinden geliyor.",
+  "dikkat": null
+}

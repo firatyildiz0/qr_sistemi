@@ -12,9 +12,19 @@ type EventRow = {
   kind: SecurityEventKind;
   severity: Severity;
   identifier: string | null;
-  ip: string | null;
   detail: Record<string, unknown> | null;
   created_at: string;
+};
+
+/**
+ * Özetin baktığı alanlar. IP yalnızca burada, yalnızca sayılmak için okunuyor:
+ * "kaç ayrı yerden denendi" sorusu dağıtık bir denemeyi ele veriyor, adresin
+ * kendisi ise ekranda hiçbir soruyu cevaplamıyor.
+ */
+type SummaryRow = {
+  kind: SecurityEventKind;
+  severity: Severity;
+  ip: string | null;
 };
 
 /** Kaç olay listelenecek. Daha eskisi 90 günde bir budanıyor (bkz. 0017). */
@@ -59,7 +69,7 @@ async function loadEvents(): Promise<{ rows: EventRow[]; summary: Summary }> {
   const [{ data: rows }, { data: recent }] = await Promise.all([
     admin
       .from("security_events")
-      .select("id, kind, severity, identifier, ip, detail, created_at")
+      .select("id, kind, severity, identifier, detail, created_at")
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE),
     admin
@@ -70,7 +80,7 @@ async function loadEvents(): Promise<{ rows: EventRow[]; summary: Summary }> {
 
   return {
     rows: (rows ?? []) as EventRow[],
-    summary: summarize((recent ?? []) as Pick<EventRow, "kind" | "severity" | "ip">[]),
+    summary: summarize((recent ?? []) as SummaryRow[]),
   };
 }
 
@@ -82,7 +92,7 @@ type Summary = {
   distinctIps: number;
 };
 
-function summarize(rows: Pick<EventRow, "kind" | "severity" | "ip">[]): Summary {
+function summarize(rows: SummaryRow[]): Summary {
   const ips = new Set<string>();
 
   for (const row of rows) {
@@ -175,11 +185,14 @@ export default async function GuvenlikPage() {
                   )}
                 </div>
 
+                {/* Olayın zamanı var, adresi yok: IP kişisel veri ve bu
+                    listede kimsenin bakıp bir şey yapacağı bir bilgi değil.
+                    Hız sınırı onu yine de tabloda tutup kendi içinde
+                    kullanıyor. */}
                 <div className="shrink-0 text-left sm:text-right">
                   <p className="text-xs text-ink-muted">
                     {timeFormat.format(new Date(row.created_at))}
                   </p>
-                  <p className="font-mono text-xs text-ink-muted">{row.ip ?? "—"}</p>
                 </div>
               </li>
             ))}

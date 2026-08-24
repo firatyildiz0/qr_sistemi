@@ -1,0 +1,6 @@
+{
+  "tip": "guvenlik",
+  "baslik": "Güvenlik ekranında kullanıcıların IP adresleri görünüyordu",
+  "aciklama": "Son olaylar listesinde her satırın yanında isteğin geldiği IP adresi yazıyordu. Artık yazmıyor; satırda olayın ne olduğu, kimin denediği ve ne zaman olduğu kalıyor. Üstteki özette yalnızca 'kaç ayrı IP' sayısı duruyor, adreslerin kendisi değil.",
+  "dikkat": null
+}

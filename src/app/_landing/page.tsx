@@ -74,7 +74,7 @@ export default async function Home() {
   return (
     <>
       <nav className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-border bg-surface/95 px-6 backdrop-blur-sm">
-        <Logo className="h-9 w-9" sizes="36px" />
+        <Logo variant="lockup" className="h-9 w-9" sizes="36px" />
         <div className="hidden items-center gap-8 md:flex">
           <a href="#how-it-works" className="link-underline text-sm font-medium text-ink-muted hover:text-accent">
             Nasıl çalışır

@@ -38,7 +38,7 @@ export default function AdminShell({
           çubuğunda beklenen iki şey: kimlik ve bildirim zili. */}
       <header className="app-bar fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-border bg-deep px-4 md:hidden">
         <Link href="/admin" className="tab-press flex items-center">
-          <Logo className="h-8 w-8" sizes="32px" />
+          <Logo variant="lockup" tone="on-dark" className="h-8 w-8" sizes="32px" wordmarkClassName="text-lg" />
         </Link>
         <div className="flex items-center gap-1">
           <Link
@@ -65,7 +65,7 @@ export default function AdminShell({
         <div>
           <div className="sidebar-head flex h-16 items-center justify-between px-6">
             <Link href="/admin" className="sidebar-label flex items-center">
-              <Logo className="h-9 w-9" sizes="36px" />
+              <Logo variant="lockup" tone="on-dark" className="h-9 w-9" sizes="36px" wordmarkClassName="text-xl" />
             </Link>
             <SidebarToggle />
           </div>

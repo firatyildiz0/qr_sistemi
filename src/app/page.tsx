@@ -1,11 +1,24 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { getProfile, homePathFor } from "@/lib/profile";
+import VeyroLabs from "@/components/labs/VeyroLabs";
 
-// The marketing landing page is parked in `_landing/` (a private folder, so it
-// is not routed) until it is ready to go public again. Until then the root is
-// the entry point: straight to the panel the account belongs to when signed
-// in, otherwise to the login screen.
+export const metadata: Metadata = {
+  title: "Veyro Labs — Hizmetlerimiz",
+  description:
+    "Veyro'nun geliştirdiği hizmetlerin tamamı: QR ile kiralama, rezervasyon takvimi, envanter, etiketler ve iade hatırlatmaları.",
+};
+
+/**
+ * Sitenin ana sayfası: hizmet vitrini.
+ *
+ * Oturum açık olsa da buraya geliyor — panele girmek isteyen için üst çubuktaki
+ * düğme rolüne göre doğru panele bakıyor. Onay bekleyen ya da reddedilen bir
+ * hesap panele giremeyeceği için giriş ekranına yönlendiriliyor; kararı
+ * `homePathFor` değil buradaki durum kontrolü veriyor.
+ */
 export default async function RootPage() {
   const profile = await getProfile();
-  redirect(profile && profile.status === "approved" ? homePathFor(profile) : "/login");
+  const onayli = profile?.status === "approved";
+
+  return <VeyroLabs panelHref={onayli ? homePathFor(profile) : "/login"} oturumAcik={Boolean(onayli)} />;
 }

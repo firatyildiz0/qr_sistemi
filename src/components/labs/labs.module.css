@@ -1,0 +1,759 @@
+/*
+ * Veyro Labs ana sayfası.
+ *
+ * Kendi renk sistemi var ve bilerek panelin token'larından ayrı duruyor:
+ * panel bir çalışma yüzeyi, bu sayfa bir vitrin. Ama tema seçimi ortak —
+ * değerler `.page` üstünde tanımlı, koyu tema `html[data-theme="dark"]`
+ * altında yeniden yazılıyor, yani Ayarlar'daki tercih burada da geçerli.
+ *
+ * Sayfa kabuğu neredeyse nötr; renk yalnızca hizmet görsellerinde. Görseller
+ * tek bir aileye bağlı altı derin tondan üretiliyor (bkz. Artwork.tsx).
+ */
+
+.page {
+  --l-bg: #fcfcfa;
+  --l-bg-2: #f4f4f0;
+  --l-card: #ffffff;
+  --l-ink: #15181a;
+  --l-ink-2: #5d6461;
+  --l-faint: #909691;
+  --l-line: #e6e7e2;
+  --l-line-2: #efefeb;
+  --l-pill: #15181a;
+  --l-pill-ink: #fcfcfa;
+  --l-accent: #b8410f;
+  --l-live: #1f8a5f;
+  --l-beta: #b47b16;
+  --l-soon: #9aa09b;
+  --l-shadow-s: 0 1px 1px rgba(21, 24, 26, 0.04), 0 3px 10px rgba(21, 24, 26, 0.045);
+  --l-shadow-m: 0 2px 6px rgba(21, 24, 26, 0.05), 0 18px 40px rgba(21, 24, 26, 0.1);
+  --l-shadow-art: 0 1px 2px rgba(21, 24, 26, 0.08), 0 30px 60px rgba(21, 24, 26, 0.16);
+  --l-r-xl: 30px;
+  --l-r-lg: 22px;
+
+  background: var(--l-bg);
+  color: var(--l-ink);
+  font-family: var(--font-labs), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+:global(html[data-theme="dark"]) .page {
+  --l-bg: #0a0c0b;
+  --l-bg-2: #111514;
+  --l-card: #111514;
+  --l-ink: #eceeea;
+  --l-ink-2: #9ba39e;
+  --l-faint: #6f7773;
+  --l-line: #1f2523;
+  --l-line-2: #191e1d;
+  --l-pill: #eceeea;
+  --l-pill-ink: #0a0c0b;
+  --l-accent: #ff8a5c;
+  --l-live: #4cbc8a;
+  --l-beta: #d9a851;
+  --l-soon: #7b837e;
+  --l-shadow-s: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --l-shadow-m: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --l-shadow-art: 0 30px 60px rgba(0, 0, 0, 0.6);
+}
+
+.page a {
+  color: inherit;
+  text-decoration: none;
+}
+.page h1,
+.page h2,
+.page h3 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  line-height: 1.05;
+}
+.page :focus-visible {
+  outline: 2px solid var(--l-accent);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+.wrap {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 0 26px;
+}
+
+/* ── Üst çubuk ───────────────────────────────────────────── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in oklab, var(--l-bg) 82%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+.navIn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  height: 72px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 17.5px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.brand svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: block;
+}
+.brand span {
+  font-weight: 500;
+  color: var(--l-faint);
+  letter-spacing: -0.02em;
+}
+.navMid {
+  display: none;
+  align-items: center;
+  gap: 32px;
+}
+@media (min-width: 960px) {
+  .navMid {
+    display: flex;
+  }
+}
+.navMid a {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--l-ink-2);
+  transition: color 0.18s;
+}
+.navMid a:hover {
+  color: var(--l-ink);
+}
+.navEnd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 11px 21px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.7, 0.3, 1),
+    box-shadow 0.22s,
+    background 0.22s,
+    color 0.22s,
+    border-color 0.22s,
+    opacity 0.22s;
+}
+.pillSolid {
+  background: var(--l-pill);
+  color: var(--l-pill-ink);
+}
+.pillSolid:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--l-shadow-s);
+  opacity: 0.92;
+}
+.pillLine {
+  border-color: var(--l-line);
+  color: var(--l-ink-2);
+  background: transparent;
+}
+.pillLine:hover {
+  background: var(--l-bg-2);
+  color: var(--l-ink);
+  transform: translateY(-1px);
+}
+.pillWhite {
+  background: rgba(255, 255, 255, 0.97);
+  color: #15181a;
+  backdrop-filter: blur(4px);
+}
+.pillWhite:hover {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.26);
+}
+.pill svg {
+  transition: transform 0.22s;
+}
+.pill:hover svg {
+  transform: translateX(3px);
+}
+
+/* ── Öne çıkanlar ────────────────────────────────────────── */
+.feature {
+  padding: 10px 0 0;
+}
+.stage {
+  position: relative;
+  border-radius: var(--l-r-xl);
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 440px;
+  box-shadow: var(--l-shadow-art);
+  background: #0d1210;
+}
+@media (min-width: 860px) {
+  .stage {
+    min-height: 540px;
+  }
+}
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 32px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.9s ease,
+    visibility 0.9s;
+}
+@media (min-width: 860px) {
+  .slide {
+    padding: 56px 60px;
+  }
+}
+.slideOn {
+  opacity: 1;
+  visibility: visible;
+}
+.art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+.art > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.slide .art > svg {
+  transform: scale(1.04);
+  transition: transform 9s ease-out;
+}
+.slideOn .art > svg {
+  transform: scale(1);
+}
+.slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to top,
+    rgba(6, 10, 9, 0.88) 4%,
+    rgba(6, 10, 9, 0.5) 40%,
+    rgba(6, 10, 9, 0.1) 72%
+  );
+}
+.slideCopy {
+  max-width: 590px;
+  color: #fff;
+  transform: translateY(16px);
+  opacity: 0;
+  transition:
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) 0.15s,
+    opacity 0.8s ease 0.15s;
+}
+.slideOn .slideCopy {
+  transform: none;
+  opacity: 1;
+}
+.slideTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  padding: 7px 13px;
+  border-radius: 999px;
+}
+.slide h2 {
+  font-size: clamp(34px, 5.4vw, 58px);
+  margin: 20px 0 0;
+  color: #fff;
+  letter-spacing: -0.042em;
+}
+.slide p {
+  margin: 15px 0 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 47ch;
+}
+.slide .pill {
+  margin-top: 28px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 18px;
+  border-top: 1px solid var(--l-line);
+}
+@media (min-width: 760px) {
+  .tabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.tab {
+  position: relative;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--l-line);
+  padding: 17px 18px 18px 0;
+  cursor: pointer;
+  color: var(--l-ink);
+  font-family: inherit;
+}
+@media (min-width: 760px) {
+  .tab {
+    border-bottom: 0;
+    padding-right: 26px;
+  }
+}
+.tab b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--l-faint);
+  transition: color 0.25s;
+}
+.tab span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--l-faint);
+  line-height: 1.45;
+  opacity: 0.72;
+  transition: opacity 0.25s;
+}
+.tab:hover b {
+  color: var(--l-ink-2);
+}
+.tabOn b {
+  color: var(--l-ink);
+}
+.tabOn span {
+  opacity: 1;
+  color: var(--l-ink-2);
+}
+.bar {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  height: 2px;
+  width: 0;
+  background: var(--l-ink);
+  border-radius: 2px;
+}
+.tabOn .bar {
+  animation: fill 7s linear forwards;
+}
+@keyframes fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* ── Bölümler ────────────────────────────────────────────── */
+.sec {
+  padding: 92px 0 0;
+}
+.secTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+.secTop h2 {
+  font-size: clamp(27px, 3.2vw, 38px);
+}
+.secTop p {
+  margin: 13px 0 0;
+  color: var(--l-ink-2);
+  font-size: 16.5px;
+  line-height: 1.62;
+  max-width: 52ch;
+}
+.cats {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 34px;
+}
+.cat {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 9px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--l-line);
+  background: transparent;
+  color: var(--l-ink-2);
+  font-family: inherit;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+.cat:hover {
+  color: var(--l-ink);
+  background: var(--l-bg-2);
+}
+.catOn {
+  background: var(--l-pill);
+  border-color: var(--l-pill);
+  color: var(--l-pill-ink);
+}
+.catOn:hover {
+  background: var(--l-pill);
+  color: var(--l-pill-ink);
+}
+
+/* ── Hizmet kartları ─────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 36px 24px;
+}
+@media (min-width: 660px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1020px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.exp {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.thumb {
+  position: relative;
+  display: block;
+  border-radius: var(--l-r-lg);
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: #0d1210;
+  box-shadow: var(--l-shadow-s);
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.7, 0.3, 1),
+    box-shadow 0.4s;
+}
+.thumb .art > svg {
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.exp:hover .thumb {
+  transform: translateY(-5px);
+  box-shadow: var(--l-shadow-m);
+}
+.exp:hover .thumb .art > svg {
+  transform: scale(1.035);
+}
+.badge {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 11px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(8px);
+}
+.expHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+}
+.exp h3 {
+  font-size: 19.5px;
+  letter-spacing: -0.038em;
+}
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--l-ink-2);
+  letter-spacing: -0.01em;
+}
+.state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: block;
+  background: var(--l-live);
+}
+.stateBeta i {
+  background: var(--l-beta);
+}
+.stateSoon i {
+  background: var(--l-soon);
+}
+.exp p {
+  margin: 0;
+  color: var(--l-ink-2);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.actions {
+  margin-top: auto;
+  padding-top: 6px;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.actions .pill {
+  font-size: 14px;
+  padding: 9px 18px;
+}
+.later {
+  font-size: 13.5px;
+  color: var(--l-faint);
+}
+
+/* ── Nasıl çalışır ───────────────────────────────────────── */
+.steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 780px) {
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.step {
+  position: relative;
+  border-radius: var(--l-r-lg);
+  overflow: hidden;
+  min-height: 270px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 26px;
+  color: #fff;
+  isolation: isolate;
+  background: #0d1210;
+  box-shadow: var(--l-shadow-s);
+}
+.step::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, rgba(6, 10, 9, 0.86) 6%, rgba(6, 10, 9, 0.3) 58%, transparent);
+}
+.stepN {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+.step h3 {
+  font-size: 21px;
+  margin-top: 9px;
+  letter-spacing: -0.04em;
+}
+.step p {
+  margin: 9px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* ── Başlangıç bandı ─────────────────────────────────────── */
+.connect {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 880px) {
+  .connect {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+}
+.panel {
+  border-radius: var(--l-r-lg);
+  padding: 34px;
+  border: 1px solid var(--l-line);
+  background: var(--l-bg-2);
+}
+.panel h3 {
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+.panel > p {
+  margin: 11px 0 0;
+  color: var(--l-ink-2);
+  font-size: 15.5px;
+  line-height: 1.6;
+  max-width: 42ch;
+}
+.panelActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.dark {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 250px;
+  isolation: isolate;
+  background: #0d1210;
+}
+.dark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, rgba(6, 10, 9, 0.88), rgba(6, 10, 9, 0.32));
+}
+.dark > p {
+  color: rgba(255, 255, 255, 0.78);
+}
+.dark .pill {
+  margin-top: 22px;
+  align-self: flex-start;
+}
+
+/* ── Alt bilgi ───────────────────────────────────────────── */
+.footer {
+  margin-top: 96px;
+  border-top: 1px solid var(--l-line);
+  padding: 48px 0 64px;
+}
+.foot {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+@media (min-width: 780px) {
+  .foot {
+    grid-template-columns: 1.7fr 1fr 1fr;
+  }
+}
+.footBrand p {
+  margin: 15px 0 0;
+  color: var(--l-faint);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 32ch;
+}
+.foot h4 {
+  margin: 0 0 15px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--l-faint);
+}
+.foot a {
+  display: block;
+  padding: 5px 0;
+  font-size: 14.5px;
+  color: var(--l-ink-2);
+  transition: color 0.18s;
+}
+.foot a:hover {
+  color: var(--l-ink);
+}
+.footBottom {
+  margin-top: 42px;
+  padding-top: 22px;
+  border-top: 1px solid var(--l-line-2);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--l-faint);
+  font-size: 13px;
+}
+
+/* Görünür oldukça yükselme. Panelin hareket tercihi burada da geçerli:
+   `data-motion="reduced"` seçildiğinde her şey yerinde duruyor. */
+.rise {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.3, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.riseIn {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  .rise,
+  .slideCopy {
+    opacity: 1;
+    transform: none;
+  }
+}
+:global(html[data-motion="reduced"]) .rise,
+:global(html[data-motion="reduced"]) .slideCopy {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}

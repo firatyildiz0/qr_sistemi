@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Kamera ürünü artık gerçekten tanıyor",
+  "aciklama": "Görselden arama, ürünü fotoğrafın renk ve şekil benzerliğine bakarak buluyordu ve çoğu zaman bulamıyordu. Yerine telefonun içinde çalışan bir görüntü tanıma modeli geldi: ürünü ışığı, açısı ve arka planı değişse de tanıyor, tanıdığında rezervasyon ekranını doğrudan açıyor. Sekmedeki \"Yakında\" kalktı, özellik kullanıma açık. Fotoğraflar hiçbir yere gönderilmiyor, tanıma tamamen telefonda yapılıyor. İlk kullanımda tanıma dosyası bir kez iniyor; sonraki açılışlar anında geliyor.",
+  "dikkat": "Bu sürüm 0025_product_image_signature.sql migration'ına ihtiyaç duyuyor. Daha önce çalıştırılmadıysa Supabase SQL düzenleyicisinden çalıştırılmalı."
+}

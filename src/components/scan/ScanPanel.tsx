@@ -8,18 +8,14 @@ import { IconImage, IconQrCode } from "@/components/icons";
 type Mode = "qr" | "image";
 
 /**
- * Görselden arama şimdilik kapalı.
+ * Görselden aramanın açma/kapama düğmesi.
  *
- * Tanıma çalışıyor ama katalog fotoğraflarıyla karşılaştırmaya dayandığı için
- * birbirine benzeyen ürünlerde (aynı modelin iki bedeni, yan yana duran iki
- * siyah çanta) yanılabiliyor; sahada denenmeden satıcının önüne açık
- * konulmuyor. Sekme yine de görünüyor ve "Yakında" diyor: özelliğin yolda
- * olduğunu satıcının bilmesi, sonradan sürprizle karşılaşmasından iyi.
- *
- * Açmak için tek yapılması gereken bunu `true` yapmak — altındaki bütün kod
- * (imza çıkarma, eşleştirme, aday listesi) yerinde duruyor.
+ * Tanıma bir görüntü modeline dayanıyor ve modelin ilk kullanımda inmesi
+ * gerekiyor (bkz. `recognizer.ts`). Sahada beklenmedik bir sorun çıkarsa
+ * özelliği geri çekmenin yolu bir dosyayı düzenleyip yayına almak olsun
+ * istendi; sekmeyi tek satırla kapatmak, kodu geri almaktan hızlı.
  */
-const GORSEL_ARAMA_ACIK = false;
+const GORSEL_ARAMA_ACIK = true;
 
 /**
  * Ürünü kamerayla bulmanın iki yolu, tek yüzeyde.

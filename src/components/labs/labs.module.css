@@ -143,6 +143,43 @@
   gap: 6px;
 }
 
+/* Tema düğmesi.
+   İki simge de işaretlemede duruyor, hangisinin görüneceğine CSS karar veriyor.
+   Böylece sunucu hangi temada olduğumuzu bilmek zorunda kalmıyor: `data-theme`
+   ön-boyama script'i tarafından ilk boyamadan önce yazılıyor, doğru simge daha
+   React devreye girmeden görünüyor — ne yanıp sönme ne hidrasyon uyuşmazlığı. */
+.themeBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--l-ink-2);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.themeBtn:hover {
+  background: var(--l-bg-2);
+  color: var(--l-ink);
+}
+.themeBtn svg {
+  display: block;
+}
+.themeBtn .sun {
+  display: none;
+}
+:global(html[data-theme="dark"]) .themeBtn .moon {
+  display: none;
+}
+:global(html[data-theme="dark"]) .themeBtn .sun {
+  display: block;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;

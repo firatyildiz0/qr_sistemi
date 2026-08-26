@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Artwork, { type Motif, type Tone } from "./Artwork";
+import { applyPreferences, readPreferences, savePreferences } from "@/lib/preferences";
 import s from "./labs.module.css";
 
 /**
@@ -41,6 +42,49 @@ function Ok() {
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d="M3 8h9M8.5 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+/**
+ * Açık ve koyu tema arasında geçiş.
+ *
+ * Tercih panelinkiyle aynı çerezde tutuluyor: ana sayfada koyuya geçen ziyaretçi
+ * hesap açıp panele girdiğinde onu da koyu buluyor. Ayarlar'daki "sistem"
+ * seçeneği burada bilerek yok — vitrinde bir düğme, üç durum değil; sistemi
+ * takip etmek isteyen Ayarlar'dan geri seçebiliyor.
+ */
+function TemaDugmesi() {
+  function degistir() {
+    const tercihler = readPreferences();
+    // Hangi temada olduğumuzu React değil <html> biliyor: değeri ön-boyama
+    // script'i yazıyor ve "sistem" tercihinde işletim sistemine bakıyor.
+    const suAn = document.documentElement.getAttribute("data-theme");
+    const guncel = { ...tercihler, theme: suAn === "dark" ? ("light" as const) : ("dark" as const) };
+
+    savePreferences(guncel);
+    applyPreferences(guncel, window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+
+  return (
+    <button type="button" className={s.themeBtn} onClick={degistir} aria-label="Açık ve koyu tema arasında geçiş yap">
+      <svg className={s.moon} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M20 14.2A8.4 8.4 0 0 1 9.8 4 8.5 8.5 0 1 0 20 14.2z"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <svg className={s.sun} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.7" />
+        <path
+          d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+      </svg>
+    </button>
   );
 }
 
@@ -280,6 +324,7 @@ export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string
             <a href="#basla">Başlayın</a>
           </div>
           <div className={s.navEnd}>
+            <TemaDugmesi />
             {!oturumAcik && (
               <Link className={`${s.pill} ${s.pillLine}`} href="/login">
                 Giriş yap

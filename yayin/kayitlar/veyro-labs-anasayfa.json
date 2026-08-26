@@ -1,6 +1,6 @@
 {
   "tip": "ozellik",
   "baslik": "Siteye Veyro Labs adında bir ana sayfa geldi",
-  "aciklama": "Adrese girildiğinde artık doğrudan giriş ekranı değil, tüm hizmetlerin tanıtıldığı bir ana sayfa açılıyor. Öne çıkan hizmetler üstte sırayla dönüyor, altında kategorilere ayrılmış kartlar var; her kart ilgili panel sayfasına gidiyor. Henüz açılmamış hizmetler 'Yolda' etiketiyle, düğmesiz duruyor.",
+  "aciklama": "Adrese girildiğinde artık doğrudan giriş ekranı değil, tüm hizmetlerin tanıtıldığı bir ana sayfa açılıyor. Öne çıkan hizmetler üstte sırayla dönüyor, altında kategorilere ayrılmış kartlar var; her kart ilgili panel sayfasına gidiyor. Henüz açılmamış hizmetler 'Yolda' etiketiyle, düğmesiz duruyor. Sağ üstteki düğmeyle sayfa koyu temaya alınabiliyor; bu tercih panelde de geçerli oluyor.",
   "dikkat": null
 }

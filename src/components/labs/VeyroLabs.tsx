@@ -25,8 +25,9 @@ type Hizmet = {
   kategori: Exclude<Kategori, "all">;
   durum: Durum;
   aciklama: string;
-  href?: string;
-  cta?: string;
+  /** Kartın açtığı yer. Henüz yayında olmayan hizmetlerde sayfa içi bant. */
+  href: string;
+  cta: string;
   rozet?: string;
 };
 
@@ -100,6 +101,66 @@ function Marka() {
       </svg>
       Veyro <span>Labs</span>
     </span>
+  );
+}
+
+/**
+ * Tek hizmet kartı.
+ *
+ * Kendi bileşeni: yükselme animasyonunu kartın kendisi taşıyor, araya bir
+ * sarmalayıcı girmiyor. Sarmalayıcı olsaydı ızgara öğesi o olurdu ve kartların
+ * düğmeleri artık aynı hizada bitmezdi — `.actions` alta yaslanmak için kartın
+ * ızgara öğesi olmasına dayanıyor.
+ */
+function HizmetKarti({ hizmet, gecikme }: { hizmet: Hizmet; gecikme: number }) {
+  const ref = useRef<HTMLElement>(null);
+  const [görünür, setGörünür] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setGörünür(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "0px 0px -6% 0px", threshold: 0.1 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <article
+      ref={ref}
+      className={`${s.exp} ${s.rise} ${görünür ? s.riseIn : ""}`}
+      style={{ transitionDelay: `${gecikme}ms` }}
+    >
+      <Link className={s.thumb} href={hizmet.href} tabIndex={-1} aria-hidden="true">
+        {hizmet.rozet && <span className={s.badge}>{hizmet.rozet}</span>}
+        <span className={s.art}>
+          <Artwork tone={hizmet.ton} motif={hizmet.motif} />
+        </span>
+      </Link>
+      <div className={s.expHead}>
+        <h3>{hizmet.ad}</h3>
+        <span className={`${s.state} ${hizmet.durum === "soon" ? s.stateSoon : ""}`}>
+          <i />
+          {hizmet.durum === "live" ? "Yayında" : "Yolda"}
+        </span>
+      </div>
+      <p>{hizmet.aciklama}</p>
+      <div className={s.actions}>
+        <Link className={`${s.pill} ${s.pillSolid}`} href={hizmet.href}>
+          {hizmet.cta}
+        </Link>
+        <a className={`${s.pill} ${s.pillLine}`} href="#nasil">
+          Bilgi al
+        </a>
+      </div>
+    </article>
   );
 }
 
@@ -190,6 +251,7 @@ export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string
       motif: "kopru",
       kategori: "etiketle",
       durum: "live",
+      rozet: "Yeni",
       aciklama: "Elinizdeki barkodlu stoğu baştan etiketlemeyin. Barkodu okutun, ürün listede karşınıza çıksın.",
       href: "/admin/products",
       cta: "Hemen dene",
@@ -200,7 +262,10 @@ export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string
       motif: "vizor",
       kategori: "etiketle",
       durum: "soon",
+      rozet: "Yolda",
       aciklama: "Etiketi yıpranmış ürünü kameraya gösterin, hangisi olduğunu bulsun. Model telefonda çalışır.",
+      href: "#basla",
+      cta: "Sıraya girin",
     },
     {
       ad: "Raporlar",
@@ -219,6 +284,8 @@ export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string
       kategori: "kirala",
       durum: "soon",
       aciklama: "Teslimde bloke edilen, iadede kendiliğinden çözülen depozito. Hasar varsa kısmi kesinti.",
+      href: "#basla",
+      cta: "Sıraya girin",
     },
   ];
 
@@ -412,42 +479,8 @@ export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string
             </Rise>
 
             <div className={s.grid}>
-              {görünenler.map((h) => (
-                <Rise key={h.ad}>
-                  <article className={s.exp}>
-                    {h.href ? (
-                      <Link className={s.thumb} href={h.href} tabIndex={-1} aria-hidden="true">
-                        {h.rozet && <span className={s.badge}>{h.rozet}</span>}
-                        <span className={s.art}>
-                          <Artwork tone={h.ton} motif={h.motif} />
-                        </span>
-                      </Link>
-                    ) : (
-                      <span className={s.thumb} aria-hidden="true">
-                        <span className={s.art}>
-                          <Artwork tone={h.ton} motif={h.motif} />
-                        </span>
-                      </span>
-                    )}
-                    <div className={s.expHead}>
-                      <h3>{h.ad}</h3>
-                      <span className={`${s.state} ${h.durum === "soon" ? s.stateSoon : ""}`}>
-                        <i />
-                        {h.durum === "live" ? "Yayında" : "Yolda"}
-                      </span>
-                    </div>
-                    <p>{h.aciklama}</p>
-                    <div className={s.actions}>
-                      {h.href ? (
-                        <Link className={`${s.pill} ${s.pillSolid}`} href={h.href}>
-                          {h.cta}
-                        </Link>
-                      ) : (
-                        <span className={s.later}>Üzerinde çalışıyoruz.</span>
-                      )}
-                    </div>
-                  </article>
-                </Rise>
+              {görünenler.map((h, i) => (
+                <HizmetKarti key={h.ad} hizmet={h} gecikme={(i % 3) * 80} />
               ))}
             </div>
           </div>

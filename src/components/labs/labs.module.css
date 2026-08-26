@@ -594,11 +594,6 @@
   font-size: 14px;
   padding: 9px 18px;
 }
-.later {
-  font-size: 13.5px;
-  color: var(--l-faint);
-}
-
 /* ── Nasıl çalışır ───────────────────────────────────────── */
 .steps {
   display: grid;

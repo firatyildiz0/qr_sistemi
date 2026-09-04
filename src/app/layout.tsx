@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { plusJakartaSans, archivoNarrow, dmSans } from "@/lib/fonts";
+import { plusJakartaSans, archivoNarrow } from "@/lib/fonts";
 import { DEFAULT_PREFERENCES, PREFERENCES_SCRIPT } from "@/lib/preferences";
 import "./globals.css";
 
@@ -61,7 +61,7 @@ export default async function RootLayout({
       data-motion="full"
       data-sidebar={DEFAULT_PREFERENCES.sidebar}
       suppressHydrationWarning
-      className={`${plusJakartaSans.variable} ${archivoNarrow.variable} ${dmSans.variable} h-full antialiased`}
+      className={`${plusJakartaSans.variable} ${archivoNarrow.variable} h-full antialiased`}
     >
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: PREFERENCES_SCRIPT }} />

@@ -382,7 +382,7 @@ export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string
     <div className={s.page}>
       <nav className={s.nav}>
         <div className={`${s.wrap} ${s.navIn}`}>
-          <Link href="/" aria-label="Veyro Labs ana sayfa">
+          <Link href="/veyro-labs" aria-label="Veyro Labs">
             <Marka />
           </Link>
           <div className={s.navMid}>

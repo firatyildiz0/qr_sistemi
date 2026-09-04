@@ -1,6 +1,6 @@
 {
   "tip": "iyilestirme",
   "baslik": "Panelin, anasayfanın ve müşteri sayfalarının görünümü baştan tasarlandı",
-  "aciklama": "Arayüz artık bir mobil uygulama gibi duruyor: yuvarlak hatlı yüzeyler, çizgi yerine gölgeyle ayrılan kartlar, buzlu cam üst ve alt çubuklar. Butonlar üstüne gelince hafifçe kalkıyor, basınca parmağın altında küçülüyor; seçili sekme ve menü satırı renkli bir hapla işaretleniyor. Tanıtım anasayfası da aynı dile geçti ve telefonda sayfanın altında her zaman duran bir 'Hemen başla' düğmesi kazandı. Panelin ana rengi turuncudan deniz yeşiline döndü — dilerseniz Ayarlar'dan eski rengi geri seçebilirsiniz.",
+  "aciklama": "Arayüz artık bir mobil uygulama gibi duruyor: yuvarlak hatlı yüzeyler, çizgi yerine gölgeyle ayrılan kartlar, buzlu cam üst ve alt çubuklar. Butonlar üstüne gelince hafifçe kalkıyor, basınca parmağın altında küçülüyor. Tanıtım anasayfası hem yeni görünüme kavuştu hem de yeniden yayına alındı: siteye girenler artık doğrudan giriş ekranına düşmüyor, önce anasayfayı görüyor; hesabıyla girmiş olanlar eskisi gibi kendi paneline iniyor. Panelin ana rengi turuncudan deniz yeşiline döndü — dilerseniz Ayarlar'dan eski rengi geri seçebilirsiniz.",
   "dikkat": null
 }

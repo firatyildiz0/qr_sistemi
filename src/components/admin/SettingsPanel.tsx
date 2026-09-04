@@ -67,6 +67,7 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: typeof IconSun }[] = [
 ];
 
 const ACCENT_LABELS: Record<Accent, string> = {
+  sedef: "Sedef",
   ember: "Turuncu",
   forest: "Yeşil",
   ocean: "Mavi",

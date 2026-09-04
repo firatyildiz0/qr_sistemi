@@ -4,30 +4,30 @@
    the [data-theme] / [data-accent] blocks further down can repaint the whole UI
    at runtime without any utility class needing a `dark:` twin. */
 @theme {
-  --color-paper: #f2f1ed;
-  --color-surface: #faf9f5;
+  --color-paper: #edf2f0;
+  --color-surface: #f6faf9;
   --color-card: #ffffff;
-  --color-ink: #1b1c1a;
-  --color-ink-muted: #5b4038;
-  --color-accent: #ff5a1f;
-  --color-accent-hover: #e14a12;
-  --color-deep: #0f2a22;
-  --color-deep-2: #17352c;
-  --color-success: #1f8a5f;
+  --color-ink: #12211e;
+  --color-ink-muted: #667a75;
+  --color-accent: #0e7c6b;
+  --color-accent-hover: #0b6558;
+  --color-deep: #0c2b26;
+  --color-deep-2: #123a32;
+  --color-success: #14875f;
   --color-warning: #b8790a;
-  --color-danger: #ba1a1a;
+  --color-danger: #c4453a;
   /* Rezervasyon durumlarının rengi. Vurgu renginden bilerek bağımsız: vurgu
      Ayarlar'dan değiştirilebiliyor, oysa "yaklaşan" her satıcıda turuncu
      olmalı — durum rengi bir tercih değil, okunacak bir işaret. */
-  --color-status-upcoming: #d85f0c;
-  --color-border: #e1dfd9;
-  --color-border-strong: #d8d5cc;
+  --color-status-upcoming: #c76a12;
+  --color-border: #e2e9e7;
+  --color-border-strong: #cfdad7;
   --color-border-dark: rgba(255, 255, 255, 0.12);
-  --color-placeholder: #9a968c;
+  --color-placeholder: #93a29e;
   /* Text sitting on --color-deep (sidebar, hero bands). Deliberately absent
      from the dark block: those surfaces are dark in *both* themes, so this must
      not flip to near-black the way --color-paper does. */
-  --color-on-deep: #f2f1ed;
+  --color-on-deep: #edf2f0;
 
   /* Tints are mixed from the live accent rather than hard-coded, so picking a
      custom accent in Ayarlar recolours pills, calendars and focus rings too. */
@@ -49,10 +49,13 @@
   --font-display: var(--font-display), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-eyebrow: var(--font-eyebrow), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  /* Sedef: köşeler her ölçekte yumuşak. Küçük yüzeyler bile (rozet, giriş
+     alanı) tırnak ucuyla değil parmak ucuyla çizilmiş gibi dursun diye taban
+     yarıçap 12px'ten başlıyor; hap biçimli düğmeler kendi 999px'ini kullanıyor. */
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.375rem;
+  --radius-xl: 1.75rem;
 
   --spacing-section: 64px;
 }
@@ -61,34 +64,42 @@
    them there would generate meaningless `bg-app-shadow` style utilities. */
 :root {
   color-scheme: light;
-  --app-shadow: rgba(27, 28, 26, 0.25);
-  --app-shadow-soft: rgba(20, 23, 26, 0.08);
-  --app-stripe: rgba(27, 28, 26, 0.06);
-  --app-backdrop: rgba(15, 42, 34, 0.45);
+  --app-shadow: rgba(18, 33, 30, 0.28);
+  --app-shadow-soft: rgba(18, 33, 30, 0.09);
+  --app-stripe: rgba(18, 33, 30, 0.06);
+  --app-backdrop: rgba(12, 43, 38, 0.42);
+  /* Sedef'in iki katmanlı gölgesi: yakın ve sert olan yüzeyi zeminden ayırıyor,
+     uzak ve yayvan olan ona ağırlık veriyor. Kartlar bu yüzden kenarlık yerine
+     gölgeyle duruyor — çizgi yerine yükseklik. */
+  --app-lift: 0 1px 2px -1px var(--app-shadow-soft), 0 10px 24px -18px var(--app-shadow);
+  --app-lift-hover: 0 3px 6px -2px var(--app-shadow-soft), 0 22px 38px -22px var(--app-shadow);
+  /* Yay eğrisi: büyürken hedefi biraz aşıp yerine oturuyor. Sedef'in bütün
+     dokunma geri bildirimi bu eğriyi paylaşıyor. */
+  --ease-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
 }
 
 /* Dark theme. `:root[data-theme="dark"]` outranks the `:root` that @theme
    emits, so these win regardless of source order. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-paper: #0c110f;
-  --color-surface: #121815;
-  --color-card: #171e1b;
-  --color-ink: #ecebe5;
-  --color-ink-muted: #a2a9a2;
-  --color-accent: #ff6a33;
-  --color-accent-hover: #ff8452;
+  --color-paper: #0b1211;
+  --color-surface: #121b19;
+  --color-card: #16211f;
+  --color-ink: #e8eeec;
+  --color-ink-muted: #93a39f;
+  --color-accent: #2fb39b;
+  --color-accent-hover: #4fc9b2;
   /* Kept clearly lighter than --color-paper so the sidebar still reads as a
      separate rail against the content area, which has no divider. */
-  --color-deep: #131b18;
-  --color-deep-2: #1b2521;
-  --color-success: #35c48d;
+  --color-deep: #101a18;
+  --color-deep-2: #182420;
+  --color-success: #3fc794;
   --color-warning: #e0a726;
-  --color-danger: #ff6b6b;
-  --color-status-upcoming: #ff8a3d;
-  --color-border: #2a332e;
-  --color-border-strong: #3a453e;
-  --color-placeholder: #7d857e;
+  --color-danger: #ff6f63;
+  --color-status-upcoming: #ff9a4d;
+  --color-border: #24312e;
+  --color-border-strong: #35443f;
+  --color-placeholder: #7c8c88;
 
   /* Aynı üç renk, koyu zemin için basamaklanmış hâli — açık temanın renkleri
      olduğu gibi bırakılırsa koyu kartın üstünde 3:1 kontrastın altına düşüyor. */
@@ -104,8 +115,12 @@
   --color-danger-soft: color-mix(in oklab, var(--color-danger) 12%, var(--color-card));
   --color-danger-border: color-mix(in oklab, var(--color-danger) 30%, var(--color-card));
 
-  --app-shadow: rgba(0, 0, 0, 0.65);
-  --app-shadow-soft: rgba(0, 0, 0, 0.5);
+  --app-shadow: rgba(0, 0, 0, 0.7);
+  --app-shadow-soft: rgba(0, 0, 0, 0.45);
+  /* Koyu temada gölge tek başına yüzeyi ayırmıyor: kart zeminden zaten koyu
+     bir zeminle ayrılıyor, o yüzden ince bir ışık kenarı gölgeye eşlik ediyor. */
+  --app-lift: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 12px 26px -18px var(--app-shadow);
+  --app-lift-hover: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 40px -22px var(--app-shadow);
   --app-stripe: rgba(236, 235, 229, 0.14);
   --app-backdrop: rgba(0, 0, 0, 0.6);
 }
@@ -118,6 +133,17 @@
    Both attributes are always present on <html> (the layout renders defaults,
    the pre-hydration script rewrites them), so qualifying every preset on the
    theme keeps it from fighting the dark block on equal specificity. */
+:root[data-theme="light"][data-accent="sedef"],
+:root[data-theme="light"] [data-accent="sedef"] {
+  --color-accent: #0e7c6b;
+  --color-accent-hover: #0b6558;
+}
+:root[data-theme="dark"][data-accent="sedef"],
+:root[data-theme="dark"] [data-accent="sedef"] {
+  --color-accent: #2fb39b;
+  --color-accent-hover: #4fc9b2;
+}
+
 :root[data-theme="light"][data-accent="ember"],
 :root[data-theme="light"] [data-accent="ember"] {
   --color-accent: #ff5a1f;
@@ -184,16 +210,16 @@
 }
 
 :root[data-radius="sharp"] .panel-scope {
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-  --radius-xl: 6px;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
 }
 :root[data-radius="round"] .panel-scope {
-  --radius-sm: 0.625rem;
-  --radius-md: 1rem;
-  --radius-lg: 1.25rem;
-  --radius-xl: 1.75rem;
+  --radius-sm: 1rem;
+  --radius-md: 1.375rem;
+  --radius-lg: 1.75rem;
+  --radius-xl: 2.25rem;
 }
 
 /* Collapsed sidebar (the icon rail).
@@ -292,10 +318,54 @@ nav,
 .app-bar {
   height: calc(var(--app-bar-h, 3.5rem) + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
+  /* Buzlu cam. İki çubuk da kendi zeminini taşımıyor, altından geçen içeriği
+     bulanıklaştırıyor: yerli uygulamalarda üst ve alt çubuğun ekrandan ayrı bir
+     bant değil, ekranın devamı gibi durmasının sebebi bu. `saturate` olmadan
+     bulanıklaştırılan renkler soluyor. */
+  background: color-mix(in oklab, var(--color-paper) 78%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
 }
 
 .tab-bar {
   padding-bottom: var(--bottom-inset);
+  background: color-mix(in oklab, var(--color-card) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-top: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
+}
+
+/* Seçili sekmenin arkasındaki hap, sekme değiştikçe yerine yaylanarak oturuyor. */
+.tab-pill {
+  animation: tab-pill-in 320ms var(--ease-spring) both;
+}
+@keyframes tab-pill-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* Sekme çubuğunun ortasındaki QR düğmesi: çubuğun üstünde duran tek yükseltilmiş
+   yüzey. Halkası kartın değil çubuğun rengiyle aynı ki buzlu camın üstünde
+   yüzüyormuş gibi dursun. */
+.tab-fab {
+  box-shadow: 0 10px 26px -8px color-mix(in oklab, var(--color-accent) 75%, transparent),
+    0 0 0 5px color-mix(in oklab, var(--color-paper) 92%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-pill {
+    animation: none;
+  }
+}
+:root[data-motion="reduced"] .tab-pill {
+  animation: none;
 }
 
 /* Ekranın altından açılan katmanlar (QR tarayıcı, menü) da ekranın alt
@@ -319,6 +389,14 @@ nav,
   position: sticky;
   top: calc(var(--app-bar-h, 3.5rem) + env(safe-area-inset-top));
   z-index: 10;
+  /* Üst çubukla aynı buzlu cam: sayfa başlığı kaydırılırken içeriğin üstünde
+     kalıyor ve altından geçeni bulanıklaştırıyor. Katmanlı bir CSS kuralı
+     olmadığı için `bg-paper` gibi bir Tailwind sınıfını da eziyor — başlık
+     hangi sayfada yazılmış olursa olsun tek bir yüzey gibi davranıyor. */
+  background: color-mix(in oklab, var(--color-paper) 80%, transparent);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border-bottom-color: color-mix(in oklab, var(--color-border) 70%, transparent);
 }
 
 @media (min-width: 768px) {
@@ -331,11 +409,14 @@ nav,
    basıldığını gösteren tek şey bu ufak çökme — yerli uygulamalardaki
    dokunma animasyonunun karşılığı. */
 .tab-press {
-  transition: transform 120ms ease, opacity 120ms ease;
+  transition: transform 300ms var(--ease-spring), opacity 140ms ease;
 }
 .tab-press:active {
   transform: scale(0.92);
   opacity: 0.7;
+  /* Basış anında yay yok: parmak değdiği anda küçülmeli, geri dönerken
+     yaylanmalı. İki yönü ayırmanın tek yolu süreyi burada kısaltmak. */
+  transition-duration: 90ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -368,35 +449,66 @@ summary,
     text-transform: uppercase;
   }
 
+  /* Sedef'in düğmesi hap biçimli: köşesi olmayan bir yüzey parmakla itilen bir
+     nesneye benziyor, yay eğrisi de onu her dokunuşta yerine oturtuyor. */
   .btn {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 44px;
+    min-height: 46px;
     /* Derived from --spacing so the density setting reaches button padding,
        while min-height keeps the tap target legal at every density. */
-    padding: 0 calc(var(--spacing) * 5);
-    border-radius: var(--radius-sm);
-    font-weight: 600;
+    padding: 0 calc(var(--spacing) * 7);
+    border-radius: 999px;
+    font-weight: 700;
     font-size: 14px;
     white-space: nowrap;
-    transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease,
-      border-color 180ms ease, color 180ms ease;
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform 260ms var(--ease-spring), background-color 200ms ease,
+      box-shadow 260ms var(--ease-spring), border-color 200ms ease, color 200ms ease;
   }
+  /* Basış: kalkan yüzey parmağın altında küçülüyor. `!important` gerekli, çünkü
+     hover aynı özelliği yazıyor ve basılı tutulurken hover da açık. */
   .btn:active {
-    transform: translateY(0) !important;
+    transform: scale(0.95) !important;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
   }
 
   .btn-primary {
     background: var(--color-accent);
     color: #ffffff;
-    box-shadow: 0 1px 2px var(--app-shadow-soft);
+    box-shadow: 0 8px 20px -12px color-mix(in oklab, var(--color-accent) 85%, transparent);
+  }
+  /* Üstüne gelince içinden bir parlama süpürülüyor — ekranın kendi ışığı
+     düğmenin üstünden geçiyormuş gibi. Yalnızca birincil düğmede var: sayfada
+     bir tane olduğu için parlama "asıl iş burada" demenin sessiz yolu. */
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      105deg,
+      transparent 32%,
+      rgba(255, 255, 255, 0.32) 48%,
+      transparent 64%
+    );
+    transform: translateX(-120%);
+    transition: transform 620ms cubic-bezier(0.3, 0, 0.2, 1);
+  }
+  .btn-primary:hover::after {
+    transform: translateX(120%);
   }
   .btn-primary:hover {
     background: var(--color-accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 24px -8px color-mix(in oklab, var(--color-accent) 45%, transparent);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 16px 30px -14px color-mix(in oklab, var(--color-accent) 90%, transparent);
   }
   .btn-primary:disabled {
     opacity: 0.6;
@@ -408,12 +520,12 @@ summary,
   .btn-secondary {
     background: var(--color-card);
     color: var(--color-ink);
-    border: 1px solid var(--color-border);
+    box-shadow: inset 0 0 0 1.5px var(--color-border), var(--app-lift);
   }
   .btn-secondary:hover {
-    border-color: var(--color-ink-muted);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px -12px var(--app-shadow);
+    color: var(--color-accent-hover);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: inset 0 0 0 1.5px var(--color-accent), var(--app-lift-hover);
   }
 
   .btn-ghost {
@@ -421,18 +533,19 @@ summary,
     color: var(--color-ink-muted);
   }
   .btn-ghost:hover {
-    background: var(--color-border);
-    color: var(--color-ink);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-hover);
   }
 
   .btn-danger-ghost {
     background: transparent;
     color: var(--color-danger);
-    border: 1px solid var(--color-danger-border);
+    box-shadow: inset 0 0 0 1.5px var(--color-danger-border);
   }
   .btn-danger-ghost:hover {
     background: var(--color-danger-soft);
-    transform: translateY(-2px);
+    box-shadow: inset 0 0 0 1.5px var(--color-danger);
+    transform: translateY(-2px) scale(1.02);
   }
 
   .btn-danger {
@@ -442,8 +555,8 @@ summary,
   }
   .btn-danger:hover {
     background: color-mix(in oklab, var(--color-danger) 82%, #000000);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 24px -8px color-mix(in oklab, var(--color-danger) 45%, transparent);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 16px 30px -14px color-mix(in oklab, var(--color-danger) 55%, transparent);
   }
   .btn-danger:disabled {
     opacity: 0.6;
@@ -452,17 +565,25 @@ summary,
     cursor: not-allowed;
   }
 
+  /* Kart artık kenarlıkla değil yükseklikle duruyor: Sedef'te yüzeyler üst üste
+     konmuş kağıtlar gibi, aralarındaki fark çizgi değil gölge. Kenarlık yine de
+     yerinde ama saydam: yüksek kontrast modunda ve gölgenin görünmediği
+     yerlerde kartın sınırı kaybolmasın diye. */
   .card {
     background: var(--color-card);
-    border: 1px solid var(--color-border);
+    border: 1px solid transparent;
     border-radius: var(--radius-lg);
     padding: calc(var(--spacing) * 6);
-    transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
+    box-shadow: var(--app-lift);
+    transition: transform 300ms var(--ease-spring), box-shadow 300ms var(--ease-spring),
+      border-color 200ms ease-out;
   }
   .card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px -20px var(--app-shadow);
-    border-color: var(--color-border-strong);
+    transform: translateY(-3px);
+    box-shadow: var(--app-lift-hover);
+  }
+  .card-hover:active {
+    transform: scale(0.99);
   }
 
   .field-label {
@@ -475,10 +596,10 @@ summary,
 
   .input {
     width: 100%;
-    border: 1px solid var(--color-border);
-    background: var(--color-card);
+    border: 1.5px solid var(--color-border);
+    background: var(--color-surface);
     border-radius: var(--radius-sm);
-    padding: 10px 14px;
+    padding: 12px 16px;
     /* 16px'in altında kalan her form alanı iOS Safari'de odaklanınca sayfayı
        otomatik olarak yakınlaştırır — bu yüzden tam 16px. */
     font-size: 16px;
@@ -488,10 +609,14 @@ summary,
   .input::placeholder {
     color: var(--color-placeholder);
   }
+  .input:hover:not(:focus) {
+    border-color: var(--color-border-strong);
+  }
   .input:focus {
     outline: none;
+    background: var(--color-card);
     border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 16%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 14%, transparent);
   }
 
   /* Giriş / üye ol geçişi. İki form tek ekranda durduğu için aralarındaki
@@ -502,16 +627,17 @@ summary,
     gap: 4px;
     padding: 4px;
     border: 1px solid var(--color-border);
-    background: var(--color-card);
-    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    border-radius: 999px;
   }
   .auth-tab {
-    min-height: 40px;
-    border-radius: calc(var(--radius-sm) - 2px);
+    min-height: 42px;
+    border-radius: 999px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--color-ink-muted);
-    transition: background 150ms ease, color 150ms ease;
+    transition: background 220ms var(--ease-spring), color 180ms ease,
+      box-shadow 220ms var(--ease-spring);
   }
   .auth-tab:hover {
     color: var(--color-ink);
@@ -519,6 +645,7 @@ summary,
   .auth-tab[aria-selected="true"] {
     background: var(--color-accent);
     color: #ffffff;
+    box-shadow: 0 8px 18px -10px color-mix(in oklab, var(--color-accent) 85%, transparent);
   }
 
   .link-underline {
@@ -708,15 +835,20 @@ summary,
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 36px;
-    width: 36px;
-    border-radius: var(--radius-sm);
+    height: 38px;
+    width: 38px;
+    border-radius: 999px;
     color: var(--color-ink-muted);
-    transition: background-color 150ms ease, color 150ms ease;
+    transition: background-color 180ms ease, color 180ms ease,
+      transform 260ms var(--ease-spring);
   }
   .icon-btn:hover {
     background: var(--color-accent-soft);
     color: var(--color-accent-hover);
+    transform: scale(1.08);
+  }
+  .icon-btn:active {
+    transform: scale(0.92);
   }
 }
 
@@ -1080,14 +1212,17 @@ summary,
     }
   }
 
+  /* Aşağıdan gelen sayfa, yay eğrisiyle yerine oturuyor: hedefi bir parça aşıp
+     geri geliyor, tıpkı yerli uygulamalardaki gibi. Süre biraz uzun (320ms)
+     çünkü yayın toparlanması görünecek kadar zaman istiyor. */
   .modal-panel {
     box-shadow: 0 32px 64px -24px var(--app-backdrop);
-    animation: modal-pop-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+    animation: modal-pop-in 320ms var(--ease-spring) both;
   }
   @keyframes modal-pop-in {
     from {
       opacity: 0;
-      transform: translateY(14px) scale(0.96);
+      transform: translateY(20px) scale(0.97);
     }
     to {
       opacity: 1;

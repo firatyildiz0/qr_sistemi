@@ -22,7 +22,7 @@ export default function QrScanFab() {
         onClick={() => setOpen(true)}
         title="Ürün bul"
         aria-label="Ürün bul"
-        className="btn btn-primary fixed bottom-8 right-8 z-40 hidden h-14 gap-2 rounded-full px-5 shadow-lg md:inline-flex"
+        className="btn btn-primary tab-fab fixed bottom-8 right-8 z-40 hidden h-14 gap-2 rounded-full px-6 md:inline-flex"
       >
         <IconScan className="h-5 w-5" />
         <span>Ürün bul</span>

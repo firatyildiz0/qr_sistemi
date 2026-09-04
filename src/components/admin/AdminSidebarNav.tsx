@@ -19,17 +19,23 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
             // `title` is what names the item once the rail is collapsed and the
             // label is hidden.
             title={item.label}
-            className={`sidebar-item relative flex items-center gap-3 rounded-md px-4 py-3 transition-colors duration-150 ${
-              active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"
+            // Seçili öğe vurgu renkli, yumuşak gölgeli bir hap: rayın üstünde
+            // duran tek yükseltilmiş yüzey o olduğu için göz nerede olduğunu
+            // renkten önce yükseklikten buluyor.
+            className={`sidebar-item relative flex items-center gap-3 rounded-full px-4 py-3 transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.97] ${
+              active
+                ? "bg-accent text-white shadow-[0_10px_20px_-12px_var(--color-accent)]"
+                : "text-ink-muted hover:bg-accent-soft hover:text-accent-hover"
             }`}
           >
-            {active && (
-              <span className="absolute bottom-0 left-0 top-0 w-1 rounded-l bg-accent" />
-            )}
             <item.icon className="h-5 w-5 shrink-0" />
             <span className="sidebar-label text-sm font-semibold">{item.label}</span>
             {!!badge && (
-              <span className="sidebar-badge ml-auto rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-white">
+              <span
+                className={`sidebar-badge ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  active ? "bg-white/20 text-white" : "bg-accent text-white"
+                }`}
+              >
                 {badge > 9 ? "9+" : badge}
               </span>
             )}
@@ -53,7 +59,7 @@ function NavPendingIndicator({ hasBadge }: { hasBadge: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`nav-spinner h-3.5 w-3.5 shrink-0 rounded-full border-2 border-white/30 border-t-white ${
+      className={`nav-spinner h-3.5 w-3.5 shrink-0 rounded-full border-2 border-transparent border-t-current ${
         hasBadge ? "ml-1.5" : "ml-auto"
       }`}
     />

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { plusJakartaSans, archivoNarrow } from "@/lib/fonts";
+import { manrope, manropeEyebrow } from "@/lib/fonts";
 import { DEFAULT_PREFERENCES, PREFERENCES_SCRIPT } from "@/lib/preferences";
 import "./globals.css";
 
@@ -31,10 +31,11 @@ export const viewport: Viewport = {
   // Klavye açıldığında görünen alan küçülsün ki alta sabitlenmiş sekme çubuğu
   // klavyenin arkasında kalmasın.
   interactiveWidget: "resizes-content",
-  // Android'de durum çubuğunun rengi. Temaya göre değişmiyor, çünkü panelin üst
-  // çubuğu (--color-deep) her iki temada da koyu — tek renk ikisinde de sürekli
-  // bir yüzey gibi görünüyor.
-  themeColor: "#0f2a22",
+  // Android'de durum çubuğunun rengi. Sedef'te panelin üst çubuğu artık koyu
+  // değil, sayfanın kendi zemininin buzlu cam hâli; durum çubuğu da o zeminle
+  // aynı renkte olsun ki ekranın tepesinde ayrı bir şerit görünmesin. Koyu tema
+  // seçildiğinde tarayıcı bunu kendi karartıyor.
+  themeColor: "#edf2f0",
 };
 
 export default async function RootLayout({
@@ -61,7 +62,7 @@ export default async function RootLayout({
       data-motion="full"
       data-sidebar={DEFAULT_PREFERENCES.sidebar}
       suppressHydrationWarning
-      className={`${plusJakartaSans.variable} ${archivoNarrow.variable} h-full antialiased`}
+      className={`${manrope.variable} ${manropeEyebrow.variable} h-full antialiased`}
     >
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: PREFERENCES_SCRIPT }} />

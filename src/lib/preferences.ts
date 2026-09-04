@@ -15,7 +15,7 @@ export const PREFERENCES_COOKIE = "rentqr_prefs";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 export const THEMES = ["system", "light", "dark"] as const;
-export const ACCENTS = ["ember", "forest", "ocean", "violet", "rose"] as const;
+export const ACCENTS = ["sedef", "ember", "forest", "ocean", "violet", "rose"] as const;
 export const DENSITIES = ["compact", "normal", "comfortable"] as const;
 export const RADII = ["sharp", "normal", "round"] as const;
 export const SIDEBARS = ["expanded", "collapsed"] as const;
@@ -38,7 +38,7 @@ export type Preferences = {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: "system",
-  accent: "ember",
+  accent: "sedef",
   density: "normal",
   radius: "normal",
   reduceMotion: false,

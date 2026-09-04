@@ -1,15 +1,22 @@
-import { Plus_Jakarta_Sans, Archivo_Narrow } from "next/font/google";
+import { Manrope } from "next/font/google";
 
-export const plusJakartaSans = Plus_Jakarta_Sans({
+/**
+ * Sedef tek bir aile üstüne kurulu: başlık, gövde ve etiket aynı yazı tipinin
+ * farklı ağırlıkları. Manrope'un yuvarlak uçları ve geniş "o"su arayüzün
+ * yumuşak köşeleriyle aynı dili konuşuyor; ikinci bir aile eklemek o dili
+ * bölerdi. Etiketler (`--font-eyebrow`) aynı aileden ama daima 700 ve harf
+ * aralığı açık kullanılıyor — ayrım aile değil, ağırlık farkı.
+ */
+export const manrope = Manrope({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-display",
   display: "swap",
 });
 
-export const archivoNarrow = Archivo_Narrow({
+export const manropeEyebrow = Manrope({
   subsets: ["latin"],
-  weight: ["600"],
+  weight: ["700"],
   variable: "--font-eyebrow",
   display: "swap",
 });

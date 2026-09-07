@@ -80,11 +80,21 @@ export default function MobileTabBar({
               menuActive ? "text-accent" : "text-ink-muted"
             }`}
           >
-            <span className="relative">
-              <IconMenu className="h-5 w-5" />
-              <Suspense fallback={null}>
-                <UnreadDot promise={unreadCountPromise} />
-              </Suspense>
+            {/* Sekmelerle aynı hap: "Menü"nün altındaki bir ekran açıkken de
+                seçili sekme aynı biçimde işaretlenmeli. */}
+            <span className="relative flex h-8 w-12 shrink-0 items-center justify-center">
+              {menuActive && (
+                <span
+                  aria-hidden="true"
+                  className="tab-pill absolute inset-0 rounded-full bg-accent-soft"
+                />
+              )}
+              <span className="relative">
+                <IconMenu className="h-5 w-5" />
+                <Suspense fallback={null}>
+                  <UnreadDot promise={unreadCountPromise} />
+                </Suspense>
+              </span>
             </span>
             <span className="text-[10px] font-semibold">Menü</span>
           </button>
@@ -115,20 +125,21 @@ function TabLink({ item, active }: { item: NavItem; active: boolean }) {
       }`}
     >
       {/* Aktif sekmenin arkasındaki hap: renk körlüğünde de sekme ayırt
-          edilsin diye rengin yanında bir de biçim var. Simge onun içinde bir
-          adım yukarı çıkıyor — dokunulan sekme, dokunulmayanların hizasından
-          çıktığı için tek bakışta bulunuyor. */}
-      {active && (
-        <span
-          aria-hidden="true"
-          className="tab-pill absolute left-1/2 top-1.5 h-8 w-14 -translate-x-1/2 rounded-full bg-accent-soft"
-        />
-      )}
-      <item.icon
-        className={`relative h-5 w-5 transition-transform duration-300 ${
-          active ? "-translate-y-0.5" : ""
-        }`}
-      />
+          edilsin diye rengin yanında bir de biçim var.
+
+          Hap simgenin kendi kutusunu kaplıyor, sekmenin tamamına göre
+          konumlanmıyor: ikisi ayrı ayrı hesaplanınca hap simgenin altından
+          kayıyor ve alt kenarı yazıya biniyordu. Burada simgeyi ortalayan
+          `flex` haptan da sorumlu, yani ikisi tanımı gereği aynı merkezde. */}
+      <span className="relative flex h-8 w-12 shrink-0 items-center justify-center">
+        {active && (
+          <span
+            aria-hidden="true"
+            className="tab-pill absolute inset-0 rounded-full bg-accent-soft"
+          />
+        )}
+        <item.icon className="relative h-5 w-5" />
+      </span>
       {/* Dar sekmede ad kırpılır, alt satıra taşıp çubuğu bozmaz. */}
       <span className="relative max-w-full truncate px-1 text-[10px] font-semibold">
         {item.shortLabel ?? item.label}
@@ -150,7 +161,7 @@ function TabPendingBar() {
   return (
     <span
       aria-hidden="true"
-      className="nav-spinner absolute bottom-1.5 h-1 w-1 rounded-full bg-accent"
+      className="nav-spinner absolute bottom-1.5 left-1/2 -ml-0.5 h-1 w-1 rounded-full bg-accent"
     />
   );
 }

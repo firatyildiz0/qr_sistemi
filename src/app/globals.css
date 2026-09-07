@@ -4,30 +4,36 @@
    the [data-theme] / [data-accent] blocks further down can repaint the whole UI
    at runtime without any utility class needing a `dark:` twin. */
 @theme {
-  --color-paper: #edf2f0;
-  --color-surface: #f6faf9;
+  --color-paper: #f3eeed;
+  --color-surface: #faf7f6;
   --color-card: #ffffff;
-  --color-ink: #12211e;
-  --color-ink-muted: #667a75;
-  --color-accent: #0e7c6b;
-  --color-accent-hover: #0b6558;
-  --color-deep: #0c2b26;
-  --color-deep-2: #123a32;
+  --color-ink: #1f1413;
+  --color-ink-muted: #7a6663;
+  /* RentQR kırmızısı. Logo bir köşegen degrade: sol üstte #a90303, sağ altta
+     #f52525. Vurgu ikisinin ortası, hover ise degradenin koyu ucu — düğmeye
+     basıldığında marka kendi içinde koyulaşıyor, başka bir renge geçmiyor. */
+  --color-accent: #d11414;
+  --color-accent-hover: #a90303;
+  --color-deep: #2a0d0b;
+  --color-deep-2: #3b1512;
   --color-success: #14875f;
   --color-warning: #b8790a;
-  --color-danger: #c4453a;
+  /* Marka kırmızıya dönünce tehlike rengi vurgudan ayrışmak zorunda: aynı
+     hüzmede kalıyor ama belirgin biçimde koyu ve doygunluğu düşük, böylece bir
+     "sil" düğmesi birincil düğmeyle aynı kırmızıyı taşımıyor. */
+  --color-danger: #93291f;
   /* Rezervasyon durumlarının rengi. Vurgu renginden bilerek bağımsız: vurgu
      Ayarlar'dan değiştirilebiliyor, oysa "yaklaşan" her satıcıda turuncu
      olmalı — durum rengi bir tercih değil, okunacak bir işaret. */
   --color-status-upcoming: #c76a12;
-  --color-border: #e2e9e7;
-  --color-border-strong: #cfdad7;
+  --color-border: #e9e1df;
+  --color-border-strong: #d9cbc8;
   --color-border-dark: rgba(255, 255, 255, 0.12);
-  --color-placeholder: #93a29e;
+  --color-placeholder: #a2908d;
   /* Text sitting on --color-deep (sidebar, hero bands). Deliberately absent
      from the dark block: those surfaces are dark in *both* themes, so this must
      not flip to near-black the way --color-paper does. */
-  --color-on-deep: #edf2f0;
+  --color-on-deep: #f3eeed;
 
   /* Tints are mixed from the live accent rather than hard-coded, so picking a
      custom accent in Ayarlar recolours pills, calendars and focus rings too. */
@@ -64,10 +70,10 @@
    them there would generate meaningless `bg-app-shadow` style utilities. */
 :root {
   color-scheme: light;
-  --app-shadow: rgba(18, 33, 30, 0.28);
-  --app-shadow-soft: rgba(18, 33, 30, 0.09);
-  --app-stripe: rgba(18, 33, 30, 0.06);
-  --app-backdrop: rgba(12, 43, 38, 0.42);
+  --app-shadow: rgba(42, 20, 18, 0.28);
+  --app-shadow-soft: rgba(42, 20, 18, 0.09);
+  --app-stripe: rgba(42, 20, 18, 0.06);
+  --app-backdrop: rgba(42, 13, 11, 0.42);
   /* Sedef'in iki katmanlı gölgesi: yakın ve sert olan yüzeyi zeminden ayırıyor,
      uzak ve yayvan olan ona ağırlık veriyor. Kartlar bu yüzden kenarlık yerine
      gölgeyle duruyor — çizgi yerine yükseklik. */
@@ -82,24 +88,28 @@
    emits, so these win regardless of source order. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-paper: #0b1211;
-  --color-surface: #121b19;
-  --color-card: #16211f;
-  --color-ink: #e8eeec;
-  --color-ink-muted: #93a39f;
-  --color-accent: #2fb39b;
-  --color-accent-hover: #4fc9b2;
+  --color-paper: #120c0b;
+  --color-surface: #1c1514;
+  --color-card: #221a19;
+  --color-ink: #efe7e5;
+  --color-ink-muted: #a3918e;
+  /* Logonun parlak ucu koyu zeminde göz kamaştırıyor; vurgu bir tık geri
+     çekilmiş hâli, hover ise açılan hâli. */
+  --color-accent: #ff4d42;
+  --color-accent-hover: #ff7167;
   /* Kept clearly lighter than --color-paper so the sidebar still reads as a
      separate rail against the content area, which has no divider. */
-  --color-deep: #101a18;
-  --color-deep-2: #182420;
+  --color-deep: #1a1211;
+  --color-deep-2: #261b19;
   --color-success: #3fc794;
   --color-warning: #e0a726;
-  --color-danger: #ff6f63;
+  /* Açık temanın tersi: burada tehlike vurgudan koyulaşarak değil, soluklaşarak
+     ayrılıyor — koyu zeminde okunaklı kalan tek yön bu. */
+  --color-danger: #ff9c8d;
   --color-status-upcoming: #ff9a4d;
-  --color-border: #24312e;
-  --color-border-strong: #35443f;
-  --color-placeholder: #7c8c88;
+  --color-border: #2f2422;
+  --color-border-strong: #443533;
+  --color-placeholder: #8b7a77;
 
   /* Aynı üç renk, koyu zemin için basamaklanmış hâli — açık temanın renkleri
      olduğu gibi bırakılırsa koyu kartın üstünde 3:1 kontrastın altına düşüyor. */
@@ -121,7 +131,7 @@
      bir zeminle ayrılıyor, o yüzden ince bir ışık kenarı gölgeye eşlik ediyor. */
   --app-lift: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 12px 26px -18px var(--app-shadow);
   --app-lift-hover: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 40px -22px var(--app-shadow);
-  --app-stripe: rgba(236, 235, 229, 0.14);
+  --app-stripe: rgba(239, 231, 229, 0.14);
   --app-backdrop: rgba(0, 0, 0, 0.6);
 }
 
@@ -133,6 +143,17 @@
    Both attributes are always present on <html> (the layout renders defaults,
    the pre-hydration script rewrites them), so qualifying every preset on the
    theme keeps it from fighting the dark block on equal specificity. */
+:root[data-theme="light"][data-accent="marka"],
+:root[data-theme="light"] [data-accent="marka"] {
+  --color-accent: #d11414;
+  --color-accent-hover: #a90303;
+}
+:root[data-theme="dark"][data-accent="marka"],
+:root[data-theme="dark"] [data-accent="marka"] {
+  --color-accent: #ff4d42;
+  --color-accent-hover: #ff7167;
+}
+
 :root[data-theme="light"][data-accent="sedef"],
 :root[data-theme="light"] [data-accent="sedef"] {
   --color-accent: #0e7c6b;

@@ -35,7 +35,7 @@ export const viewport: Viewport = {
   // değil, sayfanın kendi zemininin buzlu cam hâli; durum çubuğu da o zeminle
   // aynı renkte olsun ki ekranın tepesinde ayrı bir şerit görünmesin. Koyu tema
   // seçildiğinde tarayıcı bunu kendi karartıyor.
-  themeColor: "#edf2f0",
+  themeColor: "#f3eeed",
 };
 
 export default async function RootLayout({

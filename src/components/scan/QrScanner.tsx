@@ -209,7 +209,7 @@ export default function QrScanner({
         {live && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="scanner-container relative h-56 w-56 rounded-xl border-2 border-accent">
-              <div className="scan-line absolute left-0 top-0 h-0.5 w-full bg-accent shadow-[0_0_10px_#FF5A1F]" />
+              <div className="scan-line absolute left-0 top-0 h-0.5 w-full bg-accent shadow-[0_0_10px_var(--color-accent)]" />
             </div>
           </div>
         )}

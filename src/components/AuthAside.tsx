@@ -90,7 +90,7 @@ export default function AuthAside() {
       <div
         className="absolute inset-0 opacity-10"
         style={{
-          backgroundImage: "radial-gradient(#F2F1ED 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(var(--color-on-deep) 1px, transparent 1px)",
           backgroundSize: "22px 22px",
         }}
       />

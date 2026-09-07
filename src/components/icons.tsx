@@ -517,3 +517,57 @@ export function IconGauge(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconSparkles(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3.5 13.6 8 18 9.6 13.6 11.2 12 15.7 10.4 11.2 6 9.6 10.4 8z" />
+      <path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" />
+    </svg>
+  );
+}
+
+export function IconMic(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <rect x="9" y="2.5" width="6" height="11" rx="3" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21m-3 0h6" />
+    </svg>
+  );
+}
+
+export function IconMicOff(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 5.5a3 3 0 0 1 6 0V10m0 3.2a3 3 0 0 1-6-2.2V8.5" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 10.2 5.3M18.5 11v.5M12 17.5V21m-3 0h6M3.5 3.5l17 17" />
+    </svg>
+  );
+}
+
+export function IconSend(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 12 20.5 4l-5 16.5-3.7-6.6z" />
+      <path d="M12.8 13.9 20.5 4" />
+    </svg>
+  );
+}
+
+export function IconVolume(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 9.5h3l4-3.5v12l-4-3.5H4z" />
+      <path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11" />
+    </svg>
+  );
+}
+
+export function IconVolumeOff(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 9.5h3l4-3.5v12l-4-3.5H4z" />
+      <path d="m15.5 9.5 5 5m0-5-5 5" />
+    </svg>
+  );
+}

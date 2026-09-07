@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import type { CatalogProduct } from "@/lib/catalog";
+import { ara } from "@/lib/arama";
 import {
   formatDateRange,
   MAX_BOOKING_ITEMS,
@@ -115,11 +116,21 @@ export default function ProductPicker({
   const chosen = new Set(items.map((item) => item.productId));
   const full = items.length >= MAX_BOOKING_ITEMS;
 
-  const matches = products.filter((product) => {
-    if (chosen.has(product.id)) return false;
-    const q = query.trim().toLocaleLowerCase("tr-TR");
-    return !q || product.name.toLocaleLowerCase("tr-TR").includes(q);
-  });
+  // Arama `ara()`ya devredildi: "kırmızı gelinlik" yazan satıcı, kataloğa
+  // "Gelinlik - Kırmızı Dantelli" diye kaydedilmiş ürünü bulabilmeli. Düz
+  // `includes` bunu kaçırıyordu — kelimeler o sırada yan yana geçmiyor.
+  const matches = useMemo(
+    () =>
+      ara(
+        products.filter((product) => !chosen.has(product.id)),
+        query,
+        (product) => [product.name]
+      ),
+    // `chosen` her render'da yeniden kuruluyor, bağımlılığa girerse memo hiç
+    // tutmaz; sepetin kimliği yerine içeriği izleniyor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [products, query, items]
+  );
 
   /** Zaten sepetteyse adedi artırır — QR'ı iki kez okutmak da "bir tane daha". */
   function add(productId: string) {

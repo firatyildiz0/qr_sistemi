@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Panele sesli ve yazılı konuşulan bir asistan eklendi",
+  "aciklama": "Sağ altta, Ürün bul düğmesinin üstünde Veyro adında bir asistan var. Yazarak ya da konuşarak ürün aratabilir, tarihlerin boş olup olmadığını sorabilir, eski müşterileri bulabilir ve rezervasyon açtırabilirsiniz. Rezervasyonu kendi başına kaydetmez: ne anladığını bir kartta gösterir, kaydı siz onaylarsınız. Ayrıca ürün araması artık kelimeleri ayrı ayrı arıyor, yani kırmızı gelinlik yazdığınızda Gelinlik - Kırmızı Dantelli de çıkıyor.",
+  "dikkat": "Canlıya almadan önce iki şey: 0026 numaralı göçü Supabase SQL editöründen çalıştırın, ve Vercel'e ANTHROPIC_API_KEY ortam değişkenini ekleyin. Anahtar eklenmezse asistan açıldığında yapılandırılmamış uyarısı verir, panelin geri kalanı etkilenmez."
+}

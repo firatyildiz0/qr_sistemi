@@ -1376,3 +1376,87 @@ summary,
     display: block;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Veyro asistan
+   --------------------------------------------------------------------------- */
+
+/* Asistan düğmesi "Ürün bul"un üstünde duruyor. Masaüstünde o düğme
+   `bottom-8` + `h-14`, yani üst kenarı 5.5rem'de; buradaki 6.25rem ikisinin
+   arasına yarım parmak boşluk bırakıyor. Mobilde "Ürün bul" sekme çubuğunun
+   ortasına gömülü olduğu için asistan çubuğun üstüne çıkıyor. */
+.asistan-fab {
+  right: 1rem;
+  bottom: calc(var(--tab-bar-h) + var(--bottom-inset) + 1rem);
+  box-shadow: 0 12px 30px -10px color-mix(in oklab, var(--color-ink) 40%, transparent),
+    inset 0 0 0 1px var(--color-border);
+}
+
+@media (min-width: 768px) {
+  .asistan-fab {
+    right: 2rem;
+    bottom: 6.25rem;
+  }
+}
+
+/* Panel mobilde ekranı dolduruyor (sekme çubuğunun üstüne kadar), masaüstünde
+   köşede duran sabit boyutlu bir pencere. Yüksekliği ekrana göre kısalıyor:
+   kısa ekranlarda paneli taşırmaktansa sohbet alanı daralmalı. */
+.asistan-panel {
+  inset: auto 0.75rem calc(var(--tab-bar-h) + var(--bottom-inset) - 0.25rem) 0.75rem;
+  height: min(32rem, calc(100dvh - var(--app-bar-h) - var(--tab-bar-h) - 2rem));
+}
+
+@media (min-width: 768px) {
+  .asistan-panel {
+    inset: auto 2rem 2rem auto;
+    width: 24rem;
+    height: min(34rem, calc(100dvh - 6rem));
+  }
+}
+
+/* Dinlerken nabız gibi atan mikrofon. Kaydın alındığını gösteren tek işaret bu,
+   o yüzden hareket kısıtlıyken de görünür kalması gerekiyor — animasyon durur,
+   düğmenin kırmızısı durmaz. */
+.asistan-dinliyor {
+  animation: asistan-nabiz 1.4s ease-in-out infinite;
+}
+
+@keyframes asistan-nabiz {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-danger) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-danger) 0%, transparent);
+  }
+}
+
+.asistan-nokta {
+  animation: asistan-zipla 1.1s ease-in-out infinite;
+}
+
+@keyframes asistan-zipla {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asistan-dinliyor,
+  .asistan-nokta {
+    animation: none;
+  }
+}
+
+:root[data-motion="reduced"] .asistan-dinliyor,
+:root[data-motion="reduced"] .asistan-nokta {
+  animation: none;
+}

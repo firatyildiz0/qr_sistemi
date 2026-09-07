@@ -6,6 +6,7 @@ import AdminSidebarNav from "@/components/admin/AdminSidebarNav";
 import MobileTabBar from "@/components/admin/MobileTabBar";
 import HeaderSlogan from "@/components/admin/HeaderSlogan";
 import QrScanFab from "@/components/scan/QrScanFab";
+import AsistanFab from "@/components/asistan/AsistanFab";
 import Logo from "@/components/Logo";
 import { IconBell, IconChevronLeft, IconLogOut, IconShield } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
@@ -140,6 +141,7 @@ export default function AdminShell({
         signOutAction={signOutAction}
       />
       <QrScanFab />
+      <AsistanFab />
     </div>
   );
 }

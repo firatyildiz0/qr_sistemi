@@ -35,7 +35,9 @@ export const ARACLAR: Anthropic.Tool[] = [
       "Satıcının kataloğunda ürün arar. Kullanıcının bahsettiği her ürün için " +
       "önce bunu çağır — katalogda gerçekten ne olduğunu başka türlü bilemezsin. " +
       "Sorguyu kullanıcının kullandığı kelimelerle ver; arama sıraya ve eklere " +
-      "duyarlı değildir. Sorguyu boş bırakırsan bütün katalog döner.",
+      "duyarlı değildir. \"Hangi ürünlerim var\", \"kataloğumu göster\" gibi liste " +
+      "istekleri için de bunu çağır, sorguyu boş dize bırak: bütün katalog döner. " +
+      "Katalogda ne olduğunu bu araç dışında hiçbir yerden bilemezsin.",
     input_schema: {
       type: "object",
       properties: {
@@ -68,11 +70,14 @@ export const ARACLAR: Anthropic.Tool[] = [
         il: {
           type: "string",
           description:
-            "Teslimatın yapılacağı il. Kargo mu elden mi olduğunu belirler, o da " +
-            "ürünün kaç gün bloke kalacağını değiştirir. Bilinmiyorsa boş bırak.",
+            "Teslimatın yapılacağı il — biliniyorsa. Kargo mu elden mi olduğunu " +
+            "belirler, o da ürünün kaç gün bloke kalacağını değiştirir. İSTEĞE " +
+            "BAĞLI: kullanıcı il söylemediyse bu alanı hiç gönderme ve sorma da. " +
+            "İlsiz sorguda kargo süresi varsayılır, yani en geniş bloke aralığı " +
+            "hesaplanır; cevap yine anlamlıdır.",
         },
       },
-      required: ["urun_id", "baslangic", "bitis", "il"],
+      required: ["urun_id", "baslangic", "bitis"],
       additionalProperties: false,
     },
     strict: true,
@@ -98,8 +103,9 @@ export const ARACLAR: Anthropic.Tool[] = [
     name: "rezervasyon_olustur",
     description:
       "Rezervasyon için bir onay kartı hazırlar. Bu araç kaydı AÇMAZ — kullanıcıya " +
-      "özet gösterilir ve kaydı o onaylar. Altı alanın hepsi zorunludur; eksik " +
-      "olanı kullanıcıya sor, uydurma.",
+      "özet gösterilir ve kaydı o onaylar. Zorunlu alanlar: ürün, adet, iki tarih, " +
+      "müşteri adı, il, ilçe. Eksik olanı kullanıcıya sor, uydurma. Telefon ve " +
+      "açık adres isteğe bağlı — verilmediyse sorma, kartı onlarsız çıkar.",
     input_schema: {
       type: "object",
       properties: {
@@ -113,26 +119,23 @@ export const ARACLAR: Anthropic.Tool[] = [
         musteri_adi: { type: "string" },
         telefon: {
           type: "string",
-          description: "Varsa müşteri telefonu, yoksa boş dize.",
+          description:
+            "Müşteri telefonu. İSTEĞE BAĞLI: kullanıcı söylemediyse bu alanı hiç " +
+            "gönderme ve sorma da.",
         },
         il: { type: "string", description: "Teslimat ili. Zorunlu." },
         ilce: { type: "string", description: "Teslimat ilçesi. Zorunlu." },
         adres: {
           type: "string",
-          description: "Açık adres. İsteğe bağlı, yoksa boş dize.",
+          description:
+            "Açık adres (sokak, kapı no). İSTEĞE BAĞLI: kullanıcı söylemediyse bu " +
+            "alanı hiç gönderme ve sorma da — il ve ilçe yeterli.",
         },
       },
-      required: [
-        "urun_id",
-        "adet",
-        "baslangic",
-        "bitis",
-        "musteri_adi",
-        "telefon",
-        "il",
-        "ilce",
-        "adres",
-      ],
+      // Yalnızca gerçekten zorunlu olanlar burada. İsteğe bağlı bir alanı
+      // `required` içine koyup "boş dize ver" demek işe yaramıyor: model boş
+      // dize göndermek yerine kullanıcıya soruyor ve akış tıkanıyor.
+      required: ["urun_id", "adet", "baslangic", "bitis", "musteri_adi", "il", "ilce"],
       additionalProperties: false,
     },
     strict: true,

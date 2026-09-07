@@ -85,15 +85,17 @@ Cevapların sesli okunabiliyor. Bu yüzden:
 
 # Çalışma kuralların
 
-Ürün adı uydurma. Katalogda ne olduğunu yalnızca urun_ara ile öğrenirsin. Kullanıcının söylediği ada birebir uyan bir ürün bulamazsan, bulduklarını sayıp sor; olmayan bir ürünü varmış gibi anlatma.
+Ürün adı uydurma. Katalogda ne olduğunu yalnızca urun_ara ile öğrenirsin. Bu, tek bir ürün sorulduğunda da geçerli, "hangi ürünlerim var" gibi liste istendiğinde de: ezberden ürün sayma, urun_ara'yı boş sorguyla çağır ve yalnızca dönen adları söyle. Kullanıcının söylediği ada birebir uyan bir ürün bulamazsan, bulduklarını sayıp sor; olmayan bir ürünü varmış gibi anlatma.
 
 Müsaitliği tahmin etme. Bir ürünün belirli tarihlerde boş olup olmadığını yalnızca musaitlik_sorgula söyler. "Muhtemelen boştur" deme.
+
+Müsaitlik sormak için il gerekmez. Kullanıcı "yarın şu boş mu" diye sorduysa doğrudan cevap ver; il sorup kullanıcıyı bekletme. İl yalnızca rezervasyon oluştururken zorunlu.
 
 Fiyat, teminat, stok, adres gibi bilgileri uydurma. Araçlardan gelmediyse bilmiyorsun demektir; bilmediğini söyle.
 
 Rezervasyon oluşturmak için altı bilgi zorunlu: ürün, başlangıç tarihi, bitiş tarihi, müşteri adı, il ve ilçe. İl ve ilçe zorunlu çünkü ürünün kaç gün bloke kalacağı teslimatın nereye yapıldığına bağlı. Eksik olanı sor — varsayma, boş bırakma, "bilinmiyor" yazma. Aynı müşteri daha önce kiralamışsa musteri_ara ile adresini bulabilirsin, ama bulduğunu kullanmadan önce doğrulat.
 
-Tarihleri her zaman YYYY-AA-GG biçiminde araçlara ver. Kullanıcı "önümüzdeki cumartesi" ya da "ayın 20'si" gibi konuşursa, sana verilen bugünün tarihinden hesapla. Hangi tarihi anladığını cevabında da söyle ki kullanıcı yanlışı görebilsin. Yıl belirtilmemişse en yakın gelecekteki tarihi al; geçmiş bir tarih anladıysan sor.
+Tarihleri her zaman YYYY-AA-GG biçiminde araçlara ver. Her kullanıcı mesajının başında bir TAKVİM bloğu var: "yarın", "cumartesi" gibi ifadelerin karşılığı orada yazılı. Gün sayma, o listeden oku. Hangi tarihi anladığını cevabında da söyle ki kullanıcı yanlışı görebilsin. Yıl belirtilmemişse en yakın gelecekteki tarihi al; geçmiş bir tarih anladıysan sor.
 
 Rezervasyon önermeden önce müsaitliği kontrol et. Ürün o tarihlerde doluysa kaydı önerme; hangi güne kadar dolu olduğunu söyle.
 
@@ -142,4 +144,58 @@ export function onbellekIsaretle(
         );
 
   return [...mesajlar.slice(0, -1), { ...son, content: icerik }];
+}
+
+const GUNLER = [
+  "Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi",
+];
+
+/** Yerel takvim gününü YYYY-AA-GG olarak verir — `toISOString` saat dilimini kaydırır. */
+function isoGun(tarih: Date): string {
+  const ay = String(tarih.getMonth() + 1).padStart(2, "0");
+  const gun = String(tarih.getDate()).padStart(2, "0");
+  return `${tarih.getFullYear()}-${ay}-${gun}`;
+}
+
+/**
+ * Kullanıcı mesajının başına eklenen tarih bilgisi.
+ *
+ * Başta yalnızca bugünün tarihi veriliyordu ve gerisini model hesaplıyordu.
+ * Ölçtüğümüzde tutmadı: bugün Salı 7 Eylül'ken "yarın" sorusuna Haiku 4.5
+ * tutarlı biçimde 9 Eylül dedi — bir gün ileri. Aynı hata "önümüzdeki
+ * cumartesi"de de çıkabilir ve yanlış tarihe açılmış bir rezervasyon, cevabı
+ * geciken bir sorudan çok daha pahalı.
+ *
+ * Bu yüzden takvim aritmetiği modelden alındı: bugün, yarın, öbür gün ve
+ * önümüzdeki yedi günün her biri hazır yazılıyor. Model artık gün saymıyor,
+ * listeden okuyor. Sunucu bunu kesin biliyor; modelin tahmin etmesi için sebep
+ * yok.
+ *
+ * Damga sistem talimatının içinde değil kullanıcı mesajının yanında: talimat
+ * sabit kalmazsa önbellek her gece bozulurdu (bkz. `onbellekIsaretle`).
+ */
+export function tarihDamgasi(simdi = new Date()): string {
+  const satirlar: string[] = [];
+
+  for (let i = 0; i <= 7; i++) {
+    const gun = new Date(simdi);
+    gun.setDate(gun.getDate() + i);
+
+    const ad =
+      i === 0 ? "bugün" : i === 1 ? "yarın" : i === 2 ? "öbür gün" : GUNLER[gun.getDay()];
+
+    // 3. günden sonra hafta günü adı tekrar etmiyor: "önümüzdeki cumartesi"
+    // dendiğinde kastedilen, bugünden sonraki ilk cumartesi.
+    satirlar.push(
+      `${ad}: ${isoGun(gun)} (${gun.getDate()} ${gun.toLocaleDateString("tr-TR", {
+        month: "long",
+      })} ${GUNLER[gun.getDay()]})`
+    );
+  }
+
+  return [
+    "[TAKVİM — bu tarihleri kendin hesaplama, buradan oku:",
+    ...satirlar,
+    "Daha uzak bir tarih gerekiyorsa bugünden sayarak hesapla.]",
+  ].join("\n");
 }

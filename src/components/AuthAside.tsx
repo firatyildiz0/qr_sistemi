@@ -96,7 +96,7 @@ export default function AuthAside() {
       />
       <div className="relative z-10 w-full max-w-md">
         {/* Not a link: with the landing page parked, "/" only comes back here. */}
-        <Logo className="h-14 w-14" sizes="56px" />
+        <Logo variant="lockup" tone="on-dark" className="h-14 w-14" sizes="56px" wordmarkClassName="text-4xl" />
         <h1 className="mt-8 text-3xl font-bold leading-tight sm:text-4xl">
           Kiralamalarınızı tek bir yerden yönetin
         </h1>

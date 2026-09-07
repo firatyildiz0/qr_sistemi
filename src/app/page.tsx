@@ -90,9 +90,8 @@ export default async function Home() {
           her yüzey zeminden gölgeyle ayrılan bir katman, bu da öyle. Zemini
           buzlu cam olduğu için altından geçen içerik silinmiyor, bulanıklaşıyor. */}
       <nav className="fixed inset-x-3 top-3 z-50 mx-auto flex h-16 max-w-6xl items-center justify-between rounded-full border border-border bg-[color-mix(in_oklab,var(--color-card)_80%,transparent)] px-4 shadow-[var(--app-lift)] backdrop-blur-xl backdrop-saturate-150 sm:px-6">
-        <Link href="/" className="tab-press flex items-center gap-2.5">
-          <Logo className="h-9 w-9" sizes="36px" />
-          <span className="text-[15px] font-extrabold tracking-tight text-ink">RentQR</span>
+        <Link href="/" className="tab-press flex items-center">
+          <Logo variant="lockup" className="h-9 w-9" sizes="36px" wordmarkClassName="text-[15px]" />
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">

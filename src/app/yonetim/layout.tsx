@@ -20,7 +20,9 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
     <div className="panel-scope flex min-h-screen flex-col bg-paper text-ink">
       <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-4 sm:px-8">
         <Link href="/yonetim" className="flex items-center gap-3">
-          <Logo className="h-9 w-9" sizes="36px" />
+          {/* Bu başlık açık zeminde (`bg-surface`) duruyor, o yüzden ad
+              markanın kırmızısında kalıyor — `on-dark` koyu çubuklar için. */}
+          <Logo variant="lockup" className="h-9 w-9" sizes="36px" wordmarkClassName="text-xl" />
           <span className="flex items-center gap-1.5 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold tracking-wide text-accent-strong uppercase">
             <IconShield className="h-3.5 w-3.5" />
             Yönetim

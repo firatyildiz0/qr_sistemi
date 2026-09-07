@@ -30,6 +30,12 @@
   --color-border-strong: #d9cbc8;
   --color-border-dark: rgba(255, 255, 255, 0.12);
   --color-placeholder: #a2908d;
+  /* Logonun kırmızısı. Vurgu renginden ayrı duruyor ve `data-accent`
+     ön ayarlarına hiç karışmıyor: vurgu satıcının seçtiği bir tercih, bu ise
+     markanın kendi rengi — panelin teması değişse de aynı kalmalı. Vurgu
+     bugün aynı kırmızıdan türüyor, ama satıcı onu değiştirdiğinde bu kalır. */
+  --color-brand: #d81f26;
+
   /* Text sitting on --color-deep (sidebar, hero bands). Deliberately absent
      from the dark block: those surfaces are dark in *both* themes, so this must
      not flip to near-black the way --color-paper does. */
@@ -107,6 +113,9 @@
      ayrılıyor — koyu zeminde okunaklı kalan tek yön bu. */
   --color-danger: #ff9c8d;
   --color-status-upcoming: #ff9a4d;
+  /* Açık temanın kırmızısı koyu zeminde koyulaşıp okunmuyor; aynı kırmızının
+     beyaza doğru açılmış hâli. */
+  --color-brand: #ff5058;
   --color-border: #2f2422;
   --color-border-strong: #443533;
   --color-placeholder: #8b7a77;

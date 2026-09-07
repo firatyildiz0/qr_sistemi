@@ -43,7 +43,7 @@ export default function AdminShell({
           gibi durmasının sebebi bu. */}
       <header className="app-bar fixed inset-x-0 top-0 z-30 flex items-center justify-between px-4 md:hidden">
         <Link href="/admin" className="tab-press flex items-center">
-          <Logo className="h-8 w-8" sizes="32px" />
+          <Logo variant="lockup" className="h-8 w-8" sizes="32px" wordmarkClassName="text-lg" />
         </Link>
         <div className="flex items-center gap-1">
           <Link
@@ -74,7 +74,7 @@ export default function AdminShell({
         <div>
           <div className="sidebar-head flex h-16 items-center justify-between px-6">
             <Link href="/admin" className="sidebar-label flex items-center">
-              <Logo className="h-9 w-9" sizes="36px" />
+              <Logo variant="lockup" className="h-9 w-9" sizes="36px" wordmarkClassName="text-xl" />
             </Link>
             <SidebarToggle />
           </div>

@@ -1,0 +1,6 @@
+{
+  "tip": "hata",
+  "baslik": "Alt menüde seçili sekmenin arkasındaki renk kaymış duruyordu",
+  "aciklama": "Telefonda alt menüde açık olan sekmenin arkasında yumuşak renkli bir zemin çiziliyor. Bu zemin simgeden bağımsız yerleştiği için simgenin altından kayıyor, alt kenarı da sekmenin yazısına biniyordu. Artık zemin doğrudan simgenin kutusu, yani her zaman tam ortasında duruyor ve yazıya değmiyor. Menü sekmesi de aynı işareti alıyor.",
+  "dikkat": null
+}

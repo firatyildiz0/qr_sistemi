@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, use } from "react";
 import AdminSidebarNav from "@/components/admin/AdminSidebarNav";
 import MobileTabBar from "@/components/admin/MobileTabBar";
+import HeaderSlogan from "@/components/admin/HeaderSlogan";
 import QrScanFab from "@/components/scan/QrScanFab";
 import Logo from "@/components/Logo";
 import { IconBell, IconChevronLeft, IconLogOut, IconShield } from "@/components/icons";
@@ -37,10 +38,15 @@ export default function AdminShell({
           altındaki sekme çubuğunda. Burada kalanlar bir uygulamanın üst
           çubuğunda beklenen iki şey: kimlik ve bildirim zili. */}
       <header className="app-bar fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-border bg-deep px-4 md:hidden">
-        <Link href="/admin" className="tab-press flex items-center">
-          <Logo className="h-8 w-8" sizes="32px" />
-        </Link>
-        <div className="flex items-center gap-1">
+        {/* Logo ile sözün ortak sarmalı. `min-w-0` olmadan söz, çubuğun sağ
+            ucundaki zil ve avatarı ekrandan taşırırdı. */}
+        <div className="flex min-w-0 items-center gap-3">
+          <Link href="/admin" className="tab-press flex items-center">
+            <Logo className="h-8 w-8" sizes="32px" />
+          </Link>
+          <HeaderSlogan />
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
           <Link
             href="/admin/notifications"
             aria-label="Bildirimler"

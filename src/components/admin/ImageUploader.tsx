@@ -9,7 +9,8 @@ import {
   PRODUCT_IMAGES_BUCKET,
   storagePathFromUrl,
 } from "@/lib/storage";
-import { IconImage, IconStar, IconTrash, IconUpload } from "@/components/icons";
+import ImageCropper from "@/components/admin/ImageCropper";
+import { IconImage, IconPencil, IconStar, IconTrash, IconUpload } from "@/components/icons";
 
 type Slot = {
   key: string;
@@ -23,9 +24,19 @@ type Slot = {
 };
 
 /**
+ * A picture waiting in the cropper. `replaceKey` is set when the seller is
+ * re-cropping a picture that is already in a slot; otherwise it's a new one.
+ */
+type CropTask = { id: string; file: File; replaceKey: string | null };
+
+/**
  * Uploads straight from the browser to Supabase Storage rather than through
  * the server action — Server Actions cap the request body at 1 MB, which a
  * single photo blows past. The form only ever submits the resulting URLs.
+ *
+ * Every picture goes through the cropper first: a phone camera frames for the
+ * phone, not for a product card, so the seller gets to cut the shot down
+ * before anything is uploaded. The cropped file is what lands in the bucket.
  */
 export default function ImageUploader({
   initialImages = [],
@@ -43,13 +54,24 @@ export default function ImageUploader({
       isNew: false,
     }))
   );
+  const [queue, setQueue] = useState<CropTask[]>([]);
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const objectUrls = useRef<string[]>([]);
+  // Mirrors `slots` so an upload that finishes later can tell what it is
+  // replacing without closing over a stale render.
+  const slotsRef = useRef(slots);
 
-  const busy = slots.some((s) => s.status === "uploading");
-  const remaining = MAX_PRODUCT_IMAGES - slots.length;
+  const task = queue[0];
+  const pendingNew = queue.filter((t) => t.replaceKey === null).length;
+  const busy = slots.some((s) => s.status === "uploading") || queue.length > 0 || opening;
+  const remaining = MAX_PRODUCT_IMAGES - slots.length - pendingNew;
+
+  useEffect(() => {
+    slotsRef.current = slots;
+  }, [slots]);
 
   useEffect(() => {
     onBusyChange?.(busy);
@@ -61,7 +83,7 @@ export default function ImageUploader({
     return () => urls.forEach((u) => URL.revokeObjectURL(u));
   }, []);
 
-  async function addFiles(fileList: FileList | null) {
+  function addFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
 
     const files = Array.from(fileList);
@@ -88,8 +110,18 @@ export default function ImageUploader({
       return true;
     });
 
+    if (inputRef.current) inputRef.current.value = "";
     if (accepted.length === 0) return;
 
+    // Straight into the cropper, one after another; each one uploads as it is
+    // cropped.
+    setQueue((prev) => [
+      ...prev,
+      ...accepted.map((file) => ({ id: crypto.randomUUID(), file, replaceKey: null })),
+    ]);
+  }
+
+  async function uploadFile(file: File, replaceKey: string | null) {
     const supabase = createClient();
     const {
       data: { user },
@@ -100,46 +132,93 @@ export default function ImageUploader({
       return;
     }
 
-    for (const file of accepted) {
-      const key = crypto.randomUUID();
-      const preview = URL.createObjectURL(file);
-      objectUrls.current.push(preview);
+    const key = replaceKey ?? crypto.randomUUID();
+    const replaced = replaceKey
+      ? slotsRef.current.find((s) => s.key === replaceKey)
+      : undefined;
 
-      setSlots((prev) =>
-        prev.length >= MAX_PRODUCT_IMAGES
+    if (replaceKey && !replaced) return;
+
+    const preview = URL.createObjectURL(file);
+    objectUrls.current.push(preview);
+
+    setSlots((prev) =>
+      replaceKey
+        ? prev.map((s) =>
+            s.key === replaceKey
+              ? { ...s, url: null, preview, status: "uploading", isNew: true }
+              : s
+          )
+        : prev.length >= MAX_PRODUCT_IMAGES
           ? prev
           : [...prev, { key, url: null, preview, status: "uploading", isNew: true }]
-      );
+    );
 
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${user.id}/${key}.${ext}`;
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from(PRODUCT_IMAGES_BUCKET)
-        .upload(path, file, { contentType: file.type, upsert: false });
+    const { error: uploadError } = await supabase.storage
+      .from(PRODUCT_IMAGES_BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
 
-      if (uploadError) {
-        setError(uploadError.message);
-        setSlots((prev) =>
-          prev.map((s) => (s.key === key ? { ...s, status: "error" } : s))
-        );
-        continue;
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
-
-      setSlots((prev) =>
-        prev.map((s) => (s.key === key ? { ...s, url: publicUrl, status: "done" } : s))
-      );
+    if (uploadError) {
+      setError(uploadError.message);
+      setSlots((prev) => prev.map((s) => (s.key === key ? { ...s, status: "error" } : s)));
+      return;
     }
 
-    if (inputRef.current) inputRef.current.value = "";
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
+
+    setSlots((prev) =>
+      prev.map((s) => (s.key === key ? { ...s, url: publicUrl, status: "done" } : s))
+    );
+
+    // Re-cropping an image that was itself uploaded in this session leaves the
+    // previous object behind with nothing pointing at it. One already on the
+    // product is left alone: the server action clears it when the form saves.
+    if (replaced?.isNew && replaced.url) {
+      const stale = storagePathFromUrl(replaced.url);
+      if (stale) await supabase.storage.from(PRODUCT_IMAGES_BUCKET).remove([stale]);
+    }
+  }
+
+  /** Reopens a picture that is already in a slot in the cropper. */
+  async function editSlot(slot: Slot) {
+    if (slot.status !== "done" || !slot.url) return;
+
+    setError(null);
+    setOpening(true);
+    try {
+      // `preview` is the blob: URL for something uploaded in this session and
+      // the public URL for a saved one — either way it reads back as a file,
+      // and going through a blob keeps the canvas untainted.
+      const res = await fetch(slot.preview);
+      if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+
+      const blob = await res.blob();
+      const type = ACCEPTED_IMAGE_TYPES.includes(blob.type) ? blob.type : "image/jpeg";
+      const name = slot.url.split("/").pop() || "gorsel.jpg";
+
+      setQueue((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          file: new File([blob], decodeURIComponent(name), { type }),
+          replaceKey: slot.key,
+        },
+      ]);
+    } catch {
+      setError("Görsel düzenlemek için açılamadı. Lütfen tekrar deneyin.");
+    } finally {
+      setOpening(false);
+    }
   }
 
   async function removeSlot(slot: Slot) {
     setSlots((prev) => prev.filter((s) => s.key !== slot.key));
+    setQueue((prev) => prev.filter((t) => t.replaceKey !== slot.key));
     setError(null);
 
     // A file uploaded in this session and then removed was never saved to the
@@ -208,15 +287,30 @@ export default function ImageUploader({
               </figcaption>
             )}
 
-            <button
-              type="button"
-              onClick={() => removeSlot(slot)}
-              aria-label="Görseli kaldır"
-              title="Görseli kaldır"
-              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-card text-ink-muted shadow-sm transition-all duration-200 hover:bg-danger hover:text-white sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-            >
-              <IconTrash className="h-4 w-4" />
-            </button>
+            <div className="absolute right-2 top-2 flex gap-1.5">
+              {slot.status === "done" && (
+                <button
+                  type="button"
+                  onClick={() => void editSlot(slot)}
+                  disabled={opening || queue.length > 0}
+                  aria-label="Görseli kırp"
+                  title="Görseli kırp"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-card text-ink-muted shadow-sm transition-all duration-200 hover:bg-accent hover:text-white disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                >
+                  <IconPencil className="h-4 w-4" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => void removeSlot(slot)}
+                aria-label="Görseli kaldır"
+                title="Görseli kaldır"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-card text-ink-muted shadow-sm transition-all duration-200 hover:bg-danger hover:text-white sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+              >
+                <IconTrash className="h-4 w-4" />
+              </button>
+            </div>
           </figure>
         ))}
 
@@ -232,7 +326,7 @@ export default function ImageUploader({
             onDrop={(e) => {
               e.preventDefault();
               setDragging(false);
-              void addFiles(e.dataTransfer.files);
+              addFiles(e.dataTransfer.files);
             }}
             className={`flex aspect-4/3 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed px-3 text-center transition-colors duration-200 ${
               dragging
@@ -259,14 +353,29 @@ export default function ImageUploader({
         accept={ACCEPTED_IMAGE_TYPES.join(",")}
         multiple
         className="sr-only"
-        onChange={(e) => void addFiles(e.target.files)}
+        onChange={(e) => addFiles(e.target.files)}
       />
 
       <p className="mt-2 text-xs text-ink-muted">
-        PNG, JPG veya WEBP · görsel başına en fazla 5 MB · ilk görsel kapak olarak kullanılır
+        PNG, JPG veya WEBP · görsel başına en fazla 5 MB · ilk görsel kapak olarak kullanılır ·
+        eklerken kırpabilirsiniz
       </p>
 
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+
+      {task && (
+        <ImageCropper
+          key={task.id}
+          file={task.file}
+          title={task.replaceKey ? "Görseli düzenle" : "Görseli kırp"}
+          applyLabel={task.replaceKey ? "Kırp ve değiştir" : "Kırp ve ekle"}
+          onApply={(cropped) => {
+            setQueue((prev) => prev.filter((t) => t.id !== task.id));
+            void uploadFile(cropped, task.replaceKey);
+          }}
+          onCancel={() => setQueue((prev) => prev.filter((t) => t.id !== task.id))}
+        />
+      )}
     </div>
   );
 }

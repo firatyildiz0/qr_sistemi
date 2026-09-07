@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfile, homePathFor } from "@/lib/profile";
 import Reveal from "@/components/marketing/Reveal";
@@ -69,18 +68,21 @@ const features = [
 ];
 
 /**
- * Sitenin anasayfası. Onaylı bir hesapla girilmişse burada oyalanmanın anlamı
- * yok — tanıtım yazısı zaten o hesabın kullandığı ürünü anlatıyor — o yüzden
- * doğrudan rolüne ait panele iniliyor. Tanıtım sayfası ziyaretçiye, bir de
- * hesabı henüz onay bekleyen kullanıcıya kalıyor.
+ * Sitenin anasayfası. Adrese kim gelirse gelsin burası açılıyor: oturumu açık
+ * bir satıcı da önce anasayfayı görüyor, panele geçmek isterse üst çubuktaki
+ * düğmeyle geçiyor. Otomatik yönlendirme, sayfayı sahibine hiç göstermemek
+ * anlamına geliyordu.
+ *
+ * Düğmenin gittiği yeri profil belirliyor: onaylı hesap kendi paneline
+ * (satıcı `/admin`, superuser `/yonetim`), onay bekleyen ya da oturumu kapalı
+ * olan giriş ekranına gidiyor — panele giremeyecek birine "Panele git" demenin
+ * anlamı yok.
  */
 export default async function Home() {
-  const profile = await getProfile();
-  if (profile && profile.status === "approved") redirect(homePathFor(profile));
-
-  const user = await getCurrentUser();
-  const ctaHref = user ? "/admin" : "/login";
-  const ctaLabel = user ? "Panele git" : "Hemen başla";
+  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
+  const onayli = profile?.status === "approved";
+  const ctaHref = onayli ? homePathFor(profile) : "/login";
+  const ctaLabel = onayli ? "Panele git" : "Hemen başla";
 
   return (
     <>
@@ -324,7 +326,7 @@ export default async function Home() {
               İlk ürününüzü listelemeye hazır mısınız?
             </h2>
             <Link href={ctaHref} className="btn btn-primary h-14 px-10 text-base">
-              {user ? "Panele git" : "Sahip olarak giriş yap"}
+              {onayli ? "Panele git" : "Sahip olarak giriş yap"}
             </Link>
           </Reveal>
         </section>
@@ -337,7 +339,7 @@ export default async function Home() {
             href={ctaHref}
             className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
           >
-            {user ? "Panel" : "Giriş yap"}
+            {onayli ? "Panel" : "Giriş yap"}
           </Link>
           <a
             href="#features"

@@ -14,8 +14,21 @@ export const PREFERENCES_COOKIE = "rentqr_prefs";
 /** One year. Preferences are cosmetic, so a long-lived cookie is fine. */
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
+/**
+ * Stamped into the cookie so a rebrand can reclaim the accent.
+ *
+ * The accent is the one preference that gets written without being chosen:
+ * `toggleSidebar` persists the whole object, so collapsing the rail freezes
+ * whatever the default was that day. When the default itself changes, those
+ * users would be stuck on the old brand colour forever with no way to tell
+ * them apart from someone who picked it on purpose. Bumping this resets the
+ * accent — and only the accent — the next time the cookie is read; theme,
+ * density, radius, motion and rail state are all deliberate, so they survive.
+ */
+const PREFERENCES_VERSION = 2;
+
 export const THEMES = ["system", "light", "dark"] as const;
-export const ACCENTS = ["ember", "forest", "ocean", "violet", "rose"] as const;
+export const ACCENTS = ["marka", "sedef", "ember", "forest", "ocean", "violet", "rose"] as const;
 export const DENSITIES = ["compact", "normal", "comfortable"] as const;
 export const RADII = ["sharp", "normal", "round"] as const;
 export const SIDEBARS = ["expanded", "collapsed"] as const;
@@ -38,7 +51,7 @@ export type Preferences = {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: "system",
-  accent: "ember",
+  accent: "marka",
   density: "normal",
   radius: "normal",
   reduceMotion: false,
@@ -66,9 +79,12 @@ export function parsePreferences(raw: string | undefined): Preferences {
   if (typeof parsed !== "object" || parsed === null) return DEFAULT_PREFERENCES;
 
   const value = parsed as Record<string, unknown>;
+  const current = value.v === PREFERENCES_VERSION;
   return {
     theme: pick(THEMES, value.theme, DEFAULT_PREFERENCES.theme),
-    accent: pick(ACCENTS, value.accent, DEFAULT_PREFERENCES.accent),
+    accent: current
+      ? pick(ACCENTS, value.accent, DEFAULT_PREFERENCES.accent)
+      : DEFAULT_PREFERENCES.accent,
     density: pick(DENSITIES, value.density, DEFAULT_PREFERENCES.density),
     radius: pick(RADII, value.radius, DEFAULT_PREFERENCES.radius),
     reduceMotion: value.reduceMotion === true,
@@ -83,7 +99,7 @@ export function readPreferences(): Preferences {
 }
 
 export function serializePreferences(preferences: Preferences): string {
-  return encodeURIComponent(JSON.stringify(preferences));
+  return encodeURIComponent(JSON.stringify({ ...preferences, v: PREFERENCES_VERSION }));
 }
 
 /** Writes the cookie from the browser. No server round trip is needed. */
@@ -133,13 +149,13 @@ export function toggleSidebar(): Sidebar {
  * rewritten the cookie without a reload.
  */
 export const PREFERENCES_SCRIPT = `(function(){try{
-var K=${JSON.stringify(PREFERENCES_COOKIE)},D=${JSON.stringify(DEFAULT_PREFERENCES)};
+var K=${JSON.stringify(PREFERENCES_COOKIE)},D=${JSON.stringify(DEFAULT_PREFERENCES)},V=${PREFERENCES_VERSION};
 var q=window.matchMedia("(prefers-color-scheme: dark)");
 function read(){var m=document.cookie.match(new RegExp("(?:^|; )"+K+"=([^;]*)"));if(!m)return D;
 try{var p=JSON.parse(decodeURIComponent(m[1]));return p&&typeof p==="object"?p:D}catch(e){return D}}
 function apply(){var p=read(),r=document.documentElement,t=p.theme;
 r.setAttribute("data-theme",t==="dark"||t==="light"?t:(q.matches?"dark":"light"));
-r.setAttribute("data-accent",p.accent||D.accent);
+r.setAttribute("data-accent",p.v===V&&p.accent?p.accent:D.accent);
 r.setAttribute("data-density",p.density||D.density);
 r.setAttribute("data-radius",p.radius||D.radius);
 r.setAttribute("data-motion",p.reduceMotion?"reduced":"full");

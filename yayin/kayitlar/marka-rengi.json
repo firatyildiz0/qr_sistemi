@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Panelin ana rengi artık RentQR logosunun kırmızısı",
+  "aciklama": "Arayüz yeşil vurgu rengiyle geliyordu, logoyla ilgisi yoktu. Artık düğmeler, seçili günler, odaklanan alanlar ve kenar çubuğu logonun kırmızısını taşıyor; arka plan grileri de yeşile değil bu kırmızıya çalan sıcak bir tona döndü. Daha önce paneli kullanmış olanlarda da renk kırmızıya dönüyor: eskiden kenar çubuğunu kapatmak, seçilmemiş olsa bile o günkü rengi cihaza kaydediyordu. Koyu/açık tema, yazı sıklığı gibi bilerek yapılmış ayarlar yerinde kalıyor. İsteyen Ayarlar'dan eski yeşili ya da diğer renkleri seçmeye devam edebilir.",
+  "dikkat": null
+}

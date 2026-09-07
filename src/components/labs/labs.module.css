@@ -1,0 +1,854 @@
+/*
+ * Veyro Labs hizmet vitrini.
+ *
+ * Sayfanın kendi değişken seti var (`--l-*`), ama değerleri artık ürünün geri
+ * kalanıyla aynı yerden geliyor: Sedef'in deniz yeşili vurgusu, yumuşak
+ * yeşilimsi zemini, çizgi yerine gölgeyle ayrılan yüzeyleri ve yay eğrisi.
+ * Değişkenlerin ayrı durmasının tek sebebi bu sayfanın panelden farklı
+ * ölçeklerde çalışması — dil aynı, ölçü farklı.
+ *
+ * Tema seçimi ortak: koyu tema `html[data-theme="dark"]` altında yeniden
+ * yazılıyor, yani Ayarlar'daki tercih burada da geçerli.
+ *
+ * Sayfa kabuğu sessiz; renk yalnızca hizmet görsellerinde. Görseller tek bir
+ * aileye bağlı altı derin tondan üretiliyor (bkz. Artwork.tsx).
+ */
+
+.page {
+  --l-bg: #edf2f0;
+  --l-bg-2: #f6faf9;
+  --l-card: #ffffff;
+  --l-ink: #12211e;
+  --l-ink-2: #667a75;
+  --l-faint: #93a29e;
+  --l-line: #e2e9e7;
+  --l-line-2: #edf2f0;
+  /* Dolu düğme artık siyaha yakın değil, vurgu renginde: sayfadaki asıl eylem
+     panelin birincil düğmesiyle aynı renkte olsun ki iki yüzey arasında geçen
+     kullanıcı aynı düğmeye bastığını bilsin. */
+  --l-pill: #0e7c6b;
+  --l-pill-ink: #ffffff;
+  --l-accent: #0e7c6b;
+  --l-live: #14875f;
+  --l-beta: #b8790a;
+  --l-soon: #93a29e;
+  --l-shadow-s: 0 1px 2px -1px rgba(18, 33, 30, 0.09), 0 10px 24px -18px rgba(18, 33, 30, 0.28);
+  --l-shadow-m: 0 3px 6px -2px rgba(18, 33, 30, 0.09), 0 22px 38px -22px rgba(18, 33, 30, 0.28);
+  --l-shadow-art: 0 2px 4px -2px rgba(18, 33, 30, 0.12), 0 34px 64px -30px rgba(18, 33, 30, 0.4);
+  --l-r-xl: 36px;
+  --l-r-lg: 26px;
+  /* Sedef'in yay eğrisi: yükselen her yüzey hedefi biraz aşıp yerine oturuyor. */
+  --l-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
+
+  background: var(--l-bg);
+  color: var(--l-ink);
+  font-family: var(--font-display), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+:global(html[data-theme="dark"]) .page {
+  --l-bg: #0b1211;
+  --l-bg-2: #121b19;
+  --l-card: #16211f;
+  --l-ink: #e8eeec;
+  --l-ink-2: #93a39f;
+  --l-faint: #7c8c88;
+  --l-line: #24312e;
+  --l-line-2: #1a2523;
+  --l-pill: #2fb39b;
+  --l-pill-ink: #06201b;
+  --l-accent: #2fb39b;
+  --l-live: #3fc794;
+  --l-beta: #e0a726;
+  --l-soon: #7c8c88;
+  /* Koyu zeminde gölge tek başına yüzeyi ayırmıyor; ince bir ışık kenarı ona
+     eşlik ediyor. */
+  --l-shadow-s: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 12px 26px -18px rgba(0, 0, 0, 0.7);
+  --l-shadow-m: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 40px -22px rgba(0, 0, 0, 0.7);
+  --l-shadow-art: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 34px 64px -28px rgba(0, 0, 0, 0.75);
+}
+
+.page a {
+  text-decoration: none;
+}
+.page h1,
+.page h2,
+.page h3 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  line-height: 1.05;
+}
+.page :focus-visible {
+  outline: 2px solid var(--l-accent);
+  outline-offset: 3px;
+  border-radius: 14px;
+}
+
+.wrap {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 0 26px;
+}
+
+/* ── Üst çubuk ───────────────────────────────────────────── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in oklab, var(--l-bg) 82%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+.navIn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  height: 72px;
+}
+.brand {
+  color: var(--l-ink);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 17.5px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.brand svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: block;
+}
+.brand span {
+  font-weight: 500;
+  color: var(--l-faint);
+  letter-spacing: -0.02em;
+}
+.navMid {
+  display: none;
+  align-items: center;
+  gap: 32px;
+}
+@media (min-width: 960px) {
+  .navMid {
+    display: flex;
+  }
+}
+.navMid a {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--l-ink-2);
+  transition: color 0.18s;
+}
+.navMid a:hover {
+  color: var(--l-ink);
+}
+.navEnd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Tema düğmesi.
+   İki simge de işaretlemede duruyor, hangisinin görüneceğine CSS karar veriyor.
+   Böylece sunucu hangi temada olduğumuzu bilmek zorunda kalmıyor: `data-theme`
+   ön-boyama script'i tarafından ilk boyamadan önce yazılıyor, doğru simge daha
+   React devreye girmeden görünüyor — ne yanıp sönme ne hidrasyon uyuşmazlığı. */
+.themeBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--l-ink-2);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.themeBtn:hover {
+  background: var(--l-bg-2);
+  color: var(--l-ink);
+}
+.themeBtn svg {
+  display: block;
+}
+.themeBtn .sun {
+  display: none;
+}
+:global(html[data-theme="dark"]) .themeBtn .moon {
+  display: none;
+}
+:global(html[data-theme="dark"]) .themeBtn .sun {
+  display: block;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 13px 24px;
+  min-height: 46px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    transform 0.28s var(--l-spring),
+    box-shadow 0.28s var(--l-spring),
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+/* Basış: her düğme parmağın altında küçülüyor, bırakınca yaylanarak dönüyor. */
+.pill:active {
+  transform: scale(0.95);
+  transition-duration: 0.09s;
+}
+.pillSolid {
+  background: var(--l-pill);
+  color: var(--l-pill-ink);
+  box-shadow: 0 8px 20px -12px color-mix(in oklab, var(--l-pill) 85%, transparent);
+}
+/* Üstüne gelince içinden bir parlama süpürülüyor — panelin birincil
+   düğmesindeki hareketin aynısı, iki yüzey aynı dili konuşsun diye. */
+.pillSolid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.3) 48%,
+    transparent 64%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.62s cubic-bezier(0.3, 0, 0.2, 1);
+}
+.pillSolid:hover::after {
+  transform: translateX(120%);
+}
+.pillSolid:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 16px 30px -14px color-mix(in oklab, var(--l-pill) 90%, transparent);
+}
+.pillLine {
+  border-color: var(--l-line);
+  color: var(--l-ink-2);
+  background: var(--l-card);
+  box-shadow: var(--l-shadow-s);
+}
+.pillLine:hover {
+  border-color: var(--l-accent);
+  color: var(--l-accent);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--l-shadow-m);
+}
+.pillWhite {
+  background: rgba(255, 255, 255, 0.97);
+  color: #12211e;
+  backdrop-filter: blur(4px);
+}
+.pillWhite:hover {
+  background: #fff;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 16px 30px -14px rgba(0, 0, 0, 0.4);
+}
+.pill svg {
+  transition: transform 0.28s var(--l-spring);
+}
+.pill:hover svg {
+  transform: translateX(3px);
+}
+
+/* ── Öne çıkanlar ────────────────────────────────────────── */
+.feature {
+  padding: 10px 0 0;
+}
+.stage {
+  position: relative;
+  border-radius: var(--l-r-xl);
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 440px;
+  box-shadow: var(--l-shadow-art);
+  background: #0d1210;
+}
+@media (min-width: 860px) {
+  .stage {
+    min-height: 540px;
+  }
+}
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 32px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.9s ease,
+    visibility 0.9s;
+}
+@media (min-width: 860px) {
+  .slide {
+    padding: 56px 60px;
+  }
+}
+.slideOn {
+  opacity: 1;
+  visibility: visible;
+}
+.art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.art > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.slide .art > svg {
+  transform: scale(1.04);
+  transition: transform 9s ease-out;
+}
+.slideOn .art > svg {
+  transform: scale(1);
+}
+.slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(6, 10, 9, 0.88) 4%,
+    rgba(6, 10, 9, 0.5) 40%,
+    rgba(6, 10, 9, 0.1) 72%
+  );
+}
+.slideCopy {
+  position: relative;
+  z-index: 2;
+  max-width: 590px;
+  color: #fff;
+  transform: translateY(16px);
+  opacity: 0;
+  transition:
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) 0.15s,
+    opacity 0.8s ease 0.15s;
+}
+.slideOn .slideCopy {
+  transform: none;
+  opacity: 1;
+}
+.slideTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  padding: 7px 13px;
+  border-radius: 999px;
+}
+.slide h2 {
+  font-size: clamp(34px, 5.4vw, 58px);
+  margin: 20px 0 0;
+  color: #fff;
+  letter-spacing: -0.042em;
+}
+.slide p {
+  margin: 15px 0 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 47ch;
+}
+.slide .pill {
+  margin-top: 28px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 18px;
+  border-top: 1px solid var(--l-line);
+}
+@media (min-width: 760px) {
+  .tabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.tab {
+  position: relative;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--l-line);
+  padding: 17px 18px 18px 0;
+  cursor: pointer;
+  color: var(--l-ink);
+  font-family: inherit;
+}
+@media (min-width: 760px) {
+  .tab {
+    border-bottom: 0;
+    padding-right: 26px;
+  }
+}
+.tab b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--l-faint);
+  transition: color 0.25s;
+}
+.tab span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--l-faint);
+  line-height: 1.45;
+  opacity: 0.72;
+  transition: opacity 0.25s;
+}
+.tab:hover b {
+  color: var(--l-ink-2);
+}
+.tabOn b {
+  color: var(--l-ink);
+}
+.tabOn span {
+  opacity: 1;
+  color: var(--l-ink-2);
+}
+.bar {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  height: 2px;
+  width: 0;
+  background: var(--l-ink);
+  border-radius: 2px;
+}
+.tabOn .bar {
+  animation: fill 7s linear forwards;
+}
+@keyframes fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* ── Bölümler ────────────────────────────────────────────── */
+.sec {
+  padding: 92px 0 0;
+}
+.secTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+.secTop h2 {
+  font-size: clamp(27px, 3.2vw, 38px);
+}
+.secTop p {
+  margin: 13px 0 0;
+  color: var(--l-ink-2);
+  font-size: 16.5px;
+  line-height: 1.62;
+  max-width: 52ch;
+}
+.cats {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 34px;
+}
+.cat {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 9px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--l-line);
+  background: transparent;
+  color: var(--l-ink-2);
+  font-family: inherit;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s,
+    transform 0.28s var(--l-spring),
+    box-shadow 0.28s var(--l-spring);
+}
+.cat:hover {
+  color: var(--l-accent);
+  border-color: var(--l-accent);
+  background: var(--l-card);
+  transform: translateY(-1px);
+}
+.cat:active {
+  transform: scale(0.96);
+  transition-duration: 0.09s;
+}
+.catOn {
+  background: var(--l-pill);
+  border-color: var(--l-pill);
+  color: var(--l-pill-ink);
+  box-shadow: 0 10px 20px -12px color-mix(in oklab, var(--l-pill) 85%, transparent);
+}
+.catOn:hover {
+  background: var(--l-pill);
+  color: var(--l-pill-ink);
+}
+
+/* ── Hizmet kartları ─────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 36px 24px;
+}
+@media (min-width: 660px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1020px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.exp {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.thumb {
+  position: relative;
+  display: block;
+  border-radius: var(--l-r-lg);
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: #0d1210;
+  box-shadow: var(--l-shadow-s);
+  transition:
+    transform 0.4s var(--l-spring),
+    box-shadow 0.4s;
+}
+.thumb .art > svg {
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.exp:hover .thumb {
+  transform: translateY(-6px);
+  box-shadow: var(--l-shadow-m);
+}
+.exp:hover .thumb .art > svg {
+  transform: scale(1.035);
+}
+.badge {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 11px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(8px);
+}
+.expHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+}
+.exp h3 {
+  font-size: 19.5px;
+  letter-spacing: -0.038em;
+}
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--l-ink-2);
+  letter-spacing: -0.01em;
+}
+.state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: block;
+  background: var(--l-live);
+}
+.stateBeta i {
+  background: var(--l-beta);
+}
+.stateSoon i {
+  background: var(--l-soon);
+}
+.exp p {
+  margin: 0;
+  color: var(--l-ink-2);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.actions {
+  margin-top: auto;
+  padding-top: 6px;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.actions .pill {
+  font-size: 14px;
+  padding: 9px 18px;
+}
+/* ── Nasıl çalışır ───────────────────────────────────────── */
+.steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 780px) {
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.step {
+  position: relative;
+  border-radius: var(--l-r-lg);
+  overflow: hidden;
+  min-height: 270px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 26px;
+  color: #fff;
+  isolation: isolate;
+  background: #0d1210;
+  box-shadow: var(--l-shadow-s);
+}
+.step::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to top, rgba(6, 10, 9, 0.86) 6%, rgba(6, 10, 9, 0.3) 58%, transparent);
+}
+.stepN {
+  position: relative;
+  z-index: 2;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+.step h3 {
+  position: relative;
+  z-index: 2;
+  font-size: 21px;
+  margin-top: 9px;
+  letter-spacing: -0.04em;
+}
+.step p {
+  position: relative;
+  z-index: 2;
+  margin: 9px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* ── Başlangıç bandı ─────────────────────────────────────── */
+.connect {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 880px) {
+  .connect {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+}
+.panel {
+  border-radius: var(--l-r-lg);
+  padding: 34px;
+  border: 1px solid var(--l-line);
+  background: var(--l-bg-2);
+}
+.panel h3 {
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+.panel > p {
+  margin: 11px 0 0;
+  color: var(--l-ink-2);
+  font-size: 15.5px;
+  line-height: 1.6;
+  max-width: 42ch;
+}
+.panelActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.dark {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 250px;
+  isolation: isolate;
+  background: #0d1210;
+}
+.dark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to top, rgba(6, 10, 9, 0.88), rgba(6, 10, 9, 0.32));
+}
+.dark h3,
+.dark > p,
+.dark .pill {
+  position: relative;
+  z-index: 2;
+}
+.dark > p {
+  color: rgba(255, 255, 255, 0.78);
+}
+.dark .pill {
+  margin-top: 22px;
+  align-self: flex-start;
+}
+
+/* ── Alt bilgi ───────────────────────────────────────────── */
+.footer {
+  margin-top: 96px;
+  border-top: 1px solid var(--l-line);
+  padding: 48px 0 64px;
+}
+.foot {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+@media (min-width: 780px) {
+  .foot {
+    grid-template-columns: 1.7fr 1fr 1fr;
+  }
+}
+.footBrand p {
+  margin: 15px 0 0;
+  color: var(--l-faint);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 32ch;
+}
+.foot h4 {
+  margin: 0 0 15px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--l-faint);
+}
+.foot a {
+  display: block;
+  padding: 5px 0;
+  font-size: 14.5px;
+  color: var(--l-ink-2);
+  transition: color 0.18s;
+}
+.foot a:hover {
+  color: var(--l-ink);
+}
+.footBottom {
+  margin-top: 42px;
+  padding-top: 22px;
+  border-top: 1px solid var(--l-line-2);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--l-faint);
+  font-size: 13px;
+}
+
+/* Görünür oldukça yükselme. Panelin hareket tercihi burada da geçerli:
+   `data-motion="reduced"` seçildiğinde her şey yerinde duruyor. */
+.rise {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.3, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.riseIn {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  .rise,
+  .slideCopy {
+    opacity: 1;
+    transform: none;
+  }
+}
+:global(html[data-motion="reduced"]) .rise,
+:global(html[data-motion="reduced"]) .slideCopy {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}

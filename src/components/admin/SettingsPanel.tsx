@@ -67,6 +67,8 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: typeof IconSun }[] = [
 ];
 
 const ACCENT_LABELS: Record<Accent, string> = {
+  marka: "RentQR",
+  sedef: "Sedef",
   ember: "Turuncu",
   forest: "Yeşil",
   ocean: "Mavi",
@@ -444,11 +446,11 @@ function ThemePreview({ theme }: { theme: Theme }) {
   if (theme === "system") {
     return (
       <span className="flex h-10 w-full overflow-hidden rounded-md border border-border">
-        <span className="flex-1 bg-[#f2f1ed] p-1.5">
-          <span className="block h-1.5 w-2/3 rounded-full bg-[#1b1c1a]/70" />
+        <span className="flex-1 bg-[#f3eeed] p-1.5">
+          <span className="block h-1.5 w-2/3 rounded-full bg-[#1f1413]/70" />
         </span>
-        <span className="flex-1 bg-[#0c110f] p-1.5">
-          <span className="block h-1.5 w-2/3 rounded-full bg-[#ecebe5]/70" />
+        <span className="flex-1 bg-[#120c0b] p-1.5">
+          <span className="block h-1.5 w-2/3 rounded-full bg-[#efe7e5]/70" />
         </span>
       </span>
     );
@@ -458,11 +460,11 @@ function ThemePreview({ theme }: { theme: Theme }) {
   return (
     <span
       className={`flex h-10 w-full flex-col justify-center gap-1.5 rounded-md border border-border p-2 ${
-        dark ? "bg-[#0c110f]" : "bg-[#f2f1ed]"
+        dark ? "bg-[#120c0b]" : "bg-[#f3eeed]"
       }`}
     >
-      <span className={`block h-1.5 w-3/4 rounded-full ${dark ? "bg-[#ecebe5]/70" : "bg-[#1b1c1a]/70"}`} />
-      <span className={`block h-1.5 w-1/2 rounded-full ${dark ? "bg-[#ecebe5]/35" : "bg-[#1b1c1a]/35"}`} />
+      <span className={`block h-1.5 w-3/4 rounded-full ${dark ? "bg-[#efe7e5]/70" : "bg-[#1f1413]/70"}`} />
+      <span className={`block h-1.5 w-1/2 rounded-full ${dark ? "bg-[#efe7e5]/35" : "bg-[#1f1413]/35"}`} />
     </span>
   );
 }

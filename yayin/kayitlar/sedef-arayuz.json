@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Panelin, anasayfanın ve müşteri sayfalarının görünümü baştan tasarlandı",
+  "aciklama": "Arayüz artık bir mobil uygulama gibi duruyor: yuvarlak hatlı yüzeyler, çizgi yerine gölgeyle ayrılan kartlar, buzlu cam üst ve alt çubuklar. Butonlar üstüne gelince hafifçe kalkıyor, basınca parmağın altında küçülüyor. Tanıtım anasayfası hem yeni görünüme kavuştu hem de yeniden yayına alındı: siteye giren herkes önce anasayfayı görüyor, hesabıyla girmiş olanlar da dâhil — panele geçmek için üstteki \"Panele git\" düğmesi duruyor. Panelin ana rengi turuncudan deniz yeşiline döndü; dilerseniz Ayarlar'dan eski rengi geri seçebilirsiniz.",
+  "dikkat": null
+}

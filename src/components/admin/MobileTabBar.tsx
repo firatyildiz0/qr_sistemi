@@ -48,7 +48,7 @@ export default function MobileTabBar({
     <>
       <nav
         aria-label="Ana menü"
-        className="tab-bar fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card md:hidden"
+        className="tab-bar fixed inset-x-0 bottom-0 z-40 md:hidden"
       >
         <div className="grid h-16 grid-cols-5 items-stretch">
           <TabLink item={PRIMARY[0]} active={isActive(PRIMARY[0], pathname)} />
@@ -60,7 +60,7 @@ export default function MobileTabBar({
               type="button"
               onClick={() => setScanOpen(true)}
               aria-label="Ürün bul"
-              className="tab-press absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-5 flex-col items-center justify-center rounded-full bg-accent text-white shadow-[0_8px_20px_-6px_var(--app-shadow)] ring-4 ring-card"
+              className="tab-fab tab-press absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-5 flex-col items-center justify-center rounded-full bg-accent text-white"
             >
               <IconScan className="h-6 w-6" />
             </button>
@@ -114,16 +114,23 @@ function TabLink({ item, active }: { item: NavItem; active: boolean }) {
         active ? "text-accent" : "text-ink-muted"
       }`}
     >
-      {/* Aktif sekmenin üstündeki çizgi: renk körlüğünde de sekme ayırt edilsin. */}
+      {/* Aktif sekmenin arkasındaki hap: renk körlüğünde de sekme ayırt
+          edilsin diye rengin yanında bir de biçim var. Simge onun içinde bir
+          adım yukarı çıkıyor — dokunulan sekme, dokunulmayanların hizasından
+          çıktığı için tek bakışta bulunuyor. */}
       {active && (
         <span
           aria-hidden="true"
-          className="absolute inset-x-5 top-0 h-0.5 rounded-b bg-accent"
+          className="tab-pill absolute left-1/2 top-1.5 h-8 w-14 -translate-x-1/2 rounded-full bg-accent-soft"
         />
       )}
-      <item.icon className="h-5 w-5" />
+      <item.icon
+        className={`relative h-5 w-5 transition-transform duration-300 ${
+          active ? "-translate-y-0.5" : ""
+        }`}
+      />
       {/* Dar sekmede ad kırpılır, alt satıra taşıp çubuğu bozmaz. */}
-      <span className="max-w-full truncate px-1 text-[10px] font-semibold">
+      <span className="relative max-w-full truncate px-1 text-[10px] font-semibold">
         {item.shortLabel ?? item.label}
       </span>
       <TabPendingBar />
@@ -203,13 +210,13 @@ function MenuSheet({
     >
       <div className="modal-backdrop absolute inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="modal-panel safe-b relative z-10 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card px-4 pb-4 pt-3">
+      <div className="modal-panel safe-b relative z-10 max-h-[85vh] overflow-y-auto rounded-t-[28px] bg-card px-4 pb-4 pt-3">
         <span
           aria-hidden="true"
           className="mx-auto mb-4 block h-1 w-10 rounded-full bg-border-strong"
         />
 
-        <div className="mb-4 flex items-center gap-3 rounded-lg bg-surface p-3">
+        <div className="mb-4 flex items-center gap-3 rounded-2xl bg-surface p-3">
           <Suspense fallback={<AccountRowFallback />}>
             <AccountRow promise={identityPromise} />
           </Suspense>
@@ -217,7 +224,7 @@ function MenuSheet({
             type="button"
             onClick={onClose}
             aria-label="Kapat"
-            className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-ink-muted"
+            className="icon-btn ml-auto h-9 w-9 shrink-0"
           >
             <IconX className="h-4 w-4" />
           </button>
@@ -229,7 +236,7 @@ function MenuSheet({
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={`tab-press flex items-center gap-3 rounded-lg px-2 py-3.5 ${
+              className={`tab-press flex items-center gap-3 rounded-2xl px-2 py-3.5 ${
                 isActive(item, pathname) ? "text-accent" : "text-ink"
               }`}
             >
@@ -256,7 +263,7 @@ function MenuSheet({
         <form action={signOutAction} className="mt-2 border-t border-border pt-3">
           <button
             type="submit"
-            className="tab-press flex w-full items-center gap-3 rounded-lg px-2 py-3.5 text-left text-[15px] font-semibold text-danger"
+            className="tab-press flex w-full items-center gap-3 rounded-2xl px-2 py-3.5 text-left text-[15px] font-semibold text-danger"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-soft">
               <IconLogOut className="h-5 w-5" />
@@ -283,7 +290,7 @@ function YonetimRow({
     <Link
       href="/yonetim"
       onClick={onNavigate}
-      className="tab-press mt-2 flex items-center gap-3 rounded-lg border-t border-border px-2 py-3.5 pt-4 text-ink"
+      className="tab-press mt-2 flex items-center gap-3 rounded-2xl border-t border-border px-2 py-3.5 pt-4 text-ink"
     >
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface">
         <IconShield className="h-5 w-5" />

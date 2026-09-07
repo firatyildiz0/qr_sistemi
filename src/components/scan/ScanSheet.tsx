@@ -43,7 +43,7 @@ export default function ScanSheet({ onClose }: { onClose: () => void }) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="modal-panel safe-b relative z-10 flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-2xl border border-border bg-card p-5 sm:max-h-none sm:max-w-md sm:rounded-lg">
+      <div className="modal-panel safe-b relative z-10 flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-[28px] bg-card p-5 sm:max-h-none sm:max-w-md sm:rounded-xl">
         {/* Sheet'in üstündeki tutamaç: mobilde pencerenin aşağı kaydırılarak
             kapatılabileceğini değil, bunun bir katman olduğunu anlatıyor. */}
         <span

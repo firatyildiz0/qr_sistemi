@@ -3,22 +3,22 @@
 import { useEffect, useState } from "react";
 
 /**
- * Mobil üst çubukta logonun yanındaki boşluğa yazılan söz. En fazla üç kelime:
- * çubuk dar, uzun cümle ya sığmaz ya da zilin üstüne biner.
+ * Mobil üst çubukta logonun yanındaki boşluğa yazılan söz. Üç-dört kelime:
+ * çubuk dar, daha uzunu ya sığmaz ya da zilin üstüne biner.
  */
 const SLOGANS = [
-  "Her varlık kayıtlı",
-  "Kontrol sende",
-  "Envanterin cebinde",
-  "Tek okutma yeter",
-  "Düzen kazandırır",
-  "Kirala, takip et",
-  "Sayım artık kolay",
-  "Her şey yerinde",
-  "Bugün de düzen",
-  "Kayıp varlık yok",
-  "İşin akışında",
-  "Takip et, büyü",
+  "Her varlık kayıt altında",
+  "Kontrol artık sende",
+  "Envanterin hep cebinde",
+  "Tek okutma yeter artık",
+  "Düzen zaman kazandırır",
+  "Kirala, takip et, kazan",
+  "Sayım günü artık kolay",
+  "Her şey tam yerinde",
+  "Bugün de düzen kazansın",
+  "Kaybolan varlık kalmadı",
+  "İşin akışını sen kur",
+  "Takip et, işini büyüt",
 ];
 
 /** Söz ekranda kaldığı süre. */

@@ -41,18 +41,41 @@ export function adminIstemci(): Admin {
   return createAdminClient();
 }
 
-/** Webhook'taki hesap kimliğinden satıcıyı bulur. */
+/**
+ * Webhook'taki hesap kimliğinden satıcıyı bulur.
+ *
+ * İki kolona birden bakıyor, çünkü Instagram aynı hesabı iki numarayla anıyor:
+ * bağlantıyı kuran OAuth akışı uygulamaya özel kimliği döndürüyor, webhook ise
+ * işletme kimliğini (IGID) gönderiyor. Yalnızca ilkine bakıldığında gelen her
+ * mesaj sahipsiz kalıyordu — canlı denemede böyle yakalandı (bkz. 0028).
+ */
 export async function hesapBul(
   db: Admin,
   igUserId: string
 ): Promise<BagliHesap | null> {
+  // Kimlik doğrudan sorgu metnine giriyor (PostgREST `or` filtresi dizge alır),
+  // o yüzden şekli önce burada sabitleniyor. İmzasız bir istek zaten buraya
+  // kadar gelemiyor ama tek savunmanın imza olması gerekmiyor.
+  if (!/^\d{1,25}$/.test(igUserId)) {
+    console.warn("[instagram] geçersiz hesap kimliği", { igUserId });
+    return null;
+  }
+
   const { data } = await db
     .from("instagram_accounts")
     .select("owner_id, ig_user_id, access_token, username, is_active")
-    .eq("ig_user_id", igUserId)
+    .or(`ig_user_id.eq.${igUserId},ig_business_id.eq.${igUserId}`)
     .maybeSingle();
 
-  if (!data || !data.is_active) return null;
+  // Sessiz kalmıyor: bağlı olmayan bir hesaba gelen mesaj olağan bir durum ama
+  // *bağlı sandığı* hesabın tanınmaması bir hata ve tek belirtisi cevapsız
+  // kalan bir müşteri oluyor. Kimlik log'a düşsün ki bir daha aranmasın.
+  if (!data) {
+    console.warn("[instagram] bağlı hesap bulunamadı", { igUserId });
+    return null;
+  }
+
+  if (!data.is_active) return null;
 
   return {
     ownerId: data.owner_id as string,

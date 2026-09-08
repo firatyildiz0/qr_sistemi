@@ -288,19 +288,44 @@ export async function tokenTazele(
   }
 }
 
-/** Bağlanan hesabın kullanıcı adı; panelde "@marka" diye görünsün diye. */
-export async function hesapAdiOku(token: string): Promise<string | null> {
+/**
+ * Bağlanan hesabın kimlikleri ve kullanıcı adı.
+ *
+ * Instagram aynı hesabı iki numarayla anıyor ve ikisi de lazım: `id`
+ * uygulamaya özel kimlik (OAuth bunu döndürüyor), `user_id` ise hesabın asıl
+ * işletme kimliği ve **webhook gövdesinde gelen numara bu**. Yalnızca ilkini
+ * saklamak, gelen mesajın hiçbir satıcıya çözülememesi demekti (bkz. 0028).
+ */
+export type HesapBilgisi = {
+  username: string | null;
+  /** `/me?fields=id` — uygulamaya özel kimlik. */
+  scopedId: string | null;
+  /** `/me?fields=user_id` — IGID; webhook `entry[].id` bununla geliyor. */
+  businessId: string | null;
+};
+
+export async function hesapBilgisiOku(token: string): Promise<HesapBilgisi> {
   try {
-    const cevap = await fetch(`${TABAN}/me?fields=username`, {
+    const cevap = await fetch(`${TABAN}/me?fields=id,user_id,username`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(ZAMAN_ASIMI_MS),
       cache: "no-store",
     });
 
-    if (!cevap.ok) return null;
-    const veri = (await cevap.json()) as { username?: string };
-    return veri.username ?? null;
+    if (!cevap.ok) return { username: null, scopedId: null, businessId: null };
+
+    const veri = (await cevap.json()) as {
+      id?: string | number;
+      user_id?: string | number;
+      username?: string;
+    };
+
+    return {
+      username: veri.username ?? null,
+      scopedId: veri.id !== undefined ? String(veri.id) : null,
+      businessId: veri.user_id !== undefined ? String(veri.user_id) : null,
+    };
   } catch {
-    return null;
+    return { username: null, scopedId: null, businessId: null };
   }
 }

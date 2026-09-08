@@ -1,0 +1,6 @@
+{
+  "tip": "hata",
+  "baslik": "Instagram'dan gelen mesajlar cevapsız kalıyordu",
+  "aciklama": "Instagram hesabınıza yazan müşterinin mesajı sisteme ulaşıyor ama hangi hesaba ait olduğu anlaşılamıyor, bu yüzden hiçbir cevap gitmiyordu. Hesap artık doğru tanınıyor ve mesajlar yanıtlanıyor.",
+  "dikkat": "Canlıya almadan önce Supabase SQL editöründe 0028_instagram_isletme_kimligi.sql çalıştırılmalı."
+}

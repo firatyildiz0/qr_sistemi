@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { hesapAdiOku, tokenAl } from "@/lib/instagram/graph";
+import { hesapBilgisiOku, tokenAl } from "@/lib/instagram/graph";
 import { instagramYapilandirildi, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
 
 /**
@@ -62,16 +62,37 @@ export async function GET(request: NextRequest) {
     return panele("baglanamadi");
   }
 
-  const kullaniciAdi = await hesapAdiOku(belirtec.token);
+  // Belirteç takası yalnızca uygulamaya özel kimliği veriyor; webhook'un
+  // kullandığı işletme kimliği ayrı bir sorgudan geliyor ve ikisi de saklanıyor
+  // (bkz. 0028 — biri eksikken gelen mesaj satıcıya çözülemiyordu).
+  const bilgi = await hesapBilgisiOku(belirtec.token);
   const db = createAdminClient();
 
   // Aynı Instagram hesabı başka bir satıcıya bağlıysa devralınmıyor: iki
   // satıcının aynı gelen kutusunu paylaşması, müşteri mesajlarının yanlış
   // kataloğa düşmesi demek olurdu.
+  const sayisal = (deger: string | null) =>
+    deger && /^\d{1,25}$/.test(deger) ? deger : null;
+
+  const scopedId = sayisal(bilgi.scopedId) ?? sayisal(belirtec.igUserId);
+  const businessId = sayisal(bilgi.businessId);
+
+  if (!scopedId) {
+    console.error("[instagram] hesap kimliği okunamadı");
+    return panele("baglanamadi");
+  }
+
   const { data: mevcut } = await db
     .from("instagram_accounts")
     .select("owner_id")
-    .eq("ig_user_id", belirtec.igUserId)
+    .or(
+      [
+        `ig_user_id.eq.${scopedId}`,
+        businessId ? `ig_business_id.eq.${businessId}` : null,
+      ]
+        .filter(Boolean)
+        .join(",")
+    )
     .maybeSingle();
 
   if (mevcut && mevcut.owner_id !== user.id) return panele("baska-hesapta");
@@ -79,8 +100,9 @@ export async function GET(request: NextRequest) {
   const { error } = await db.from("instagram_accounts").upsert(
     {
       owner_id: user.id,
-      ig_user_id: belirtec.igUserId,
-      username: kullaniciAdi,
+      ig_user_id: scopedId,
+      ig_business_id: businessId,
+      username: bilgi.username,
       access_token: belirtec.token,
       token_expires_at: belirtec.expiresAt,
       is_active: true,

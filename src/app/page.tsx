@@ -352,6 +352,12 @@ export default async function Home() {
           >
             İletişim
           </a>
+          <Link
+            href="/gizlilik"
+            className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
+          >
+            Gizlilik
+          </Link>
         </div>
         <span className="text-sm text-ink-muted">© {new Date().getFullYear()} RentQR</span>
       </footer>

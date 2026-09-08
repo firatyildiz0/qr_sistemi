@@ -8,6 +8,7 @@ import {
   aracCalistir,
   type AracBaglami,
   type RezervasyonPlani,
+  type UrunKarti,
 } from "@/lib/asistan/araclar";
 import {
   GUNLUK_LIMIT,
@@ -58,12 +59,25 @@ type Istek = {
 };
 
 type Yanit =
-  | { tip: "yanit"; metin: string; mesajlar: Anthropic.MessageParam[]; kalan: number }
+  | {
+      tip: "yanit";
+      metin: string;
+      /**
+       * Bu turda üretilen ürün kartları. Model cümlesini kurarken kart zaten
+       * hazırdır; ekranda cümlenin yanında görünüyor. Sayı ve ad gibi yanlış
+       * olması pahalı olan şeyler böylece modelin cümlesinden değil doğrudan
+       * veritabanından geliyor.
+       */
+      kartlar: UrunKarti[];
+      mesajlar: Anthropic.MessageParam[];
+      kalan: number;
+    }
   | {
       tip: "onay";
       metin: string;
       plan: RezervasyonPlani;
       arac_id: string;
+      kartlar: UrunKarti[];
       mesajlar: Anthropic.MessageParam[];
       kalan: number;
     };
@@ -172,6 +186,7 @@ export async function POST(request: Request) {
   const client = new Anthropic();
 
   let plan: { plan: RezervasyonPlani; aracId: string } | null = null;
+  const kartlar: UrunKarti[] = [];
 
   try {
     for (let tur = 0; tur < MAX_TURLAR; tur++) {
@@ -189,6 +204,7 @@ export async function POST(request: Request) {
         return NextResponse.json<Yanit>({
           tip: "yanit",
           metin: metniTopla(yanit.content),
+          kartlar,
           mesajlar,
           kalan,
         });
@@ -217,6 +233,11 @@ export async function POST(request: Request) {
         if (sonuc.tip === "plan" && !plan) {
           plan = { plan: sonuc.plan, aracId: blok.id };
         }
+
+        // Aynı ürün iki kez sorulursa kart bir kez çıksın.
+        if (sonuc.tip === "kart" && !kartlar.some((k) => k.id === sonuc.kart.id)) {
+          kartlar.push(sonuc.kart);
+        }
       }
 
       mesajlar.push({ role: "user", content: sonuclar });
@@ -229,6 +250,7 @@ export async function POST(request: Request) {
           metin: "Şunu kaydedeyim mi?",
           plan: plan.plan,
           arac_id: plan.aracId,
+          kartlar,
           mesajlar,
           kalan,
         });
@@ -238,6 +260,7 @@ export async function POST(request: Request) {
     return NextResponse.json<Yanit>({
       tip: "yanit",
       metin: "Bu isteği çözemedim. Daha kısa ve net anlatır mısın?",
+      kartlar,
       mesajlar,
       kalan,
     });

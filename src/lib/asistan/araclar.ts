@@ -37,7 +37,9 @@ export const ARACLAR: Anthropic.Tool[] = [
       "Sorguyu kullanıcının kullandığı kelimelerle ver; arama sıraya ve eklere " +
       "duyarlı değildir. \"Hangi ürünlerim var\", \"kataloğumu göster\" gibi liste " +
       "istekleri için de bunu çağır, sorguyu boş dize bırak: bütün katalog döner. " +
-      "Katalogda ne olduğunu bu araç dışında hiçbir yerden bilemezsin.",
+      "Katalogda ne olduğunu bu araç dışında hiçbir yerden bilemezsin. Bu araç " +
+      "yalnızca ürünün adını ve kimliğini verir; fiyat, teminat, stok ve " +
+      "açıklama için urun_detay'ı çağır.",
     input_schema: {
       type: "object",
       properties: {
@@ -78,6 +80,24 @@ export const ARACLAR: Anthropic.Tool[] = [
         },
       },
       required: ["urun_id", "baslangic", "bitis"],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
+  {
+    name: "urun_detay",
+    description:
+      "Tek bir ürünün bütün bilgilerini kullanıcıya bir KART olarak gösterir: " +
+      "görsel, günlük fiyat, teminat, stok, bugünkü müsaitlik, etiket numarası " +
+      "ve açıklama. Kullanıcı bir ürünün bilgilerini, fiyatını, stoğunu ya da " +
+      "detayını sorduğunda bunu çağır. Kartı kullanıcı görüyor, o yüzden " +
+      "cevabında kartın içindekileri tek tek sayma — bir cümlede özetle.",
+    input_schema: {
+      type: "object",
+      properties: {
+        urun_id: { type: "string", description: "urun_ara sonucundan gelen kimlik." },
+      },
+      required: ["urun_id"],
       additionalProperties: false,
     },
     strict: true,
@@ -184,10 +204,34 @@ export type RezervasyonPlani = {
   bloke_bitis: string;
 };
 
-/** Aracın sonucu: ya modele dönecek bir metin, ya kullanıcıya çıkacak bir plan. */
+/**
+ * Ürün kartı — kullanıcının gördüğü ürün künyesi.
+ *
+ * Modelin bu alanları cümle içinde tekrar etmesine gerek yok, hatta
+ * istenmiyor: ölçümde Haiku 4.5 eline verilen listeyi doğru alıp adları
+ * uydurabiliyor. Sayı ve ad gibi yanlış olması pahalı olan her şey buradan,
+ * yani veritabanından doğrudan ekrana gidiyor; modelin payına yalnızca
+ * bağlayıcı cümle kalıyor.
+ */
+export type UrunKarti = {
+  id: string;
+  ad: string;
+  aciklama: string | null;
+  ozellikler: string[];
+  gorsel: string | null;
+  gunluk_fiyat: number | null;
+  teminat: number | null;
+  stok: number;
+  /** Bugün itibarıyla kaç adedi elde. */
+  bugun_musait: number;
+  etiket: string | null;
+};
+
+/** Aracın sonucu: modele dönen metin, ve gerekiyorsa kullanıcıya çıkan bir görsel. */
 export type AracSonucu =
   | { tip: "metin"; metin: string }
-  | { tip: "plan"; plan: RezervasyonPlani; metin: string };
+  | { tip: "plan"; plan: RezervasyonPlani; metin: string }
+  | { tip: "kart"; kart: UrunKarti; metin: string };
 
 const GUN_BICIMI = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -220,6 +264,8 @@ export async function aracCalistir(
       return urunAra(metin(girdi.sorgu), baglam);
     case "musaitlik_sorgula":
       return musaitlikSorgula(girdi, baglam);
+    case "urun_detay":
+      return urunDetay(metin(girdi.urun_id), baglam);
     case "musteri_ara":
       return musteriAra(metin(girdi.sorgu), baglam);
     case "rezervasyon_olustur":
@@ -347,6 +393,81 @@ type MusteriSatiri = {
   customer_address: string | null;
   start_date: string;
 };
+
+/**
+ * Bir ürünün künyesini kart olarak hazırlar.
+ *
+ * Katalog sorgusu (`getOwnerCatalog`) yalnızca ad, stok, fiyat ve müsaitlik
+ * getiriyor — seçici için gereken bu. Kartın istediği açıklama, görsel, teminat
+ * ve etiket numarası orada yok, o yüzden ürün satırı ayrıca okunuyor. Sorgu
+ * yine oturumun anahtarıyla gidiyor: `products_select_own` politikası satırı
+ * zaten sahibiyle sınırlıyor, `owner_id` koşulu da hata mesajının "yetkin yok"
+ * yerine "böyle bir ürün yok" olması için.
+ */
+async function urunDetay(urunId: string, baglam: AracBaglami): Promise<AracSonucu> {
+  const katalog = await katalogAl(baglam);
+  const ozet = katalog.find((kayit) => kayit.id === urunId);
+  if (!ozet) {
+    return { tip: "metin", metin: "Bu kimlikte bir ürün yok. Önce urun_ara ile bul." };
+  }
+
+  const { data, error } = await baglam.supabase
+    .from("products")
+    .select("description, features, images, deposit_price, barcode")
+    .eq("id", urunId)
+    .eq("owner_id", baglam.ownerId)
+    .maybeSingle();
+
+  if (error) return { tip: "metin", metin: "Ürün bilgileri okunamadı." };
+
+  const satir = (data ?? {}) as {
+    description?: string | null;
+    features?: string[] | null;
+    images?: string[] | null;
+    deposit_price?: number | string | null;
+    barcode?: string | null;
+  };
+
+  const bugun = new Date();
+  const bugunIso = `${bugun.getFullYear()}-${String(bugun.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(bugun.getDate()).padStart(2, "0")}`;
+
+  const kart: UrunKarti = {
+    id: ozet.id,
+    ad: ozet.name,
+    aciklama: satir.description?.trim() || null,
+    ozellikler: (satir.features ?? []).filter((o) => typeof o === "string" && o.trim()),
+    gorsel: satir.images?.[0] ?? null,
+    gunluk_fiyat: ozet.dailyPrice,
+    teminat: satir.deposit_price === null || satir.deposit_price === undefined
+      ? null
+      : Number(satir.deposit_price),
+    stok: ozet.stock,
+    bugun_musait: unitsLeftInRange(
+      ozet.availability.occupied,
+      ozet.stock,
+      bugunIso,
+      bugunIso
+    ),
+    etiket: satir.barcode?.trim() || null,
+  };
+
+  // Modele dönen metin kartın kopyası değil özeti: kartı kullanıcı zaten
+  // görüyor, modelin işi onu tekrar okumak değil bağlayıcı cümleyi kurmak.
+  return {
+    tip: "kart",
+    kart,
+    metin:
+      `"${kart.ad}" kartı kullanıcıya gösterildi. Stok ${kart.stok}, bugün ` +
+      `${kart.bugun_musait} adet müsait, günlük fiyat ` +
+      `${kart.gunluk_fiyat ?? "belirtilmemiş"}, teminat ` +
+      `${kart.teminat ?? "yok"}. Kullanıcı belirli bir şey sorduysa (fiyat, ` +
+      `teminat, stok) onu tek cümlede rakamla söyle; sormadıysa kartın ` +
+      `tamamını okuma, bir sonraki adımı sor.`,
+  };
+}
 
 async function musteriAra(sorgu: string, baglam: AracBaglami): Promise<AracSonucu> {
   if (!sorgu) {

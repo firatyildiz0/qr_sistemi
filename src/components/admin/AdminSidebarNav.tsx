@@ -30,6 +30,18 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
           >
             <item.icon className="h-5 w-5 shrink-0" />
             <span className="sidebar-label text-sm font-semibold">{item.label}</span>
+            {/* Sayı rozetiyle aynı yeri paylaşıyorlar; okunmamış bildirim
+                varken o kazanıyor — bekleyen bir iş, yeni bir ekrandan daha
+                acil. */}
+            {!badge && item.yeni && (
+              <span
+                className={`sidebar-badge sidebar-yeni ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  active ? "bg-white/20 text-white" : "bg-accent-soft text-accent"
+                }`}
+              >
+                Yeni
+              </span>
+            )}
             {!!badge && (
               <span
                 className={`sidebar-badge ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${

@@ -26,6 +26,15 @@ export type NavItem = {
   primary?: boolean;
   /** Reads the unread notification count instead of a static badge. */
   unread?: boolean;
+  /**
+   * "Yeni" rozeti. Yeni eklenmiş bir ekranı menüde görünür kılmak için —
+   * satıcı listeye her gün bakmıyor ve eklenen bir şeyi kendiliğinden fark
+   * etmesini beklemek, o ekranın hiç açılmaması demek.
+   *
+   * Bilinçli olarak sabit: kim neyi görmüş diye kayıt tutmuyor. Rozet artık
+   * yeni sayılmadığında buradan kaldırılır.
+   */
+  yeni?: boolean;
 };
 
 /**
@@ -51,10 +60,10 @@ export const NAV_ITEMS: NavItem[] = [
   },
   // Instagram'dan gelen rezervasyon istekleri. Sekme çubuğuna girmiyor —
   // bekleyen talep zaten bildirim rozetinde görünüyor.
-  { href: "/admin/talepler", label: "Talepler", icon: IconInbox },
+  { href: "/admin/talepler", label: "Talepler", icon: IconInbox, yeni: true },
   { href: "/admin/dashboard", label: "İstatistik", icon: IconChart },
   { href: "/admin/notifications", label: "Bildirimler", icon: IconBell, unread: true },
-  { href: "/admin/instagram", label: "Instagram", icon: IconInstagram },
+  { href: "/admin/instagram", label: "Instagram", icon: IconInstagram, yeni: true },
   { href: "/admin/support", label: "Destek", icon: IconLifebuoy },
   { href: "/admin/settings", label: "Ayarlar", icon: IconSettings },
 ];

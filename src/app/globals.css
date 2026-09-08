@@ -297,6 +297,17 @@
     padding: 0 0.25rem;
   }
 
+  /* Daraltılmış rayda rozet köşeye çekiliyor ve oraya "Yeni" yazısı sığmaz;
+     yazı gizlenip yerini bir nokta alıyor — işaret aynı, boyu değişik. */
+  :root[data-sidebar="collapsed"] .sidebar-yeni {
+    width: 0.5rem;
+    height: 0.5rem;
+    padding: 0;
+    font-size: 0;
+    line-height: 0;
+    background-color: var(--color-accent);
+  }
+
   :root[data-sidebar="collapsed"] .sidebar-toggle-icon {
     transform: rotate(180deg);
   }

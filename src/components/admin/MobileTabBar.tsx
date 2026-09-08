@@ -260,6 +260,11 @@ function MenuSheet({
                   <UnreadPill promise={unreadCountPromise} />
                 </Suspense>
               )}
+              {item.yeni && (
+                <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent">
+                  Yeni
+                </span>
+              )}
               <IconChevronRight className="ml-auto h-4 w-4 text-ink-muted" />
             </Link>
           ))}

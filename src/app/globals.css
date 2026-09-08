@@ -1376,3 +1376,349 @@ summary,
     display: block;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   404 sayfasının balon oyunu.
+
+   Oyunun kendi yüzeyi var: sayfanın kâğıt zemini değil, ondan bir tık açık bir
+   "gökyüzü". Balonların konumunu JavaScript yazıyor, geri kalan her hareket —
+   salınım, patlama, ürünün fırlaması — burada duruyor. Böylece kare başına iş
+   tarayıcının bileşik katmanında kalıyor, JavaScript'te değil.
+   ------------------------------------------------------------------------- */
+
+.oyun-kabuk {
+  background: var(--color-card);
+}
+
+.auth-game .oyun-alani {
+  height: 180px;
+}
+
+.auth-game {
+  opacity: 0.68;
+  transition: opacity 180ms ease;
+}
+.auth-game:hover,
+.auth-game:focus-within {
+  opacity: 1;
+}
+
+.auth-game .oyun-kabuk {
+  box-shadow: none !important;
+}
+
+.auth-game .oyun-balon {
+  filter: drop-shadow(0 7px 9px color-mix(in oklab, var(--color-ink) 20%, transparent));
+}
+
+.auth-game .text-ink {
+  color: var(--color-on-deep);
+}
+
+.auth-game .text-ink-muted {
+  color: color-mix(in oklab, var(--color-on-deep) 68%, transparent);
+}
+
+.oyun-alani {
+  /* Yukarısı açık, aşağısı hafif koyu: yer çekimi olan bir sahne. Renkler
+     temanın kendi yüzeylerinden türüyor, koyu temada da çalışıyor. */
+  background:
+    radial-gradient(120% 80% at 50% -20%, color-mix(in oklab, var(--color-accent) 7%, var(--color-card)), transparent 70%),
+    linear-gradient(to bottom, var(--color-card) 0%, var(--color-surface) 62%, var(--color-paper) 100%);
+  overflow: hidden;
+}
+
+/* Zeminden yukarı doğru dağılan bulanık bir sis: sahnenin dibi. */
+.oyun-alani::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 22%;
+  background: linear-gradient(to top, color-mix(in oklab, var(--color-ink) 7%, transparent), transparent);
+  pointer-events: none;
+}
+
+/* Kaçış çizgisi: bunun altına inen balon bir can götürüyor. */
+.oyun-cizgi {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  height: 0;
+  border-top: 2px dashed color-mix(in oklab, var(--color-ink) 22%, transparent);
+  pointer-events: none;
+}
+
+.oyun-balon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  will-change: transform;
+  /* Balonun altına düşen yumuşak gölge: onu zeminden koparan tek şey. */
+  filter: drop-shadow(0 10px 12px color-mix(in oklab, var(--color-ink) 22%, transparent));
+  -webkit-tap-highlight-color: transparent;
+}
+.oyun-balon:focus-visible {
+  outline: none;
+}
+.oyun-balon:focus-visible .oyun-balon-ic {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* Balonun kendi nefesi: havada duran lastik hep hafifçe esner. Konumu JS
+   yazdığı için esneme ayrı bir katmanda — ikisi aynı `transform`'a yazsaydı
+   biri diğerini ezerdi. */
+.oyun-balon-ic {
+  display: block;
+  animation: oyun-nefes 3.4s ease-in-out infinite;
+  transform-origin: 50% 30%;
+}
+.oyun-balon:nth-child(2n) .oyun-balon-ic {
+  animation-duration: 4.1s;
+  animation-delay: -1.2s;
+}
+.oyun-balon:nth-child(3n) .oyun-balon-ic {
+  animation-duration: 2.9s;
+  animation-delay: -0.6s;
+}
+.oyun-balon:active .oyun-balon-ic {
+  animation: none;
+  transform: scale(1.08);
+}
+
+@keyframes oyun-nefes {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.035, 0.965);
+  }
+}
+
+.oyun-balon-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* --- Patlama ------------------------------------------------------------ */
+
+.oyun-patlama {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Şok halkası: patlamanın bastığı hava. Hızlı büyüyüp incelerek kayboluyor. */
+.oyun-halka {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  width: 36px;
+  height: 36px;
+  border: 3px solid currentColor;
+  border-radius: 999px;
+  opacity: 0.85;
+  animation: oyun-halka 520ms cubic-bezier(0.15, 0.75, 0.3, 1) forwards;
+}
+
+@keyframes oyun-halka {
+  from {
+    transform: scale(0.35);
+    opacity: 0.85;
+    border-width: 4px;
+  }
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+/* Lastiğin parçaları: dokuz yöne savrulup dönerek küçülüyorlar. Yönü ve dönmesi
+   JavaScript'ten geliyor, eğrisi burada. */
+.oyun-parca {
+  position: absolute;
+  border-radius: 2px 6px 3px 5px;
+  animation: oyun-parca 700ms cubic-bezier(0.2, 0.7, 0.35, 1) forwards;
+}
+
+@keyframes oyun-parca {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(var(--px), var(--py), 0) rotate(var(--donme)) scale(0.35);
+    opacity: 0;
+  }
+}
+
+/* Ürün: balonun içinden fırlıyor, tepede bir an duraklıyor, sonra süzülerek
+   siliniyor. Yay eğrisi ilk sıçramayı hedefin biraz ötesine taşıyor. */
+.oyun-urun {
+  position: absolute;
+  left: -26px;
+  top: -26px;
+  display: block;
+  width: 52px;
+  height: 52px;
+  animation: oyun-urun-cik 1150ms cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+  filter: drop-shadow(0 6px 8px color-mix(in oklab, var(--color-ink) 28%, transparent));
+}
+
+.oyun-urun-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes oyun-urun-cik {
+  0% {
+    transform: translateY(4px) scale(0.2) rotate(-14deg);
+    opacity: 0;
+  }
+  22% {
+    transform: translateY(-14px) scale(1.14) rotate(6deg);
+    opacity: 1;
+  }
+  40% {
+    transform: translateY(-20px) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-58px) scale(0.9) rotate(4deg);
+    opacity: 0;
+  }
+}
+
+.oyun-puan {
+  position: absolute;
+  left: 26px;
+  top: -14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+  white-space: nowrap;
+  animation: oyun-puan 900ms ease-out forwards;
+}
+
+@keyframes oyun-puan {
+  0% {
+    transform: translateY(6px) scale(0.8);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(-4px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-26px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* --- Sahne üstü ---------------------------------------------------------- */
+
+.oyun-can {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: var(--color-accent);
+  stroke: color-mix(in oklab, var(--color-ink) 24%, transparent);
+  stroke-width: 1;
+  transition: fill 220ms ease, opacity 220ms ease, transform 260ms var(--ease-spring);
+}
+.oyun-can-bitti {
+  fill: color-mix(in oklab, var(--color-ink) 16%, transparent);
+  stroke: none;
+  opacity: 0.8;
+  transform: scale(0.7);
+}
+
+.oyun-ses {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  color: var(--color-ink-muted);
+  background: color-mix(in oklab, var(--color-card) 78%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  backdrop-filter: blur(4px);
+  transition: color 180ms ease, transform 220ms var(--ease-spring);
+}
+.oyun-ses:hover {
+  color: var(--color-ink);
+  transform: scale(1.06);
+}
+.oyun-ses:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.oyun-perde {
+  background: color-mix(in oklab, var(--color-card) 72%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+/* Can gittiğinde sahne bir kez sarsılıyor: kaybı sayıya bakmadan anlatan şey. */
+.oyun-sarsinti {
+  animation: oyun-sarsinti 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes oyun-sarsinti {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-6px);
+  }
+  40%,
+  60% {
+    transform: translateX(6px);
+  }
+}
+
+/* Hareket azaltıldığında oyun oynanabilir kalıyor, yalnızca süsler susuyor:
+   balon nefes almıyor, patlama parçaları JS tarafında hiç üretilmiyor, ürün ve
+   puan yerinde belirip soluyor. */
+:root[data-motion="reduced"] .oyun-balon-ic,
+:root[data-motion="reduced"] .oyun-halka,
+:root[data-motion="reduced"] .oyun-sarsinti {
+  animation: none;
+}
+:root[data-motion="reduced"] .oyun-halka {
+  display: none;
+}
+:root[data-motion="reduced"] .oyun-urun {
+  animation: oyun-solgunlas 1150ms ease-out forwards;
+}
+:root[data-motion="reduced"] .oyun-puan {
+  animation: oyun-solgunlas 900ms ease-out forwards;
+}
+
+@keyframes oyun-solgunlas {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

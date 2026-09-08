@@ -1,0 +1,5 @@
+{
+  "tip": "ozellik",
+  "baslik": "Olmayan bir adrese girildiğinde artık boş bir hata sayfası yerine balon patlatma oyunu çıkıyor",
+  "aciklama": "Silinmiş ya da yanlış yazılmış bir bağlantıya girenler eskiden kuru bir hata yazısı görüyordu. Artık büyük bir 404 yazısı, ana sayfaya dönüş düğmesi ve küçük bir oyun var: balonlar yavaşça aşağı iniyor, patlattığınız her balondan kiralanabilir bir ürün çıkıyor — tişört, telefon, kamera, matkap gibi. Üç balon yere değerse oyun bitiyor, en yüksek puanınız tarayıcınızda saklanıyor. Patlama sesi sağ üstteki düğmeyle kapatılabiliyor. Oyun koyu temada da, hareket azaltma açıkken de çalışıyor."
+}

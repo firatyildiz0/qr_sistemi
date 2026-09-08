@@ -133,21 +133,40 @@ export async function POST(request: Request) {
 
   const mesajlar = [...gelen];
 
-  // Onay kartının cevabı, modelin beklediği araç sonucu olarak geçmişe giriyor.
-  // Böylece sohbet kopmuyor: model kaydın açıldığını (ya da reddedildiğini)
-  // biliyor ve bir sonraki cümlesini ona göre kuruyor.
+  // Onay kartının cevabı geçmişe *yeni bir kullanıcı turu* olarak giriyor,
+  // araç sonucu olarak değil.
+  //
+  // İlk yazışta araç sonucu olarak eklenmişti ve API her isteği reddetti: bir
+  // `tool_use` yalnızca bir `tool_result` alabiliyor, oysa o kimliğin sonucu
+  // zaten aşağıdaki döngüde yazılmıştı ("kart gösterildi, kayıt açılmadı").
+  // Onay ikinci bir kopya ekliyordu.
+  //
+  // Doğrusu da bu: kart gösterildiği anda aracın işi bitmişti. Kullanıcının
+  // kararı ondan sonra olmuş yeni bir olay, ve sohbete öyle giriyor. Kullanıcı
+  // onaylamak yerine bambaşka bir şey yazarsa da geçmiş tutarlı kalıyor —
+  // cevapsız bir araç çağrısı asılı kalmıyor.
   if (govde.onay) {
     const aracId = typeof govde.onay.arac_id === "string" ? govde.onay.arac_id : "";
     if (!aracId) return hata("Onay kimliği eksik.", 400);
+
+    // Kart gerçekten gösterilmiş mi: istemcinin, hiç önerilmemiş bir planı
+    // onaylatmaya çalışmadığını doğruluyor. `createBooking` zaten kendi
+    // kontrollerini yapıyor, bu ondan önceki ucuz elemek.
+    const kartVar = mesajlar.some(
+      (mesaj) =>
+        mesaj.role === "assistant" &&
+        Array.isArray(mesaj.content) &&
+        mesaj.content.some(
+          (blok) => blok.type === "tool_use" && blok.id === aracId
+        )
+    );
+    if (!kartVar) return hata("Onaylanacak bir kart bulunamadı.", 400);
 
     const sonuc = govde.onay.kabul
       ? await rezervasyonuAc(govde.onay.plan, me.id)
       : "Kullanıcı kaydı onaylamadı, rezervasyon açılmadı.";
 
-    mesajlar.push({
-      role: "user",
-      content: [{ type: "tool_result", tool_use_id: aracId, content: sonuc }],
-    });
+    mesajlar.push({ role: "user", content: `[onay kartının sonucu] ${sonuc}` });
   }
 
   const client = new Anthropic();

@@ -122,6 +122,7 @@ function taslakOku(ham: unknown): Taslak {
               typeof u.gunlukFiyat === "number" && Number.isFinite(u.gunlukFiyat)
                 ? u.gunlukFiyat
                 : null,
+            gorsel: typeof u.gorsel === "string" ? u.gorsel : null,
           },
         ];
       })
@@ -242,7 +243,7 @@ export async function urunBul(
 ): Promise<TaslakUrun | null> {
   const { data } = await db
     .from("products")
-    .select("id, name, stock, daily_price, barcode")
+    .select("id, name, stock, daily_price, barcode, images")
     .eq("owner_id", ownerId)
     .ilike("barcode", kod)
     .limit(1)
@@ -257,6 +258,8 @@ export async function urunBul(
     adet: 1,
     stok: (data.stock ?? 0) as number,
     gunlukFiyat: (data.daily_price ?? null) as number | null,
+    // Kart yalnızca ilk görseli gösteriyor; ikincisi ürün sayfasında.
+    gorsel: ((data.images ?? []) as string[])[0] ?? null,
   };
 }
 

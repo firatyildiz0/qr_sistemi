@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recordSecurityEvent } from "@/lib/security";
 import { mesajiIsle } from "@/lib/instagram/akis";
-import { mesajGonder, yaziyorGoster } from "@/lib/instagram/graph";
+import { kartGonder, mesajGonder, yaziyorGoster } from "@/lib/instagram/graph";
 import { belirtecGecerli, imzaGecerli } from "@/lib/instagram/imza";
 import { KARSILAMA, KOD_ISTE, METIN_DEGIL } from "@/lib/instagram/metin";
 import { adminIstemci, hesapBul, olayYeni } from "@/lib/instagram/veri";
@@ -190,6 +190,14 @@ async function olayIsle(
   }
 
   for (const cevap of cevaplar) {
+    // Kart önce: müşteri önce ürünü görsün, sonra ne yazacağını okusun.
+    // Kartın gitmemesi akışı durdurmuyor — metin zaten aynı bilgiyi taşıyor,
+    // eksik olan yalnızca fotoğraf.
+    if (cevap.kart) {
+      const kart = await kartGonder(hesap.accessToken, senderId, cevap.kart);
+      if (!kart.ok) console.error("[instagram] ürün kartı gönderilemedi", kart.hata);
+    }
+
     const gonderim = await mesajGonder(hesap.accessToken, senderId, cevap.metin, cevap.hizli);
 
     if (!gonderim.ok) {

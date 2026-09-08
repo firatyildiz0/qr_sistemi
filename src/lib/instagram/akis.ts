@@ -2,7 +2,7 @@ import { MAX_BOOKING_ITEMS, MAX_ITEM_QUANTITY } from "@/lib/bookings";
 import { deliveryModeForCity } from "@/lib/turnaround";
 import { adresOku, ilceOku } from "@/lib/instagram/adres";
 import { sadelestir } from "@/lib/instagram/harf";
-import type { HizliCevap } from "@/lib/instagram/graph";
+import type { HizliCevap, UrunKarti } from "@/lib/instagram/graph";
 import * as metin from "@/lib/instagram/metin";
 import { tarihOku } from "@/lib/instagram/tarih";
 import type { Adim, BagliHesap, Konusma, Taslak, TaslakUrun } from "@/lib/instagram/tipler";
@@ -33,7 +33,11 @@ import {
  * açmış olabilir ve müşteriye verilmiş söz o anda geçersizleşir.
  */
 
-export type Cevap = { metin: string; hizli?: HizliCevap[] };
+/**
+ * Tek bir cevap. `kart` varsa metinden *önce* gönderiliyor: fotoğraf gelir,
+ * altında ne yapılacağını söyleyen mesaj durur.
+ */
+export type Cevap = { metin: string; hizli?: HizliCevap[]; kart?: UrunKarti };
 
 export type AkisSonucu = {
   adim: Adim;
@@ -226,6 +230,8 @@ async function kodAdimi(
     cevaplar.push({
       metin: metin.urunEklendi(sonEklenen, yeniTaslak),
       hizli: metin.HIZLI_DEVAM,
+      // Görseli olmayan üründe kart yok; mesaj yine tek başına yeterli.
+      kart: metin.urunKarti(sonEklenen) ?? undefined,
     });
     return sonuc("kod", yeniTaslak, ...cevaplar);
   }

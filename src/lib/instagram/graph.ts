@@ -131,6 +131,54 @@ export async function mesajGonder(
 }
 
 /**
+ * Ürün kartı: fotoğraf, ad, altında kod ve fiyat, bir de siteye açılan düğme.
+ *
+ * Instagram'ın kendi "generic template" bileşeni. Tasarımını biz seçmiyoruz —
+ * yazı tipi, renk, köşe yuvarlaklığı hepsi Meta'nın; elimizdeki tek şey içerik.
+ * Bu yüzden alanlar kısa tutuluyor: uzun metin kırpılıyor ve kırpılmış bir
+ * fiyat, yazılmamış bir fiyattan kötü.
+ */
+export type UrunKarti = {
+  baslik: string;
+  altBaslik: string;
+  gorselUrl: string;
+  dugmeUrl: string;
+  dugmeMetni: string;
+};
+
+export async function kartGonder(
+  token: string,
+  aliciId: string,
+  kart: UrunKarti
+): Promise<GonderimSonucu> {
+  return istek("/me/messages", token, {
+    recipient: { id: aliciId },
+    message: {
+      attachment: {
+        type: "template",
+        payload: {
+          template_type: "generic",
+          elements: [
+            {
+              // Instagram başlığı 80, alt başlığı 80, düğme metnini 20
+              // karakterde kesiyor. Kesmeyi kendimiz yapıyoruz ki nerede
+              // biteceğini bilelim.
+              title: kart.baslik.slice(0, 80),
+              subtitle: kart.altBaslik.slice(0, 80),
+              image_url: kart.gorselUrl,
+              default_action: { type: "web_url", url: kart.dugmeUrl },
+              buttons: [
+                { type: "web_url", url: kart.dugmeUrl, title: kart.dugmeMetni.slice(0, 20) },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  });
+}
+
+/**
  * "Yazıyor" göstergesi. Müsaitlik sorgusu birkaç yüz milisaniye sürüyor ve o
  * sessizlik sohbette donmuş gibi duruyor. Başarısız olması önemli değil, o
  * yüzden sonucu yutuluyor.

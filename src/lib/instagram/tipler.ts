@@ -32,6 +32,8 @@ export type TaslakUrun = {
   adet: number;
   stok: number;
   gunlukFiyat: number | null;
+  /** İlk ürün görselinin herkese açık adresi; kart bunu gösteriyor. */
+  gorsel?: string | null;
 };
 
 /**

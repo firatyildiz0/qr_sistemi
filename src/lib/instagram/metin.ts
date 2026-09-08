@@ -1,7 +1,8 @@
 import { formatPrice } from "@/lib/format";
 import { nightsBetween } from "@/lib/bookings";
 import { araligiYaz, tarihYaz } from "@/lib/instagram/tarih";
-import type { HizliCevap } from "@/lib/instagram/graph";
+import type { HizliCevap, UrunKarti } from "@/lib/instagram/graph";
+import { yonlendirmeAdresi } from "@/lib/instagram/kurulum";
 import type { Taslak, TaslakUrun } from "@/lib/instagram/tipler";
 
 /**
@@ -43,6 +44,28 @@ export function kodBulunamadi(kod: string): string {
 
 export function kodStoktaYok(ad: string): string {
   return `${ad} şu anda kiralamaya kapalı. Başka bir ürün kodu yazabilirsiniz.`;
+}
+
+/**
+ * Eklenen ürünün kartı — görseli olmayan üründe null.
+ *
+ * Kart metnin yerine geçmiyor, önüne geçiyor: altındaki mesaj yine sepeti ve
+ * ne yazılacağını anlatıyor. Sebep, kartın tek başına bir soru sormaması —
+ * müşteri fotoğrafı görüp ne yapacağını bilmeden kalmasın.
+ */
+export function urunKarti(urun: TaslakUrun): UrunKarti | null {
+  if (!urun.gorsel) return null;
+
+  const fiyat =
+    urun.gunlukFiyat != null ? ` · ${formatPrice(urun.gunlukFiyat)}/gün` : "";
+
+  return {
+    baslik: urun.ad,
+    altBaslik: `${urun.kod}${fiyat}`,
+    gorselUrl: urun.gorsel,
+    dugmeUrl: yonlendirmeAdresi(`/product/${urun.id}`).toString(),
+    dugmeMetni: "Ürünü gör",
+  };
 }
 
 export function urunEklendi(urun: TaslakUrun, taslak: Taslak): string {

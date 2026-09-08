@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTransition } from "react";
 import { markNotificationRead } from "@/app/admin/notifications/actions";
-import { IconClock } from "@/components/icons";
+import { IconClock, IconInbox } from "@/components/icons";
 
 function relativeTime(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -18,7 +18,8 @@ function relativeTime(iso: string) {
 
 export default function NotificationRow({
   id,
-  productId,
+  href,
+  kind,
   productName,
   message,
   isRead,
@@ -26,7 +27,9 @@ export default function NotificationRow({
   delay = 0,
 }: {
   id: string;
-  productId: string;
+  /** Bildirimin götürdüğü ekran; türüne göre değişiyor. */
+  href: string;
+  kind: "iade" | "talep";
   productName: string;
   message: string;
   isRead: boolean;
@@ -34,6 +37,7 @@ export default function NotificationRow({
   delay?: number;
 }) {
   const [, startTransition] = useTransition();
+  const talep = kind === "talep";
 
   return (
     <li
@@ -43,14 +47,18 @@ export default function NotificationRow({
       style={{ animationDelay: `${delay}ms` }}
     >
       <Link
-        href={`/admin/products/${productId}`}
+        href={href}
         onClick={() => {
           if (!isRead) startTransition(() => markNotificationRead(id));
         }}
         className="flex items-start gap-3 px-4 py-4 transition-colors hover:bg-surface sm:gap-4 sm:px-6"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
-          <IconClock className="h-4 w-4" />
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+            talep ? "bg-accent-soft text-accent" : "bg-warning/15 text-warning"
+          }`}
+        >
+          {talep ? <IconInbox className="h-4 w-4" /> : <IconClock className="h-4 w-4" />}
         </span>
         <div className="min-w-0 flex-1">
           <p className={`text-sm ${isRead ? "text-ink-muted" : "font-semibold text-ink"}`}>

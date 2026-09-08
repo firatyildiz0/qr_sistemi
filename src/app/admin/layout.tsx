@@ -30,13 +30,14 @@ async function loadUnreadCount(): Promise<number> {
   const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
   if (!user) return 0;
 
-  // Scoped through the product owner so one seller never sees another's count.
-  // RLS enforces this too; filtering here keeps the query from scanning rows it
-  // would only discard.
+  // Sahiplik artık bildirimin kendi kolonunda: talep bildirimlerinin tek bir
+  // ürünü olmadığı için ürün üzerinden filtrelemek onları dışarıda bırakırdı.
+  // RLS de aynı kolona bakıyor; buradaki filtre sorgunun eleyeceği satırları
+  // hiç taramaması için.
   const { count } = await supabase
     .from("notifications")
-    .select("id, products!inner(owner_id)", { count: "exact", head: true })
-    .eq("products.owner_id", user.id)
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id)
     .eq("is_read", false);
   return count ?? 0;
 }

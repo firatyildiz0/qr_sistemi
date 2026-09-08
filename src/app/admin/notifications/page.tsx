@@ -7,24 +7,33 @@ import { IconCheckCircle } from "@/components/icons";
 export default async function NotificationsPage() {
   const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
 
-  // `!inner` + the owner filter means a seller only ever sees notifications for
-  // products they own, independent of the RLS policy backing it up.
+  // Sahiplik bildirimin kendi kolonundan geliyor; RLS de aynı koşulu arkada
+  // uyguluyor. Ürün bağlantısı isteğe bağlı: talep bildirimlerinin tek bir
+  // ürünü olmayabilir (toplu talep), o yüzden join `!inner` değil.
   const { data: rows } = await supabase
     .from("notifications")
-    .select(
-      "id, booking_id, product_id, message, is_read, created_at, products!inner(name, owner_id)"
-    )
-    .eq("products.owner_id", user?.id ?? "")
+    .select("id, kind, request_id, product_id, message, is_read, created_at, products(name)")
+    .eq("owner_id", user?.id ?? "")
     .order("created_at", { ascending: false })
     .limit(50);
 
   const notifications = (rows ?? []).map((n) => ({
     id: n.id,
-    product_id: n.product_id,
+    // Bildirime tıklayan satıcı ne yapmak istiyorsa oraya gitmeli: iade
+    // hatırlatmasında ürün sayfasına, rezervasyon talebinde karar ekranına.
+    href:
+      n.kind === "talep"
+        ? "/admin/talepler"
+        : n.product_id
+          ? `/admin/products/${n.product_id}`
+          : "/admin",
+    kind: n.kind as "iade" | "talep",
     message: n.message,
     is_read: n.is_read,
     created_at: n.created_at,
-    product_name: (n.products as unknown as { name: string } | null)?.name ?? "Ürün",
+    product_name:
+      (n.products as unknown as { name: string } | null)?.name ??
+      (n.kind === "talep" ? "Instagram talebi" : "Ürün"),
   }));
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -43,7 +52,9 @@ export default async function NotificationsPage() {
               <IconCheckCircle className="h-6 w-6" />
             </span>
             <p className="font-semibold text-ink">Her şey güncel</p>
-            <p className="text-sm text-ink-muted">İade tarihi hatırlatmaları burada görünecek.</p>
+            <p className="text-sm text-ink-muted">
+              İade hatırlatmaları ve Instagram’dan gelen rezervasyon talepleri burada görünecek.
+            </p>
           </div>
         ) : (
           <ul className="overflow-hidden rounded-lg border border-border bg-card">
@@ -51,7 +62,8 @@ export default async function NotificationsPage() {
               <NotificationRow
                 key={n.id}
                 id={n.id}
-                productId={n.product_id}
+                href={n.href}
+                kind={n.kind}
                 productName={n.product_name}
                 message={n.message}
                 isRead={n.is_read}

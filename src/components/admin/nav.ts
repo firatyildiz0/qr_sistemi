@@ -5,6 +5,8 @@ import {
   IconChart,
   IconGrid,
   IconHome,
+  IconInbox,
+  IconInstagram,
   IconLifebuoy,
   IconSettings,
 } from "@/components/icons";
@@ -47,8 +49,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: IconCalendar,
     primary: true,
   },
+  // Instagram'dan gelen rezervasyon istekleri. Sekme çubuğuna girmiyor —
+  // bekleyen talep zaten bildirim rozetinde görünüyor.
+  { href: "/admin/talepler", label: "Talepler", icon: IconInbox },
   { href: "/admin/dashboard", label: "İstatistik", icon: IconChart },
   { href: "/admin/notifications", label: "Bildirimler", icon: IconBell, unread: true },
+  { href: "/admin/instagram", label: "Instagram", icon: IconInstagram },
   { href: "/admin/support", label: "Destek", icon: IconLifebuoy },
   { href: "/admin/settings", label: "Ayarlar", icon: IconSettings },
 ];

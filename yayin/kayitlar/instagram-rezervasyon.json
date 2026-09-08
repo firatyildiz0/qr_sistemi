@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Müşteriler Instagram mesajından rezervasyon isteyebiliyor",
+  "aciklama": "Instagram hesabınıza mesaj atan müşteri, ürün kodunu ve tarihleri yazarak rezervasyon talebi oluşturabiliyor. Talep panelinizdeki Talepler ekranına ve bildirimlerinize düşüyor; siz onaylayana kadar hiçbir tarih kapanmıyor. Onayladığınız anda rezervasyon oluşuyor ve müşteriye Instagram'dan haber gidiyor.",
+  "dikkat": "Canlıya almadan önce Supabase SQL editöründe 0027_instagram_rezervasyon.sql çalıştırılmalı, ardından Vercel'e INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET ve INSTAGRAM_VERIFY_TOKEN eklenmeli. Meta panelinde webhook adresi ve messages aboneliği tanımlanmalı."
+}

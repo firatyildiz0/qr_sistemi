@@ -70,8 +70,19 @@ export type Booking = {
 
 export type Notification = {
   id: string;
-  booking_id: string;
-  product_id: string;
+  /** Bildirimin sahibi. Talep bildiriminin ürünü olmayabilir, sahibi hep var. */
+  owner_id: string;
+  /**
+   * Ne olduğu: `iade` yarın teslim edilmesi gereken bir kiralama, `talep`
+   * Instagram'dan gelen ve satıcının kararını bekleyen bir rezervasyon isteği.
+   */
+  kind: "iade" | "talep";
+  /** `iade` bildiriminde dolu. */
+  booking_id: string | null;
+  /** Talep birden çok ürün taşıyabildiği için orada boş kalabilir. */
+  product_id: string | null;
+  /** `talep` bildiriminde dolu. */
+  request_id: string | null;
   message: string;
   is_read: boolean;
   created_at: string;

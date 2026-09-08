@@ -11,7 +11,7 @@ import { IconArrowRight, IconTag } from "@/components/icons";
  * Kart bir süs değil, doğruluk önlemi. Ölçümde Haiku 4.5, eline verilen ürün
  * listesini doğru aldığı hâlde adları uydurabiliyor — "üç ürün var" deyip
  * katalogda olmayan iki ad sayabiliyor. Bu yüzden yanlış olması pahalı olan
- * her şey (ad, fiyat, teminat, stok, müsaitlik) modelin cümlesinden değil
+ * her şey (ad, fiyat, stok, müsaitlik) modelin cümlesinden değil
  * doğrudan veritabanından geliyor ve burada basılıyor. Modele kalan tek şey
  * bağlayıcı cümle; oradaki bir kayma kartı yanlış yapmıyor.
  *
@@ -44,7 +44,7 @@ export default function UrunKarti({ kart }: { kart: Kart }) {
         {/* Panelin her yerindeki ürün görseliyle aynı bileşen: aynı yer
             tutucu, aynı "kırpma, sığdır" kararı. Kart kendi görsel kutusunu
             kurmuyor ki ürün listelerinden farklı görünmesin. */}
-        <ProductThumb src={kart.gorsel} className="h-[4.5rem] w-[4.5rem]" sizes="72px" />
+        <ProductThumb src={kart.gorsel} className="h-18 w-18" sizes="72px" />
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-extrabold leading-tight tracking-tight text-ink">
@@ -60,12 +60,10 @@ export default function UrunKarti({ kart }: { kart: Kart }) {
                 <span className="text-xs font-semibold text-ink-muted"> / gün</span>
               </span>
             )}
-            {kart.teminat !== null && (
-              <span className="text-xs font-semibold text-ink-muted">
-                {para(kart.teminat)} teminat
-              </span>
-            )}
-            {kart.gunluk_fiyat === null && kart.teminat === null && (
+            {/* Teminat burada yok, bilerek: teminat ürüne değil rezervasyona
+                ait (bkz. 0015 göçü). Ürün başına teminat kolonu bir kez
+                denenip terk edilmiş, uygulamada onu yazan bir yer yok. */}
+            {kart.gunluk_fiyat === null && (
               <span className="text-xs font-semibold text-ink-muted">
                 Fiyat girilmemiş
               </span>

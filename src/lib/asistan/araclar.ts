@@ -88,10 +88,11 @@ export const ARACLAR: Anthropic.Tool[] = [
     name: "urun_detay",
     description:
       "Tek bir ürünün bütün bilgilerini kullanıcıya bir KART olarak gösterir: " +
-      "görsel, günlük fiyat, teminat, stok, bugünkü müsaitlik, etiket numarası " +
-      "ve açıklama. Kullanıcı bir ürünün bilgilerini, fiyatını, stoğunu ya da " +
+      "görsel, günlük fiyat, stok, bugünkü müsaitlik, etiket numarası ve " +
+      "açıklama. Kullanıcı bir ürünün bilgilerini, fiyatını, stoğunu ya da " +
       "detayını sorduğunda bunu çağır. Kartı kullanıcı görüyor, o yüzden " +
-      "cevabında kartın içindekileri tek tek sayma — bir cümlede özetle.",
+      "cevabında kartın içindekileri tek tek sayma — bir cümlede özetle. " +
+      "Teminat ürüne değil rezervasyona ait; buradan gelmez.",
     input_schema: {
       type: "object",
       properties: {
@@ -220,7 +221,6 @@ export type UrunKarti = {
   ozellikler: string[];
   gorsel: string | null;
   gunluk_fiyat: number | null;
-  teminat: number | null;
   stok: number;
   /** Bugün itibarıyla kaç adedi elde. */
   bugun_musait: number;
@@ -293,16 +293,30 @@ async function urunAra(sorgu: string, baglam: AracBaglami): Promise<AracSonucu> 
     };
   }
 
-  const satirlar = bulunan.map((urun) =>
-    [
-      `id: ${urun.id}`,
-      `ad: ${urun.name}`,
-      `stok: ${urun.stock}`,
-      `gunluk_fiyat: ${urun.dailyPrice ?? "belirtilmemis"}`,
-    ].join(" | ")
+  // Arama bir BULUCU: yalnızca ad ve kimlik döndürüyor, nitelik döndürmüyor.
+  //
+  // Fiyat ve stok da buradan geldiğinde model "gelinlik kaç para?" sorusunu
+  // arama sonucundan cevaplayıp kartı hiç çıkarmıyordu — ölçümde görüldü.
+  // Nitelikler `urun_detay`'ın işi; orada hem kart basılıyor hem sayılar
+  // modelin cümlesinden değil doğrudan veritabanından ekrana gidiyor.
+  //
+  // Adlar numaralı ve tırnak içinde, sonda da açık bir kapanış cümlesi var:
+  // düz bir liste verildiğinde model doğru sayıyı söyleyip adları
+  // uydurabiliyordu ("üç ürün var: gelinlik, smokin, gümüş çanta").
+  const satirlar = bulunan.map(
+    (urun, i) => `${i + 1}. ad: "${urun.name}" | id: ${urun.id}`
   );
 
-  return { tip: "metin", metin: satirlar.join("\n") };
+  return {
+    tip: "metin",
+    metin:
+      satirlar.join("\n") +
+      `\n\nKatalogda bu aramaya uyan ${bulunan.length} ürün var. Yukarıdaki ` +
+      `adları kullanıcıya olduğu gibi söyleyebilirsin; sadece bu listenin ` +
+      `DIŞINDA bir ürün adı ekleme. Aradığı ürün listede yoksa bunu açıkça ` +
+      `söyle ve elindekileri say. Fiyat, stok ya da açıklama soruluyorsa ` +
+      `urun_detay'ı çağır — o bilgiler burada yok ve tahmin edilemez.`,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -411,20 +425,24 @@ async function urunDetay(urunId: string, baglam: AracBaglami): Promise<AracSonuc
     return { tip: "metin", metin: "Bu kimlikte bir ürün yok. Önce urun_ara ile bul." };
   }
 
-  const { data, error } = await baglam.supabase
+  // Kartın omurgası katalogdan geliyor ve her zaman elde: ad, stok, fiyat,
+  // müsaitlik. Aşağıdaki sorgu yalnızca *zenginleştirme* — görsel, açıklama,
+  // özellikler, etiket. Düşerse kart yine çıkıyor, sadece o alanlar boş kalıyor.
+  //
+  // Bu ayrım ölçümle geldi: sorgu bir kez düştüğünde araç komple hata döndü,
+  // model de kartsız kaldığı yerde fiyatı ve stoğu uydurdu ("10.000 ₺, 5 adet").
+  // Doğru olan, eksik bir kart göstermek; uydurulmuş bir cümle değil.
+  const { data } = await baglam.supabase
     .from("products")
-    .select("description, features, images, deposit_price, barcode")
+    .select("description, features, images, barcode")
     .eq("id", urunId)
     .eq("owner_id", baglam.ownerId)
     .maybeSingle();
-
-  if (error) return { tip: "metin", metin: "Ürün bilgileri okunamadı." };
 
   const satir = (data ?? {}) as {
     description?: string | null;
     features?: string[] | null;
     images?: string[] | null;
-    deposit_price?: number | string | null;
     barcode?: string | null;
   };
 
@@ -441,9 +459,6 @@ async function urunDetay(urunId: string, baglam: AracBaglami): Promise<AracSonuc
     ozellikler: (satir.features ?? []).filter((o) => typeof o === "string" && o.trim()),
     gorsel: satir.images?.[0] ?? null,
     gunluk_fiyat: ozet.dailyPrice,
-    teminat: satir.deposit_price === null || satir.deposit_price === undefined
-      ? null
-      : Number(satir.deposit_price),
     stok: ozet.stock,
     bugun_musait: unitsLeftInRange(
       ozet.availability.occupied,
@@ -462,10 +477,10 @@ async function urunDetay(urunId: string, baglam: AracBaglami): Promise<AracSonuc
     metin:
       `"${kart.ad}" kartı kullanıcıya gösterildi. Stok ${kart.stok}, bugün ` +
       `${kart.bugun_musait} adet müsait, günlük fiyat ` +
-      `${kart.gunluk_fiyat ?? "belirtilmemiş"}, teminat ` +
-      `${kart.teminat ?? "yok"}. Kullanıcı belirli bir şey sorduysa (fiyat, ` +
-      `teminat, stok) onu tek cümlede rakamla söyle; sormadıysa kartın ` +
-      `tamamını okuma, bir sonraki adımı sor.`,
+      `${kart.gunluk_fiyat ?? "belirtilmemiş"}. Kullanıcı belirli bir şey ` +
+      `sorduysa (fiyat, stok) onu tek cümlede rakamla söyle; sormadıysa kartın ` +
+      `tamamını okuma, bir sonraki adımı sor. Teminat ürüne değil rezervasyona ` +
+      `ait, burada yok.`,
   };
 }
 

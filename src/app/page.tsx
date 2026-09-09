@@ -84,7 +84,7 @@ export default async function Home() {
 
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
   const onayli = profile?.status === "approved";
-  const ctaHref = onayli ? homePathFor(profile!) : "/login";
+  const ctaHref = onayli ? homePathFor(profile) : "/login";
   const ctaLabel = onayli ? "Panele git" : "Hemen başla";
 
   return (

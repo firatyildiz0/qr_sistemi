@@ -190,17 +190,6 @@ function Rise({ children, className }: { children: React.ReactNode; className?: 
 export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string; oturumAcik: boolean }) {
   const hizmetler: Hizmet[] = [
     {
-      ad: "Çok kanallı stok",
-      ton: "turkuaz",
-      motif: "grafik",
-      kategori: "yonet",
-      durum: "live",
-      rozet: "Yeni hizmet",
-      aciklama: "Trendyol, Hepsiburada ve mağaza stoğunuzu tek panelde birleştirin; ürünleri anında güncel tutun.",
-      href: "/stok",
-      cta: "Panele git",
-    },
-    {
       ad: "Kiralama",
       ton: "yosun",
       motif: "qr",

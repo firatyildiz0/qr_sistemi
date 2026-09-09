@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Artwork, { type Motif, type Tone } from "./Artwork";
+import VeyroLogo from "@/components/VeyroLogo";
 import { applyPreferences, readPreferences, savePreferences } from "@/lib/preferences";
 import s from "./labs.module.css";
 
@@ -92,13 +93,7 @@ function TemaDugmesi() {
 function Marka() {
   return (
     <span className={s.brand}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="1.5" y="1.5" width="8" height="8" rx="2.4" fill="none" stroke="currentColor" strokeWidth="2" />
-        <rect x="14.5" y="1.5" width="8" height="8" rx="2.4" fill="none" stroke="currentColor" strokeWidth="2" />
-        <rect x="1.5" y="14.5" width="8" height="8" rx="2.4" fill="none" stroke="currentColor" strokeWidth="2" />
-        <rect x="14.5" y="14.5" width="3.8" height="3.8" rx="1.2" fill="var(--l-accent)" />
-        <rect x="18.7" y="18.7" width="3.8" height="3.8" rx="1.2" fill="var(--l-accent)" />
-      </svg>
+      <VeyroLogo />
       Veyro <span>Labs</span>
     </span>
   );
@@ -194,6 +189,17 @@ function Rise({ children, className }: { children: React.ReactNode; className?: 
 
 export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string; oturumAcik: boolean }) {
   const hizmetler: Hizmet[] = [
+    {
+      ad: "Çok kanallı stok",
+      ton: "turkuaz",
+      motif: "grafik",
+      kategori: "yonet",
+      durum: "live",
+      rozet: "Yeni hizmet",
+      aciklama: "Trendyol, Hepsiburada ve mağaza stoğunuzu tek panelde birleştirin; ürünleri anında güncel tutun.",
+      href: "/stok",
+      cta: "Panele git",
+    },
     {
       ad: "Kiralama",
       ton: "yosun",

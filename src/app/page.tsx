@@ -4,6 +4,7 @@ import { getProfile, homePathFor } from "@/lib/profile";
 import Reveal from "@/components/marketing/Reveal";
 import Logo from "@/components/Logo";
 import Counter from "@/components/marketing/Counter";
+import { redirect } from "next/navigation";
 import {
   IconArrowRight,
   IconBell,
@@ -79,9 +80,11 @@ const features = [
  * anlamı yok.
  */
 export default async function Home() {
+  redirect("/veyro-labs");
+
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
   const onayli = profile?.status === "approved";
-  const ctaHref = onayli ? homePathFor(profile) : "/login";
+  const ctaHref = onayli ? homePathFor(profile!) : "/login";
   const ctaLabel = onayli ? "Panele git" : "Hemen başla";
 
   return (

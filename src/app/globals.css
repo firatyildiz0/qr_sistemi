@@ -1,4 +1,5 @@
 @import "tailwindcss";
+.quick-actions>a{width:100%;display:flex;align-items:center;gap:11px;text-align:left;background:#fafaff;border:1px solid #efedf8;border-radius:10px;padding:12px;margin-top:7px;color:#7166d6;font-size:17px;cursor:pointer;transition:.2s;text-decoration:none}.quick-actions>a:hover{border-color:#cfcaff;background:#f2f0ff;transform:translateX(3px)}
 .stock-nav button{padding:12px;border-radius:11px;color:#9996ad;display:flex;gap:12px;align-items:center;font-size:13px;border:0;background:transparent;width:100%;text-align:left;cursor:pointer}.stock-nav button:hover,.stock-nav button.active{background:#393458;color:#fff}.stock-nav button.active{box-shadow:inset 3px 0 #9a8dff}
 
 /* VeyroStock workspace */
@@ -2270,14 +2271,16 @@ summary,
   flex: none;
   width: 100%;
   /* Karakter boydan görünüyor ama küçük duruyor: karşılama ekranının konusu o
-     değil, ne sorulabileceği. Yedi buçuk rem genişlik, on iki reme yakın bir
-     boya denk geliyor — bir avatardan büyük, bir illüstrasyondan küçük. */
-  max-width: 7.5rem;
+     değil, ne sorulabileceği. Genişlik boyun yarısından az olduğu için ölçü
+     buradan veriliyor: altı rem genişlik, on bir rem boy demek. Daha büyüğü
+     karşılamayı panele sığmaz hâle getiriyor ve karakterin başı ekranın
+     dışında kalıyor. */
+  max-width: 6rem;
   height: auto;
   /* Üstte ve solda negatif boşluk var: çizimin üstünde ampule ayrılmış boşluk,
      solunda kenar payı duruyor; oraları kapatmak karşılamayı tek blok yapıyor.
      Altta karakterin ayakları ve gölgesi bitiyor, orası zaten boşluk. */
-  margin: -1.25rem 0 0.25rem -0.6rem;
+  margin: -1rem 0 0.15rem -0.5rem;
   overflow: visible;
 }
 

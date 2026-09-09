@@ -18,7 +18,7 @@ export default function StokPanel({ initialProducts, loadError }: { initialProdu
   const [lowOnly, setLowOnly] = useState(false);
   const [toast, setToast] = useState("");
   const filtered = useMemo(() => products.filter((p) => (channel === "Tümü" || p.channel === channel) && (!lowOnly || p.stock < 10) && `${p.name} ${p.sku}`.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))), [products, channel, query, lowOnly]);
-  const adjust = async (id: number, amount: number) => { const current = products.find((p) => p.id === id); if (!current) return; const next = Math.max(0, current.stock + amount); setProducts((items) => items.map((p) => p.id === id ? { ...p, stock: next } : p)); try { await updateStock(String(id), next); notify("Stok kaydedildi"); } catch { setProducts((items) => items.map((p) => p.id === id ? { ...p, stock: current.stock } : p)); notify("Stok kaydedilemedi"); } };
+  const adjust = async (id: string, amount: number) => { const current = products.find((p) => p.id === id); if (!current) return; const next = Math.max(0, current.stock + amount); setProducts((items) => items.map((p) => p.id === id ? { ...p, stock: next } : p)); try { await updateStock(id, next); notify("Stok kaydedildi"); } catch { setProducts((items) => items.map((p) => p.id === id ? { ...p, stock: current.stock } : p)); notify("Stok kaydedilemedi"); } };
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2400); };
 
   return <main className="stock-app">

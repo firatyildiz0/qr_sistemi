@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { manrope, manropeEyebrow } from "@/lib/fonts";
+import { archivo, manrope, manropeEyebrow } from "@/lib/fonts";
 import { DEFAULT_PREFERENCES, PREFERENCES_SCRIPT } from "@/lib/preferences";
 import "./globals.css";
 
@@ -62,7 +62,7 @@ export default async function RootLayout({
       data-motion="full"
       data-sidebar={DEFAULT_PREFERENCES.sidebar}
       suppressHydrationWarning
-      className={`${manrope.variable} ${manropeEyebrow.variable} h-full antialiased`}
+      className={`${manrope.variable} ${manropeEyebrow.variable} ${archivo.variable} h-full antialiased`}
     >
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: PREFERENCES_SCRIPT }} />

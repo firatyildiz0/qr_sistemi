@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Veyro Labs anasayfası baştan tasarlandı: renkli sahneler ve aşağı kaydırdıkça ilerleyen anlatım",
+  "aciklama": "Anasayfa artık sayfa aşağı kaydırıldıkça kendini anlatıyor. Açılıştaki başlık perdenin altından çıkıyor, arka plandaki gün batımı yaklaşıyor, yanındaki telefon ters yöne kayıyor. Ortada ekrana sabitlenen bir bölüm var: yapıştır, okut, rezerve et, geri al diye dört adım dev harflerle geçiyor ve her adımda arka plan rengi değişiyor. Hemen altında kiracının gördüğü ekran adım adım ilerliyor — önce kamera kodu arıyor, sonra ürünün fiyatı ve müsait günleri çıkıyor, sonunda rezervasyon onayı görünüyor. Hizmetler bölümündeki soluk çizimlerin yerini panelin gerçek ekranları aldı: gerçek rezervasyon listesi, baskıya hazır etiket ve son otuz günün grafiği. Renkler de değişti; sayfa artık pembe, turuncu, altın ve turkuaz bir gün batımı paletinde.",
+  "dikkat": null
+}

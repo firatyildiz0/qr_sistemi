@@ -11,6 +11,7 @@ import {
   recordSecurityEvent,
 } from "@/lib/security";
 import { passwordError } from "@/lib/password";
+import { UYELIK_SOZLESMESI_SURUMU } from "@/lib/yasal";
 
 // `awaitingApproval`, arayüzün "onay bekleniyor" penceresini açması için: aynı
 // durum hem kayıttan hemen sonra hem de onaysız hesapla giriş denendiğinde
@@ -163,6 +164,15 @@ export async function signUp(
     return { error: "E-posta, kullanıcı adı ve şifre gereklidir.", notice: null, awaitingApproval: false };
   }
 
+  // Formdaki kutu `required`, ama elle atılan bir istek onu atlayabilir.
+  if (formData.get("uyelik_sozlesmesi") !== "on") {
+    return {
+      error: "Üye olmak için Üyelik Sözleşmesi’ni kabul etmelisiniz.",
+      notice: null,
+      awaitingApproval: false,
+    };
+  }
+
   if (!isValidUsername(username)) {
     return { error: `Kullanıcı adı geçersiz. ${USERNAME_RULE}`, notice: null, awaitingApproval: false };
   }
@@ -200,10 +210,20 @@ export async function signUp(
   const supabase = await createClient();
   // `username` metadata'ya yazılır; `handle_new_user` trigger'ı onu aynı
   // işlemde `profiles` tablosuna taşır.
+  //
+  // Kabul edilen sözleşmenin sürümü ve zamanı da yanına yazılıyor, böylece
+  // kimin hangi metni ne zaman kabul ettiği hesaptan okunabiliyor. Trigger
+  // yalnızca `username`'i okuduğu için ek alanlar ona dokunmuyor.
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { username } },
+    options: {
+      data: {
+        username,
+        uyelik_sozlesmesi_surumu: UYELIK_SOZLESMESI_SURUMU,
+        uyelik_sozlesmesi_kabul: new Date().toISOString(),
+      },
+    },
   });
 
   if (error) {

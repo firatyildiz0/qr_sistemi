@@ -782,7 +782,7 @@
 }
 @media (min-width: 780px) {
   .foot {
-    grid-template-columns: 1.7fr 1fr 1fr;
+    grid-template-columns: 1.7fr 1fr 1fr 1fr;
   }
 }
 .footBrand p {

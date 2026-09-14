@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Artwork, { type Motif, type Tone } from "./Artwork";
 import { applyPreferences, readPreferences, savePreferences } from "@/lib/preferences";
+import { BELGELER } from "@/lib/yasal";
 import s from "./labs.module.css";
 
 /**
@@ -577,6 +578,14 @@ export default function VeyroLabs({ panelHref, oturumAcik }: { panelHref: string
               </>
             )}
             <Link href="/admin/support">Destek</Link>
+          </div>
+          <div>
+            <h4>Yasal</h4>
+            {BELGELER.map((belge) => (
+              <Link key={belge.href} href={belge.href}>
+                {belge.kisa}
+              </Link>
+            ))}
           </div>
         </div>
         <div className={`${s.wrap} ${s.footBottom}`}>

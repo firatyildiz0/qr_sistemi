@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { manrope, manropeEyebrow } from "@/lib/fonts";
 import { DEFAULT_PREFERENCES, PREFERENCES_SCRIPT } from "@/lib/preferences";
+import CerezBildirimi from "@/components/yasal/CerezBildirimi";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -69,6 +70,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-paper text-ink font-display">
         {children}
+        <CerezBildirimi />
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { signUp, type SignupState } from "./actions";
 import { USERNAME_RULE } from "@/lib/username";
 import PasswordField from "@/components/PasswordField";
@@ -51,6 +52,37 @@ export default function SignupForm() {
       </div>
 
       <PasswordField />
+
+      {/* Sözleşme yeni sekmede açılıyor: aynı sekmede açılsaydı yazılmış form
+          kaybolurdu. Aydınlatma metni onay kutusunun dışında — KVKK'da
+          aydınlatma bir bilgilendirme, kabul ettirilecek bir şey değil. */}
+      <div className="space-y-2">
+        <label className="flex cursor-pointer items-start gap-3 text-sm text-ink-muted">
+          <input
+            type="checkbox"
+            name="uyelik_sozlesmesi"
+            required
+            className="mt-0.5 h-4.5 w-4.5 shrink-0 cursor-pointer accent-accent"
+          />
+          <span>
+            <Link
+              href="/uyelik-sozlesmesi"
+              target="_blank"
+              className="link-underline font-medium text-accent"
+            >
+              Üyelik Sözleşmesi
+            </Link>
+            ’ni okudum ve kabul ediyorum.
+          </span>
+        </label>
+        <p className="text-xs text-ink-muted">
+          Kişisel verileriniz{" "}
+          <Link href="/kvkk" target="_blank" className="link-underline font-medium text-accent">
+            KVKK Aydınlatma Metni
+          </Link>{" "}
+          kapsamında işlenir.
+        </p>
+      </div>
 
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
       {state.notice && <p className="text-sm text-ink">{state.notice}</p>}

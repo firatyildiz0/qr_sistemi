@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Yasal metinler eklendi: KVKK, çerez politikası, üyelik, mesafeli satış, iptal ve iade",
+  "aciklama": "Sitede artık KVKK aydınlatma metni, çerez politikası, üyelik sözleşmesi, mesafeli satış sözleşmesi ve iptal-iade koşulları var; gizlilik politikası da bunlarla uyumlu hâle getirildi. Hepsine ana sayfanın altından ulaşılıyor. Üye olurken sözleşmeyi kabul etmek zorunlu oldu ve ilk girişte kısa bir çerez bilgilendirmesi çıkıyor.",
+  "dikkat": "Metinlerde sarı işaretli yer tutucular var: şirket unvanı, adres, vergi dairesi ve numarası, MERSİS, telefon, KEP, yetkili mahkeme ili ve ödeme kuruluşu. Canlıya almadan önce bunların src/lib/yasal.ts içinde doldurulması gerekiyor; metinlerin bir hukukçuya kontrol ettirilmesi önerilir."
+}

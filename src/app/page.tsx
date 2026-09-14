@@ -4,6 +4,7 @@ import { getProfile, homePathFor } from "@/lib/profile";
 import Reveal from "@/components/marketing/Reveal";
 import Logo from "@/components/Logo";
 import Counter from "@/components/marketing/Counter";
+import { BELGELER } from "@/lib/yasal";
 import {
   IconArrowRight,
   IconBell,
@@ -331,7 +332,10 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="flex flex-col items-center gap-6 border-t border-border px-6 py-12 md:flex-row md:justify-between">
+      {/* Telefonda alttaki sabit eylem çubuğu sayfanın sonunu örtüyor; alt
+          boşluk yasal bağlantıların onun arkasında kalmaması için. */}
+      <footer className="border-t border-border px-6 pt-12 pb-32 sm:pb-12">
+        <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
         <span className="text-lg font-extrabold tracking-tight text-ink">RentQR</span>
         <div className="flex flex-wrap justify-center gap-1">
           <Link
@@ -353,13 +357,25 @@ export default async function Home() {
             İletişim
           </a>
           <Link
-            href="/gizlilik"
+            href="/yasal"
             className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
           >
-            Gizlilik
+            Yasal
           </Link>
         </div>
         <span className="text-sm text-ink-muted">© {new Date().getFullYear()} RentQR</span>
+        </div>
+
+        <nav
+          aria-label="Yasal metinler"
+          className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-border pt-6 text-xs text-ink-muted"
+        >
+          {BELGELER.map((belge) => (
+            <Link key={belge.href} href={belge.href} className="transition-colors hover:text-accent-hover">
+              {belge.baslik}
+            </Link>
+          ))}
+        </nav>
       </footer>
 
       {/* Telefonda sayfanın altına sabitlenen eylem çubuğu: bir uygulamanın

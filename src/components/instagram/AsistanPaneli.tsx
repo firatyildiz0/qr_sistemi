@@ -12,6 +12,7 @@ import {
   type Uslup,
 } from "@/lib/instagram/ayarlar";
 import type { GecmisMesaj } from "@/lib/instagram/tipler";
+import GorselOrnekler from "@/components/instagram/GorselOrnekler";
 import { IconAlertTriangle, IconCheckCircle, IconPlus, IconTrash } from "@/components/icons";
 
 /**
@@ -25,9 +26,12 @@ import { IconAlertTriangle, IconCheckCircle, IconPlus, IconTrash } from "@/compo
 export default function AsistanPaneli({
   baslangic,
   asistanHazir,
+  ownerId,
 }: {
   baslangic: InstagramAyarlari;
   asistanHazir: boolean;
+  /** Ekran görüntüleri satıcının kendi depo klasörüne yükleniyor. */
+  ownerId: string;
 }) {
   const [ayarlar, setAyarlar] = useState(baslangic);
   const [kayitli, setKayitli] = useState(baslangic);
@@ -187,11 +191,17 @@ export default function AsistanPaneli({
 
       <Bolum
         baslik="Örnek konuşmalar"
-        aciklama="Sık gelen sorulara sizin nasıl cevap verdiğinizi yazın. Asistan hem bilgiyi hem üslubu buradan öğrenir."
+        aciklama="Sık gelen sorulara sizin nasıl cevap verdiğinizi yazın ya da gerçek konuşmalarınızın ekran görüntüsünü ekleyin. Asistan hem bilgiyi hem üslubu buradan öğrenir."
       >
         <OrnekListesi
           ornekler={ayarlar.ornekler}
           onChange={(v) => guncelle("ornekler", v)}
+        />
+        <GorselOrnekler
+          ornekler={ayarlar.gorselOrnekler}
+          onChange={(v) => guncelle("gorselOrnekler", v)}
+          ownerId={ownerId}
+          asistanHazir={asistanHazir}
         />
       </Bolum>
 

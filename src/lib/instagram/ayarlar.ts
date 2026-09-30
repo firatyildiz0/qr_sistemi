@@ -12,6 +12,14 @@ export type Uslup = "samimi" | "dengeli" | "resmi";
 
 export type OrnekMesaj = { soru: string; cevap: string };
 
+/**
+ * Satıcının yüklediği gerçek bir DM konuşmasının ekran görüntüsü ve ondan
+ * çıkarılan yazılı döküm. Asistan cevap verirken dökümü okuyor, görseli değil:
+ * her mesajda görselleri yeniden göndermek hem yavaş hem pahalı olurdu.
+ * Döküm yükleme anında bir kez çıkarılıyor ve satıcı onu düzeltebiliyor.
+ */
+export type GorselOrnek = { url: string; dokum: string };
+
 export type InstagramAyarlari = {
   /** Serbest sorulara (fiyat, kargo, kapora...) cevap verilsin mi. */
   soruCevapAcik: boolean;
@@ -27,6 +35,8 @@ export type InstagramAyarlari = {
   kurallar: string;
   /** Satıcının kendi cevapladığı örnek konuşmalar; üslup da buradan öğreniliyor. */
   ornekler: OrnekMesaj[];
+  /** Ekran görüntüsünden alınmış örnek konuşmalar. */
+  gorselOrnekler: GorselOrnek[];
   /** Asistanın hiç konuşmaması gereken konular ya da yönlendirmeler. */
   yasaklar: string;
   /** Talep satıcıya iletildiğinde müşteriye giden mesaj. Boşsa varsayılan. */
@@ -46,6 +56,7 @@ export const VARSAYILAN_AYARLAR: InstagramAyarlari = {
   isletmeBilgisi: "",
   kurallar: "",
   ornekler: [],
+  gorselOrnekler: [],
   yasaklar: "",
   talepAlindi: "",
   onayNotu: "",
@@ -57,8 +68,16 @@ export const SINIRLAR = {
   uzunMetin: 6000,
   ornekSayisi: 20,
   ornekMetin: 600,
+  gorselOrnekSayisi: 10,
+  gorselDokum: 3000,
   minGun: 60,
 } as const;
+
+/**
+ * Görselli örneğin adresi: kendi kovamızdaki `instagram-ornek` klasörü. Sahip
+ * kontrolü (klasörün satıcının kendisine ait olması) kaydederken yapılıyor.
+ */
+const ORNEK_GORSEL_YOLU = /\/storage\/v1\/object\/public\/product-images\/[0-9a-f-]{36}\/instagram-ornek\/[\w.-]+$/i;
 
 function metin(deger: unknown, sinir: number): string {
   return typeof deger === "string" ? deger.trim().slice(0, sinir) : "";
@@ -80,6 +99,17 @@ export function ayarlariOku(ham: unknown): InstagramAyarlari {
         .slice(0, SINIRLAR.ornekSayisi)
     : [];
 
+  const gorselOrnekler: GorselOrnek[] = Array.isArray(v.gorselOrnekler)
+    ? v.gorselOrnekler
+        .flatMap((o) => {
+          if (typeof o !== "object" || o === null) return [];
+          const r = o as Record<string, unknown>;
+          if (typeof r.url !== "string" || !ORNEK_GORSEL_YOLU.test(r.url)) return [];
+          return [{ url: r.url, dokum: metin(r.dokum, SINIRLAR.gorselDokum) }];
+        })
+        .slice(0, SINIRLAR.gorselOrnekSayisi)
+    : [];
+
   const minGun = Number(v.minGun);
 
   return {
@@ -91,6 +121,7 @@ export function ayarlariOku(ham: unknown): InstagramAyarlari {
     isletmeBilgisi: metin(v.isletmeBilgisi, SINIRLAR.uzunMetin),
     kurallar: metin(v.kurallar, SINIRLAR.uzunMetin),
     ornekler,
+    gorselOrnekler,
     yasaklar: metin(v.yasaklar, SINIRLAR.uzunMetin),
     talepAlindi: metin(v.talepAlindi, SINIRLAR.kisaMetin),
     onayNotu: metin(v.onayNotu, SINIRLAR.kisaMetin),

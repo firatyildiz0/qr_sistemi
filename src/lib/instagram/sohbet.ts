@@ -67,6 +67,13 @@ function sistemIstemi({ ayarlar, katalog, isletmeAdi }: Baglam): string {
     ? ayarlar.ornekler.map((o) => `Müşteri: ${o.soru}\nSen: ${o.cevap}`).join("\n\n")
     : "(Örnek yok.)";
 
+  // Satıcının yüklediği gerçek konuşmaların dökümleri. "Siz" satırları
+  // satıcının kendi cevapları; üslubun en güvenilir kaynağı bunlar.
+  const gercekKonusmalar = ayarlar.gorselOrnekler
+    .filter((o) => o.dokum)
+    .map((o, i) => `### Konuşma ${i + 1}\n${o.dokum}`)
+    .join("\n\n");
+
   return [
     `Sen ${isletmeAdi ? `@${isletmeAdi} adlı` : "bir"} kiralama işletmesinin Instagram mesajlarına cevap veren çalışanısın. Müşterilere Türkçe cevap veriyorsun.`,
     "",
@@ -99,6 +106,12 @@ function sistemIstemi({ ayarlar, katalog, isletmeAdi }: Baglam): string {
     "## Örnek konuşmalar",
     ornekler,
     "",
+    gercekKonusmalar
+      ? "## Satıcının gerçek konuşmaları (ekran görüntülerinden)\n" +
+        "\"Siz\" satırları satıcının müşterilerine gerçekten yazdığı cevaplar. Uzunluğu, samimiyeti, emoji kullanımını ve kelime seçimini bunlara benzet; içlerindeki bilgiler de geçerli. Köşeli parantezli yerler ([isim], [telefon]) gizlenmiş kişisel bilgidir, onları kullanma.\n\n" +
+        gercekKonusmalar +
+        "\n"
+      : "",
     "## Katalog",
     katalogMetni(katalog),
   ].join("\n");
@@ -185,5 +198,66 @@ export async function soruyaCevap(girdi: SoruGirdisi): Promise<string | null> {
       console.error("[instagram] asistan cevap veremedi", err);
     }
     return null;
+  }
+}
+
+const DOKUM_TALIMATI = [
+  "Bu görsel bir Instagram mesajlaşmasının ekran görüntüsü. Ekran görüntüsünü alan kişi işletme sahibi.",
+  "Konuşmayı baştan sona, sırasıyla yazıya dök:",
+  "- İşletmenin mesajlarını (genellikle sağdaki, renkli balonlar) \"Siz:\" ile, karşı tarafın mesajlarını (genellikle soldaki balonlar) \"Müşteri:\" ile başlat.",
+  "- Her mesaj ayrı satırda. Yazım, emoji ve noktalama aynen kalsın; düzeltme yapma.",
+  "- Kişisel bilgileri gizle: isim → [isim], telefon → [telefon], adres → [adres], e-posta → [e-posta]. Fiyat, tarih, ürün adı gibi işletme bilgileri kalsın.",
+  "- Saat, \"Görüldü\", tepki, kullanıcı adı başlığı gibi arayüz öğelerini yazma. Fotoğraf ya da gönderi paylaşılmışsa kısaca [fotoğraf: kırmızı abiye] gibi belirt.",
+  "- Yalnızca dökümü yaz, başka hiçbir açıklama ekleme.",
+  "Görselde bir mesajlaşma yoksa yalnızca YOK yaz.",
+].join("\n");
+
+export type DokumSonucu = { dokum: string } | { hata: string };
+
+/**
+ * Ekran görüntüsündeki konuşmayı yazıya döker. Yükleme anında bir kez
+ * çalışıyor; sonucu satıcı panelde görüp düzeltebiliyor.
+ */
+export async function gorselOrnegiCoz(
+  veri: string,
+  tur: "image/jpeg" | "image/png" | "image/webp"
+): Promise<DokumSonucu> {
+  if (!asistanYapilandirildi()) return { hata: "Görsel okuma bu kurulumda yapılandırılmamış." };
+
+  try {
+    const cevap = await anthropic().messages.create(
+      {
+        model: MODEL,
+        max_tokens: 4000,
+        output_config: { effort: "low" },
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: tur, data: veri } },
+              { type: "text", text: DOKUM_TALIMATI },
+            ],
+          },
+        ],
+      },
+      // Uzun bir konuşmanın dökümü bir DM cevabından uzun sürüyor.
+      { timeout: 60_000 }
+    );
+
+    if (cevap.stop_reason === "refusal") return { hata: "Bu görsel okunamadı." };
+
+    const dokum = cevap.content
+      .flatMap((blok) => (blok.type === "text" ? [blok.text] : []))
+      .join("")
+      .trim();
+
+    if (!dokum || dokum === "YOK") {
+      return { hata: "Görselde bir mesajlaşma bulunamadı. Instagram konuşmasının ekran görüntüsünü yükleyin." };
+    }
+
+    return { dokum };
+  } catch (err) {
+    console.error("[instagram] görsel örnek okunamadı", err);
+    return { hata: "Görsel şu an okunamadı. Biraz sonra tekrar deneyin." };
   }
 }

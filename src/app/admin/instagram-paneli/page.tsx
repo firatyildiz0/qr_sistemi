@@ -68,6 +68,7 @@ export default async function InstagramPaneliPage() {
         <AsistanPaneli
           baslangic={ayarlariOku(satir?.settings)}
           asistanHazir={asistanYapilandirildi()}
+          ownerId={user?.id ?? ""}
         />
       </div>
     </div>

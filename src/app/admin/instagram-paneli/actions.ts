@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { ayarlariOku, type InstagramAyarlari } from "@/lib/instagram/ayarlar";
-import { soruyaCevap } from "@/lib/instagram/sohbet";
+import { gorselOrnegiCoz, soruyaCevap } from "@/lib/instagram/sohbet";
+import { PRODUCT_IMAGES_BUCKET, storagePathFromUrl } from "@/lib/storage";
 import type { GecmisMesaj } from "@/lib/instagram/tipler";
 import type { KatalogUrunu } from "@/lib/instagram/veri";
 
@@ -19,8 +20,20 @@ export async function ayarlariKaydet(
   const user = await getCurrentUser();
   if (!user) return { hata: "Oturumunuz sona ermiş. Lütfen tekrar giriş yapın." };
 
-  const ayarlar = ayarlariOku(ham);
+  const okunan = ayarlariOku(ham);
+  // Görselli örnekler yalnızca satıcının kendi klasöründen olabilir.
+  const ayarlar: InstagramAyarlari = {
+    ...okunan,
+    gorselOrnekler: okunan.gorselOrnekler.filter((o) => kendiGorseli(o.url, user.id)),
+  };
+
   const supabase = await createClient();
+
+  const { data: onceki } = await supabase
+    .from("instagram_settings")
+    .select("settings")
+    .eq("owner_id", user.id)
+    .maybeSingle();
 
   const { error } = await supabase.from("instagram_settings").upsert({
     owner_id: user.id,
@@ -30,8 +43,48 @@ export async function ayarlariKaydet(
 
   if (error) return { hata: error.message };
 
+  // Listeden çıkarılan ekran görüntüleri kovadan da siliniyor: içlerinde
+  // müşteri konuşmaları var, gereksiz yere durmasınlar.
+  const kalan = new Set(ayarlar.gorselOrnekler.map((o) => o.url));
+  const silinecek = ayarlariOku(onceki?.settings)
+    .gorselOrnekler.filter((o) => !kalan.has(o.url) && kendiGorseli(o.url, user.id))
+    .flatMap((o) => storagePathFromUrl(o.url) ?? []);
+
+  if (silinecek.length) await supabase.storage.from(PRODUCT_IMAGES_BUCKET).remove(silinecek);
+
   revalidatePath("/admin/instagram-paneli");
   return { hata: null, ayarlar };
+}
+
+function kendiGorseli(url: string, ownerId: string): boolean {
+  return storagePathFromUrl(url)?.startsWith(`${ownerId}/instagram-ornek/`) ?? false;
+}
+
+const GORSEL_TURLERI = ["image/jpeg", "image/png", "image/webp"] as const;
+
+/**
+ * Yüklenen ekran görüntüsündeki konuşmayı yazıya döker. Görsel tarayıcıdan
+ * doğrudan kovaya yükleniyor (sunucu eylemlerinin gövde sınırı yüzünden);
+ * burada kovadan okunup modele veriliyor.
+ */
+export async function gorselOrnegiOku(
+  url: string
+): Promise<{ dokum: string | null; hata: string | null }> {
+  const user = await getCurrentUser();
+  if (!user) return { dokum: null, hata: "Oturumunuz sona ermiş." };
+
+  const yol = storagePathFromUrl(url);
+  if (!yol || !kendiGorseli(url, user.id)) return { dokum: null, hata: "Görsel bulunamadı." };
+
+  const supabase = await createClient();
+  const { data: dosya, error } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).download(yol);
+  if (error || !dosya) return { dokum: null, hata: "Görsel okunamadı." };
+
+  const tur = GORSEL_TURLERI.find((t) => t === dosya.type) ?? "image/jpeg";
+  const veri = Buffer.from(await dosya.arrayBuffer()).toString("base64");
+
+  const sonuc = await gorselOrnegiCoz(veri, tur);
+  return "dokum" in sonuc ? { dokum: sonuc.dokum, hata: null } : { dokum: null, hata: sonuc.hata };
 }
 
 /**

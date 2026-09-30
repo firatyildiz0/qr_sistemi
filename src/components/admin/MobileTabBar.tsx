@@ -6,6 +6,7 @@ import { Suspense, use, useEffect, useState } from "react";
 import ScanSheet from "@/components/scan/ScanSheet";
 import { NAV_ITEMS, isActive, type NavItem } from "@/components/admin/nav";
 import type { Identity } from "@/components/admin/AdminShell";
+import ProfilAvatari from "@/components/ProfilAvatari";
 import {
   IconChevronRight,
   IconLogOut,
@@ -229,7 +230,7 @@ function MenuSheet({
 
         <div className="mb-4 flex items-center gap-3 rounded-2xl bg-surface p-3">
           <Suspense fallback={<AccountRowFallback />}>
-            <AccountRow promise={identityPromise} />
+            <AccountRow promise={identityPromise} onNavigate={onClose} />
           </Suspense>
           <button
             type="button"
@@ -337,19 +338,18 @@ function AccountRowFallback() {
   );
 }
 
-function AccountRow({ promise }: { promise: Promise<Identity> }) {
-  const { email, initial, name, greeting } = use(promise);
+/** Hesap satırı Hesabım ekranına götürüyor: profile dokunmak hesabı açıyor. */
+function AccountRow({ promise, onNavigate }: { promise: Promise<Identity>; onNavigate: () => void }) {
+  const { email, initial, name, greeting, avatarUrl, avatarColor } = use(promise);
   return (
-    <>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-white">
-        {initial}
-      </span>
+    <Link href="/admin/hesabim" onClick={onNavigate} className="tab-press flex min-w-0 flex-1 items-center gap-3">
+      <ProfilAvatari url={avatarUrl} renk={avatarColor} harf={initial} className="h-10 w-10" />
       <span className="flex min-w-0 flex-col">
         <span className="truncate text-sm font-semibold text-ink">
           {greeting}, {name}
         </span>
-        <span className="truncate text-xs text-ink-muted">{email}</span>
+        <span className="truncate text-xs text-ink-muted">{email} · Hesabım</span>
       </span>
-    </>
+    </Link>
   );
 }

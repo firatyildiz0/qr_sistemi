@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profile";
 import { greetingFor } from "@/lib/greeting";
+import { basHarf } from "@/lib/hesap";
 import { signOut } from "@/app/login/actions";
 import AdminShell, { type Identity } from "@/components/admin/AdminShell";
 import UsernamePrompt from "@/components/admin/UsernamePrompt";
@@ -12,12 +13,16 @@ import PresenceBeacon from "@/components/PresenceBeacon";
 async function loadIdentity(): Promise<Identity> {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
   const email = user?.email ?? "Giriş yapıldı";
-  // Kullanıcı adı yoksa e-postanın yerel kısmı: selamlamada "@..." görünmesin.
-  const name = profile?.username ?? email.split("@")[0];
+  // Selamlamada önce satıcının kendi yazdığı adı; yoksa kullanıcı adı, o da
+  // yoksa e-postanın yerel kısmı ("@..." görünmesin).
+  const name =
+    profile?.fullName?.split(" ")[0] ?? profile?.username ?? email.split("@")[0];
   return {
     email,
-    initial: email.charAt(0).toUpperCase(),
+    initial: basHarf(profile?.fullName ?? null, email),
     name,
+    avatarUrl: profile?.avatarUrl ?? null,
+    avatarColor: profile?.avatarColor ?? null,
     greeting: greetingFor(),
     // Yönetim paneline dönüş bağlantısı yalnızca superuser'a çizilsin diye.
     // Kimliğin içinde geliyor çünkü kabuk zaten onu bekliyor; ayrı bir profil

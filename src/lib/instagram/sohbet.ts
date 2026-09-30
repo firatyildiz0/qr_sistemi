@@ -19,7 +19,7 @@ import type { KatalogUrunu } from "@/lib/instagram/veri";
  * taraf eski sabit cümleye düşüyor: müşteri hiçbir durumda cevapsız kalmıyor.
  */
 
-const MODEL = "claude-opus-5-5";
+const MODEL = "claude-sonnet-5";
 /** Webhook 20 saniye içinde 200 dönmek zorunda; cevap bunun içinde bitmeli. */
 const ZAMAN_ASIMI_MS = 12_000;
 
@@ -129,7 +129,7 @@ function anthropic(): Anthropic {
 export async function soruyaCevap(girdi: SoruGirdisi): Promise<string | null> {
   if (!asistanYapilandirildi()) return null;
 
-  const mesajlar: Anthropic.Beta.BetaMessageParam[] = [];
+  const mesajlar: Anthropic.MessageParam[] = [];
 
   // Geçmiş müşteri mesajıyla başlamalı; baştaki bizim mesajlarımız atlanıyor.
   const gecmis = [...girdi.gecmis];
@@ -156,11 +156,9 @@ export async function soruyaCevap(girdi: SoruGirdisi): Promise<string | null> {
   });
 
   try {
-    const cevap = await anthropic().beta.messages.create({
+    const cevap = await anthropic().messages.create({
       model: MODEL,
       max_tokens: 4000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
       output_config: { effort: "low" },
       system: [
         {

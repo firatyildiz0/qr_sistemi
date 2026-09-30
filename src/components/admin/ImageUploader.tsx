@@ -30,6 +30,13 @@ type Slot = {
 type CropTask = { id: string; file: File; replaceKey: string | null };
 
 /**
+ * Ceiling on the file the seller picks, before cropping. It only guards the
+ * browser against decoding something absurd; a 50 MP phone photo is well
+ * under it, and the cropper shrinks it to MAX_IMAGE_BYTES before upload.
+ */
+const MAX_SOURCE_BYTES = 40 * 1024 * 1024;
+
+/**
  * Uploads straight from the browser to Supabase Storage rather than through
  * the server action — Server Actions cap the request body at 1 MB, which a
  * single photo blows past. The form only ever submits the resulting URLs.
@@ -59,6 +66,7 @@ export default function ImageUploader({
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const objectUrls = useRef<string[]>([]);
   // Mirrors `slots` so an upload that finishes later can tell what it is
   // replacing without closing over a stale render.
@@ -72,6 +80,12 @@ export default function ImageUploader({
   useEffect(() => {
     slotsRef.current = slots;
   }, [slots]);
+
+  // On a phone the file picker and the cropper both cover the page; when they
+  // close, a message under the picture grid is usually off-screen.
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   useEffect(() => {
     onBusyChange?.(busy);
@@ -98,13 +112,18 @@ export default function ImageUploader({
       if (remaining === 0) return;
     }
 
+    // Only the source is checked loosely here: the cropper re-encodes every
+    // picture to JPEG/PNG/WEBP at a capped size, and that output is what has
+    // to fit MAX_IMAGE_BYTES. Checking the raw file against 5 MB turned away
+    // ordinary phone photos. Some Android pickers hand over an empty type, so
+    // that is let through too — the cropper says so if it can't decode it.
     const accepted = files.slice(0, remaining).filter((file) => {
-      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-        setError("Yalnızca PNG, JPG veya WEBP dosyaları yüklenebilir.");
+      if (file.type !== "" && !file.type.startsWith("image/")) {
+        setError("Yalnızca fotoğraf dosyaları yüklenebilir.");
         return false;
       }
-      if (file.size > MAX_IMAGE_BYTES) {
-        setError("Her görsel en fazla 5 MB olabilir.");
+      if (file.size > MAX_SOURCE_BYTES) {
+        setError("Bu fotoğraf çok büyük. Daha küçük bir fotoğraf seçin.");
         return false;
       }
       return true;
@@ -122,22 +141,44 @@ export default function ImageUploader({
   }
 
   async function uploadFile(file: File, replaceKey: string | null) {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setError("Görsel yüklemek için giriş yapmalısınız.");
-      return;
-    }
-
     const key = replaceKey ?? crypto.randomUUID();
     const replaced = replaceKey
       ? slotsRef.current.find((s) => s.key === replaceKey)
       : undefined;
 
     if (replaceKey && !replaced) return;
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError("Görsel 5 MB'ın altına indirilemedi. Kırpma alanını küçültüp tekrar deneyin.");
+      return;
+    }
+
+    try {
+      await sendFile(file, key, replaced);
+    } catch {
+      // Nothing may escape from here: an upload that throws instead of
+      // returning an error used to leave its slot spinning, the submit button
+      // stuck on "Görseller yükleniyor…" and the seller with no message at all.
+      failSlot(key, "Görsel yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.");
+    }
+  }
+
+  function failSlot(key: string, message: string) {
+    setError(message);
+    setSlots((prev) => prev.map((s) => (s.key === key ? { ...s, status: "error" } : s)));
+  }
+
+  async function sendFile(file: File, key: string, replaced: Slot | undefined) {
+    const replaceKey = replaced?.key ?? null;
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setError("Oturumunuz kapanmış. Sayfayı yenileyip tekrar giriş yapın.");
+      return;
+    }
 
     const preview = URL.createObjectURL(file);
     objectUrls.current.push(preview);
@@ -162,8 +203,9 @@ export default function ImageUploader({
       .upload(path, file, { contentType: file.type, upsert: false });
 
     if (uploadError) {
-      setError(uploadError.message);
-      setSlots((prev) => prev.map((s) => (s.key === key ? { ...s, status: "error" } : s)));
+      // The raw message is the browser's ("Load failed", "Failed to fetch"),
+      // which tells a seller nothing.
+      failSlot(key, "Görsel yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.");
       return;
     }
 
@@ -357,11 +399,15 @@ export default function ImageUploader({
       />
 
       <p className="mt-2 text-xs text-ink-muted">
-        PNG, JPG veya WEBP · görsel başına en fazla 5 MB · ilk görsel kapak olarak kullanılır ·
-        eklerken kırpabilirsiniz
+        Telefon fotoğrafları otomatik küçültülür · ilk görsel kapak olarak kullanılır · eklerken
+        kırpabilirsiniz
       </p>
 
-      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      {error && (
+        <p ref={errorRef} role="alert" className="mt-2 text-sm text-danger">
+          {error}
+        </p>
+      )}
 
       {task && (
         <ImageCropper

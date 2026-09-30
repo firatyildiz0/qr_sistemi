@@ -329,6 +329,14 @@ export default function ImageCropper({
                 setCrop(centredCrop(null));
                 setRatio(null);
               }}
+              // Without this a picture the browser can't decode (HEIC on
+              // Android, a broken download) left the dialog open with the
+              // apply button disabled and nothing on screen saying why.
+              onError={() =>
+                setError(
+                  "Bu fotoğraf açılamadı. Telefonunuz fotoğrafı farklı bir biçimde kaydediyor olabilir; fotoğrafın ekran görüntüsünü alıp onu seçmeyi deneyin."
+                )
+              }
               className="block max-h-[46vh] max-w-full object-contain sm:max-h-[54vh]"
             />
 

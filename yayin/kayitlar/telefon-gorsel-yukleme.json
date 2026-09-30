@@ -1,0 +1,6 @@
+{
+  "tip": "hata",
+  "baslik": "Telefondan ürün eklerken fotoğraf eklenemiyordu",
+  "aciklama": "5 MB’tan büyük telefon fotoğrafları reddediliyor ama uyarı ekranın görünmeyen bir yerinde kalıyordu; bazı fotoğraflarda kırpma penceresi takılıyor, yükleme koptuğunda da kaydet butonu kilitli kalıyordu. Artık telefon fotoğrafları boyutuna bakılmadan kabul edilip otomatik küçültülüyor; açılamayan ya da yüklenemeyen fotoğraf için anlaşılır bir uyarı çıkıyor ve ekran o uyarıya kayıyor.",
+  "dikkat": null
+}

@@ -11,6 +11,11 @@ export type Profile = {
   usernameAuto: boolean;
   role: ProfileRole;
   status: ProfileStatus;
+  fullName: string | null;
+  sector: string | null;
+  avatarUrl: string | null;
+  avatarColor: string | null;
+  createdAt: string;
 };
 
 /** Rolüne göre girişten sonra ineceği panel. */
@@ -32,7 +37,9 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, username_auto, role, status")
+    .select(
+      "id, username, username_auto, role, status, full_name, sector, avatar_url, avatar_color, created_at"
+    )
     .eq("id", user.id)
     .maybeSingle();
 
@@ -44,5 +51,10 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
     usernameAuto: data.username_auto,
     role: data.role as ProfileRole,
     status: data.status as ProfileStatus,
+    fullName: data.full_name ?? null,
+    sector: data.sector ?? null,
+    avatarUrl: data.avatar_url ?? null,
+    avatarColor: data.avatar_color ?? null,
+    createdAt: data.created_at,
   };
 });

@@ -7,6 +7,8 @@ import MobileTabBar from "@/components/admin/MobileTabBar";
 import HeaderSlogan from "@/components/admin/HeaderSlogan";
 import QrScanFab from "@/components/scan/QrScanFab";
 import Logo from "@/components/Logo";
+import ProfilAvatari from "@/components/ProfilAvatari";
+import ProfilMenusu from "@/components/admin/ProfilMenusu";
 import { IconBell, IconChevronLeft, IconLogOut, IconShield } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
 
@@ -16,6 +18,9 @@ export type Identity = {
   name: string;
   greeting: string;
   isSuperuser: boolean;
+  /** Profil fotoğrafı; yoksa `avatarColor` zeminli baş harf. */
+  avatarUrl: string | null;
+  avatarColor: string | null;
 };
 
 export default function AdminShell({
@@ -62,11 +67,12 @@ export default function AdminShell({
               <UnreadDot promise={unreadCountPromise} />
             </Suspense>
           </Link>
-          <Link href="/admin/settings" aria-label="Ayarlar" className="tab-press">
+          {/* Profile dokununca Hesabım / Ayarlar / Çıkış menüsü. */}
+          <ProfilMenusu yon="asagi" signOutAction={signOutAction}>
             <Suspense fallback={<AvatarShell className="h-8 w-8 text-sm" />}>
               <Avatar promise={identityPromise} className="h-8 w-8 text-sm" />
             </Suspense>
-          </Link>
+          </ProfilMenusu>
         </div>
       </header>
 
@@ -108,9 +114,15 @@ export default function AdminShell({
           </Suspense>
 
           <div className="sidebar-account flex items-center gap-3">
-            <Suspense fallback={<AccountFallback />}>
-              <Account promise={identityPromise} />
-            </Suspense>
+            <ProfilMenusu
+              yon="yukari"
+              signOutAction={signOutAction}
+              className="min-w-0 flex-1"
+            >
+              <Suspense fallback={<AccountFallback />}>
+                <Account promise={identityPromise} />
+              </Suspense>
+            </ProfilMenusu>
             <form action={signOutAction} className="sidebar-signout ml-auto">
               <button
                 type="submit"
@@ -184,8 +196,8 @@ function AvatarShell({ className }: { className: string }) {
 }
 
 function Avatar({ promise, className }: { promise: Promise<Identity>; className: string }) {
-  const { initial } = use(promise);
-  return <span className={`${avatarClass} ${className}`}>{initial}</span>;
+  const { initial, avatarUrl, avatarColor } = use(promise);
+  return <ProfilAvatari url={avatarUrl} renk={avatarColor} harf={initial} className={className} />;
 }
 
 /**
@@ -233,10 +245,10 @@ function AccountFallback() {
 }
 
 function Account({ promise }: { promise: Promise<Identity> }) {
-  const { email, initial } = use(promise);
+  const { email, initial, avatarUrl, avatarColor } = use(promise);
   return (
     <>
-      <span className={`${avatarClass} h-10 w-10 shrink-0`}>{initial}</span>
+      <ProfilAvatari url={avatarUrl} renk={avatarColor} harf={initial} className="h-10 w-10" />
       <div className="sidebar-label flex min-w-0 flex-col">
         <span className="truncate text-sm text-ink">{email}</span>
         <span className="text-xs text-ink-muted">Sahip</span>

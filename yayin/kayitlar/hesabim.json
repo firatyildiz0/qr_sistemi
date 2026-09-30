@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Profil fotoğrafı ve Hesabım ekranı",
+  "aciklama": "Profil resminize tıklayınca Hesabım, Ayarlar ve Çıkış seçenekleri açılıyor. Hesabım ekranında profil fotoğrafı yükleyebilir ya da baş harfiniz için renk seçebilir, ad soyad ve sektör bilginizi düzenleyebilirsiniz; üyelik planınızı, hesabı açtığınız e-postayı ve üyelik tarihinizi de görürsünüz.",
+  "dikkat": "Canlıya almadan önce supabase/migrations/0030_profil_bilgileri.sql Supabase SQL editöründe çalıştırılmalı; çalıştırılmazsa panel açılmaz."
+}

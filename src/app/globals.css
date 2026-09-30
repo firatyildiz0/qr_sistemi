@@ -1733,3 +1733,72 @@ summary,
     opacity: 0;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Bildirimler
+   ---------------------------------------------------------------------
+   Zil, bildirimleri açmaya çağıran yerlerde birkaç saniyede bir kısaca
+   sallanıyor — göz ucuyla fark edilecek kadar, rahatsız etmeyecek kadar.
+   Davet penceresi de modal değil: sayfanın üstünde, alt çubuğun hemen
+   yukarısında duruyor ve satıcının işini kesmiyor. */
+.zil-salla svg {
+  transform-origin: 50% 10%;
+  animation: zil-salla 4.5s ease-in-out 1.2s infinite;
+}
+@keyframes zil-salla {
+  0%,
+  82%,
+  100% {
+    transform: rotate(0);
+  }
+  85% {
+    transform: rotate(14deg);
+  }
+  88% {
+    transform: rotate(-12deg);
+  }
+  91% {
+    transform: rotate(8deg);
+  }
+  94% {
+    transform: rotate(-5deg);
+  }
+}
+
+.bildirim-daveti {
+  bottom: calc(
+    var(--tab-bar-h, 4rem) + var(--bottom-inset, max(env(safe-area-inset-bottom), 0.75rem)) + 0.75rem
+  );
+  animation: modal-pop-in 420ms var(--ease-spring) both;
+}
+@media (min-width: 768px) {
+  .bildirim-daveti {
+    /* Masaüstünde sağ alttaki "Tara" düğmesinin üstünde. */
+    bottom: 6.5rem;
+  }
+}
+
+.bildirim-satiri-sil {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.bildirim-satiri:hover .bildirim-satiri-sil,
+.bildirim-satiri:focus-within .bildirim-satiri-sil {
+  opacity: 1;
+}
+@media (hover: none) {
+  .bildirim-satiri-sil {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zil-salla svg,
+  .bildirim-daveti {
+    animation: none !important;
+  }
+}
+:root[data-motion="reduced"] .zil-salla svg,
+:root[data-motion="reduced"] .bildirim-daveti {
+  animation: none !important;
+}

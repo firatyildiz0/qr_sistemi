@@ -45,6 +45,10 @@ function contentSecurityPolicy(nonce: string): string {
     `img-src 'self' blob: data: ${supabase}`,
     `font-src 'self'`,
     `connect-src 'self' ${supabase}${isDev ? " ws: wss:" : ""}`,
+    // Telefon bildirimlerinin service worker'ı (`/sw.js`). Açıkça yazılmazsa
+    // `script-src`'ye düşüyor ve orada `strict-dynamic` `'self'`i yok saydığı
+    // için kayıt reddediliyor.
+    `worker-src 'self'`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

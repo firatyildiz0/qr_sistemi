@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Yeni talep gelince telefona bildirim gidiyor; bildirim ekranı yenilendi",
+  "aciklama": "Instagram'dan rezervasyon talebi geldiğinde, bildirimlere izin veren satıcının telefonuna anında bildirim gidiyor; bildirime dokununca Talepler ekranı açılıyor. Panel, bildirimleri henüz açmamış satıcıya birkaç saniye sonra küçük bir pencereyle açmayı öneriyor (iPhone'da önce ana ekrana ekleme adımlarını gösteriyor). Bildirimler ekranı güne göre gruplandı, türe göre süzülebiliyor, talebin güncel durumu görünüyor ve bildirimler tek tek ya da toplu silinebiliyor; çok ürünlü talep bildirimlerinin okundu işaretlenememesi de düzeldi.",
+  "dikkat": "Canlıya almadan önce supabase/migrations/0031_push_abonelikleri.sql Supabase SQL editöründe çalıştırılmalı. Bildirim anahtarları (NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT) Vercel'e canlı ve önizleme için eklendi; ek işlem gerekmez."
+}

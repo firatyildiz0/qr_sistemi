@@ -9,6 +9,7 @@ import AdminShell, { type Identity } from "@/components/admin/AdminShell";
 import UsernamePrompt from "@/components/admin/UsernamePrompt";
 import AccessGuard from "@/components/admin/AccessGuard";
 import PresenceBeacon from "@/components/PresenceBeacon";
+import BildirimDaveti from "@/components/bildirim/BildirimDaveti";
 
 async function loadIdentity(): Promise<Identity> {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
@@ -81,6 +82,10 @@ export default function AdminLayout({
           kullanıcı sayacı bunu sayıyor. Layout'ta duruyor ki sayfa değiştirmek
           sayacı sıfırlamasın. */}
       <PresenceBeacon kind="panel" />
+
+      {/* Bildirimleri henüz açmamış satıcıya birkaç saniye sonra açmayı
+          öneriyor; izin verilmişse cihazın aboneliğini sessizce tazeliyor. */}
+      <BildirimDaveti />
     </>
   );
 }

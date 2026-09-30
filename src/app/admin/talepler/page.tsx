@@ -10,6 +10,7 @@ import {
 import { DELIVERY_MODE_LABEL, type DeliveryMode } from "@/lib/turnaround";
 import { IconInbox } from "@/components/icons";
 import TalepKarti, { type Talep } from "@/components/instagram/TalepKarti";
+import { BildirimSeridi } from "@/components/bildirim/BildirimIzni";
 
 /**
  * Instagram'dan gelen rezervasyon talepleri.
@@ -187,6 +188,8 @@ export default async function TaleplerPage() {
       </header>
 
       <div className="mx-auto w-full max-w-3xl flex-1 space-y-8 p-4 sm:p-8">
+        <BildirimSeridi />
+
         {bekleyen.length === 0 ? (
           <div className="card flex flex-col items-center gap-3 border-dashed py-16 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface text-ink-muted">

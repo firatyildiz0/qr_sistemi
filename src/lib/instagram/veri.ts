@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { saticiyaPushGonder } from "@/lib/bildirim/push";
 import {
   addDays,
   bookedCountByDate,
@@ -521,6 +522,19 @@ export async function talepOlustur(
   if (bildirimHatasi) {
     await db.from("booking_requests").delete().eq("id", talepId);
     return { hata: bildirimHatasi.message };
+  }
+
+  // Telefona da haber ver — yalnızca bildirimlere izin vermiş satıcının
+  // cihazlarına gider. Gidemezse talep yine geçerli: panelde bildirimi duruyor.
+  try {
+    await saticiyaPushGonder(girdi.ownerId, {
+      title: "Yeni rezervasyon talebi",
+      body: `${taslak.ad} · ${urunOzeti}`,
+      url: "/admin/talepler",
+      tag: `talep-${talepId}`,
+    });
+  } catch (hata) {
+    console.error("[push] talep bildirimi gönderilemedi", hata);
   }
 
   return { id: talepId };

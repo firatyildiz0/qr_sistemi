@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Görsel okutmada ürün karıştırılmıyor, doğrudan doğru ürün bulunuyor",
+  "aciklama": "Görsel okutunca birkaç farklı ürün öneriliyordu. Artık sistem her ürünün diğerlerinde olmayan detaylarını (desen, logo, süsleme gibi) çıkarıp hatırlıyor ve kamerada o detayı görünce ürünü doğrudan açıyor. Emin olamazsa liste yerine tek bir aday soruyor ya da ayırt edici detayı yaklaştırmanızı istiyor.",
+  "dikkat": "İlk görsel okutmada ürünlerin detayları bir kez yeniden hazırlanır, katalog büyükse birkaç saniye sürebilir."
+}

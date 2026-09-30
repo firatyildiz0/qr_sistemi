@@ -55,6 +55,15 @@ export type Taslak = {
 
 export const BOS_TASLAK: Taslak = { urunler: [] };
 
+/**
+ * Sohbetin son birkaç mesajı. Serbest soruya cevap verirken bağlam için:
+ * "peki kargosu ne kadar?" önceki mesaj olmadan anlaşılmıyor.
+ */
+export type GecmisMesaj = { kim: "musteri" | "biz"; metin: string };
+
+/** Konuşmada saklanan en fazla mesaj sayısı. */
+export const MAX_GECMIS = 10;
+
 /** Konuşmanın veritabanındaki hali. */
 export type Konusma = {
   id: string;
@@ -63,6 +72,7 @@ export type Konusma = {
   senderId: string;
   adim: Adim;
   taslak: Taslak;
+  gecmis: GecmisMesaj[];
   /** Compare-and-swap için: yazarken bu değer hâlâ aynı olmalı. */
   updatedAt: string;
 };

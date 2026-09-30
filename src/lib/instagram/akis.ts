@@ -1,14 +1,24 @@
-import { MAX_BOOKING_ITEMS, MAX_ITEM_QUANTITY } from "@/lib/bookings";
+import { MAX_BOOKING_ITEMS, MAX_ITEM_QUANTITY, nightsBetween } from "@/lib/bookings";
 import { deliveryModeForCity } from "@/lib/turnaround";
 import { adresOku, ilceOku } from "@/lib/instagram/adres";
+import type { InstagramAyarlari } from "@/lib/instagram/ayarlar";
 import { sadelestir } from "@/lib/instagram/harf";
 import type { HizliCevap, UrunKarti } from "@/lib/instagram/graph";
 import * as metin from "@/lib/instagram/metin";
+import { soruyaCevap } from "@/lib/instagram/sohbet";
 import { tarihOku } from "@/lib/instagram/tarih";
-import type { Adim, BagliHesap, Konusma, Taslak, TaslakUrun } from "@/lib/instagram/tipler";
+import type {
+  Adim,
+  BagliHesap,
+  GecmisMesaj,
+  Konusma,
+  Taslak,
+  TaslakUrun,
+} from "@/lib/instagram/tipler";
 import {
   cakismaBul,
   enGenisAralik,
+  katalogOku,
   konusmaBul,
   konusmaYaz,
   surelerOku,
@@ -67,7 +77,77 @@ const DEVAM_SOZLERI = new Set(["devam", "devam et", "tamam", "bitti", "hepsi bu"
 const EVET_SOZLERI = new Set(["evet", "onayliyorum", "onay", "onayla", "olur", "tamamdir", "kabul"]);
 const HAYIR_SOZLERI = new Set(["hayir", "yok", "olmaz", "istemiyorum"]);
 const ATLA_SOZLERI = new Set(["atla", "gec", "yok", "telefonum yok", "-"]);
-const YARDIM_SOZLERI = new Set(["yardim", "yardım", "help", "nasil", "nasıl"]);
+const YARDIM_SOZLERI = new Set(["yardim", "yardım", "help"]);
+const SELAM_SOZLERI = new Set([
+  "merhaba",
+  "merhabalar",
+  "meraba",
+  "mrb",
+  "selam",
+  "selamlar",
+  "slm",
+  "sa",
+  "selamun aleykum",
+  "selamin aleykum",
+  "iyi gunler",
+  "iyi aksamlar",
+  "gunaydin",
+  "hi",
+  "hello",
+  "hey",
+]);
+
+/** Noktalamasız, sadeleştirilmiş kelimeler: "Merhaba!!" → "merhaba". */
+function kelimeler(ham: string): string {
+  return sadelestir(ham)
+    .replace(/[^\p{L}\p{N} ]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Yalnızca selam veren bir mesaj mı. */
+function selamMi(ham: string): boolean {
+  return SELAM_SOZLERI.has(kelimeler(ham));
+}
+
+/**
+ * Mesaj bir soru mu. Adım ortasında gelen "kargo var mı?" gibi bir mesajı
+ * ad ya da adres sanmamak için. Soru işareti en güvenilir işaret; yazmayanlar
+ * için Türkçe soru ekleri ve soru kelimeleri de sayılıyor.
+ */
+export function soruMu(ham: string): boolean {
+  if (ham.includes("?")) return true;
+  const sade = kelimeler(ham);
+  if (/(^| )(mi|mu|misiniz|musunuz|miyim|muyum|midir|mudur)( |$)/.test(sade)) return true;
+  return /^(ne|neden|nasil|nerede|nereden|nereye|kac|hangi|kim|niye|nicin)( |$)/.test(sade);
+}
+
+/** Adımın müşteriden beklediği şey; soruya cevaptan sonra hatırlatılıyor. */
+const BEKLENEN: Record<Adim, string> = {
+  kod: "başka bir ürünün kodunu ya da devam etmek için 'devam' yazması bekleniyor",
+  tarih: "kiralama tarih aralığını yazması bekleniyor (örnek: 12.05.2026 - 15.05.2026)",
+  ad: "adını ve soyadını yazması bekleniyor",
+  telefon: "telefon numarasını yazması bekleniyor (vermek istemezse 'atla' yazabilir)",
+  adres: "teslimat için il ve ilçeyi yazması bekleniyor (örnek: Bursa / Nilüfer)",
+  onay: "özeti onaylamak için 'onaylıyorum', vazgeçmek için 'iptal' yazması bekleniyor",
+  bekliyor:
+    "bir şey beklenmiyor; talebi satıcıda onay bekliyor. Yeni rezervasyon için 'yeni' yazabilir",
+};
+
+/**
+ * Bir mesajı işlerken elde olan her şey. `sor` serbest soruyu asistana
+ * götürüyor; katalog yalnızca gerçekten soru geldiğinde okunuyor.
+ */
+type Ortam = {
+  db: Db;
+  hesap: BagliHesap;
+  ayarlar: InstagramAyarlari;
+  konusma: Konusma;
+  ham: string;
+  yeni: boolean;
+  /** Soruyu asistana sorar; cevap yoksa (kapalı, hata) null. */
+  sor: (bekleyen?: string) => Promise<string | null>;
+};
 
 /** Ürün kodunun veritabanındaki şekli (`products_barcode_shape`) ile aynı. */
 const KOD_DESENI = /[A-Za-z0-9][A-Za-z0-9._/-]{0,31}/g;
@@ -128,14 +208,20 @@ function sonuc(adim: Adim, taslak: Taslak, ...cevaplar: Cevap[]): AkisSonucu {
  * durum döndürülür. Yazma işini çağıran taraf yapıyor (bkz. `mesajiIsle`),
  * çünkü yazma başarısız olursa mesajın baştan değerlendirilmesi gerekiyor.
  */
-async function adimIsle(
-  db: Db,
-  hesap: BagliHesap,
-  konusma: Konusma,
-  ham: string
-): Promise<AkisSonucu> {
+async function adimIsle(o: Ortam): Promise<AkisSonucu> {
+  const { db, hesap, konusma, ham, ayarlar } = o;
   const taslak = konusma.taslak;
   const komut = sadelestir(ham);
+
+  // Mesajdan rezervasyon kapalıysa her mesaj bir soru: asistan cevaplıyor,
+  // cevap alınamazsa satıcının döneceği söyleniyor.
+  if (!ayarlar.rezervasyonAcik) {
+    if (o.yeni && selamMi(ham)) {
+      return sonuc("kod", taslak, { metin: metin.KOD_ISTE });
+    }
+    const cevap = ayarlar.soruCevapAcik ? await o.sor() : null;
+    return sonuc("kod", taslak, { metin: cevap ?? metin.SATICI_DONECEK });
+  }
 
   if (YARDIM_SOZLERI.has(komut)) {
     return sonuc(konusma.adim, taslak, { metin: metin.YARDIM });
@@ -149,39 +235,78 @@ async function adimIsle(
 
   switch (konusma.adim) {
     case "kod":
-      return kodAdimi(db, hesap, taslak, ham, komut);
+      return kodAdimi(o, taslak, komut);
     case "tarih":
-      return tarihAdimi(db, hesap, taslak, ham);
+      return (await tarihAdimi(db, hesap, ayarlar, taslak, ham)) ?? soruYaDa(o, "tarih", taslak);
     case "ad":
+      // Ad her şey olabilir; soru gibi görünen mesaj ad sanılmıyor.
+      if (soruMu(ham)) return soruYaDa(o, "ad", taslak);
       return adAdimi(taslak, ham);
     case "telefon":
-      return telefonAdimi(taslak, ham, komut);
+      return telefonAdimi(taslak, ham, komut) ?? soruYaDa(o, "telefon", taslak);
     case "adres":
-      return adresAdimi(taslak, ham);
+      return adresAdimi(taslak, ham) ?? soruYaDa(o, "adres", taslak);
     case "onay":
-      return onayAdimi(db, hesap, konusma, taslak, komut);
+      return onayAdimi(o, taslak, komut);
     case "bekliyor":
-      return sonuc("bekliyor", taslak, {
-        metin: metin.BEKLIYOR,
-        hizli: metin.HIZLI_YENI,
-      });
+      return soruYaDa(
+        o,
+        "bekliyor",
+        taslak,
+        sonuc("bekliyor", taslak, { metin: metin.BEKLIYOR, hizli: metin.HIZLI_YENI })
+      );
   }
 }
 
-async function kodAdimi(
-  db: Db,
-  hesap: BagliHesap,
+/**
+ * Adım mesajı anlayamadı. Mesaj bir soruysa asistan cevaplıyor ve sonunda
+ * adımın beklediğini hatırlatıyor; soru değilse (ya da asistan cevap
+ * veremediyse) adımın kendi "anlayamadım" cümlesi gidiyor.
+ */
+async function soruYaDa(
+  o: Ortam,
+  adim: Adim,
   taslak: Taslak,
-  ham: string,
-  komut: string
+  yedek?: AkisSonucu
 ): Promise<AkisSonucu> {
+  if (o.ayarlar.soruCevapAcik && soruMu(o.ham)) {
+    const cevap = await o.sor(BEKLENEN[adim]);
+    if (cevap) return sonuc(adim, taslak, { metin: cevap });
+  }
+
+  return yedek ?? sonuc(adim, taslak, { metin: YEDEK_METIN[adim](taslak) });
+}
+
+/** Adımın mesajı anlayamadığında gönderdiği cümle. */
+const YEDEK_METIN: Record<Adim, (taslak: Taslak) => string> = {
+  kod: () => metin.KOD_ISTE,
+  tarih: () => metin.TARIH_HATALARI.anlasilmadi,
+  ad: () => metin.AD_HATALI,
+  telefon: () => metin.TELEFON_HATALI,
+  adres: (taslak) => (taslak.il ? metin.ilceIste(taslak.il) : metin.ADRES_HATALI),
+  onay: (taslak) => metin.ozet(taslak, deliveryModeForCity(taslak.il) === "kargo"),
+  bekliyor: () => metin.BEKLIYOR,
+};
+
+async function kodAdimi(o: Ortam, taslak: Taslak, komut: string): Promise<AkisSonucu> {
+  const { db, hesap, ham } = o;
+
   if (DEVAM_SOZLERI.has(komut) && taslak.urunler.length > 0) {
     return sonuc("tarih", taslak, { metin: metin.TARIH_ISTE });
   }
 
+  // Yeni konuşmada yalnızca "merhaba": karşılama mesajı zaten her şeyi
+  // söylüyor (webhook bu cevabı karşılamayla değiştiriyor).
+  if (o.yeni && selamMi(ham)) {
+    return sonuc("kod", taslak, { metin: metin.KOD_ISTE });
+  }
+
+  const bekleyen = taslak.urunler.length > 0 ? BEKLENEN.kod : undefined;
+
   const adaylar = kodlariBul(ham);
   if (adaylar.length === 0) {
-    return sonuc("kod", taslak, { metin: metin.KOD_ISTE });
+    const cevap = o.ayarlar.soruCevapAcik ? await o.sor(bekleyen) : null;
+    return sonuc("kod", taslak, { metin: cevap ?? metin.KOD_ISTE });
   }
 
   const urunler = [...taslak.urunler];
@@ -241,6 +366,16 @@ async function kodAdimi(
   // ona "104523 koduna ait ürün bulamadım" demek anlamsız olurdu. Kodlar da
   // çoğunlukla numaradır (bkz. `allocate_product_barcode`), o yüzden ayrım
   // rakamdan geçiyor: sorgu yine yapılıyor, yalnızca hata cümlesi değişiyor.
+  //
+  // Kod denemesi değilse (ya da rakam içerse bile açıkça bir soruysa: "10
+  // kişilik masa var mı?") mesaj bir soru olarak asistana gidiyor.
+  const kodDenemesi = bulunamayanlar.length > 0 && /\d/.test(ham) && !soruMu(ham);
+
+  if (cevaplar.length === 0 && !kodDenemesi && o.ayarlar.soruCevapAcik) {
+    const cevap = await o.sor(bekleyen);
+    if (cevap) return sonuc("kod", yeniTaslak, { metin: cevap });
+  }
+
   if (bulunamayanlar.length > 0 && /\d/.test(ham)) {
     cevaplar.push({ metin: metin.kodBulunamadi(bulunamayanlar[0]) });
   } else if (cevaplar.length === 0) {
@@ -250,18 +385,27 @@ async function kodAdimi(
   return sonuc("kod", yeniTaslak, ...cevaplar);
 }
 
+/** Tarih hiç anlaşılamadıysa null: mesaj bir soru olabilir (bkz. `soruYaDa`). */
 async function tarihAdimi(
   db: Db,
   hesap: BagliHesap,
+  ayarlar: InstagramAyarlari,
   taslak: Taslak,
   ham: string
-): Promise<AkisSonucu> {
+): Promise<AkisSonucu | null> {
   const okunan = tarihOku(ham);
 
   if ("hata" in okunan) {
+    if (okunan.hata === "anlasilmadi" || okunan.hata === "bos") return null;
     return sonuc("tarih", taslak, {
       metin: metin.TARIH_HATALARI[okunan.hata] ?? metin.TARIH_ISTE,
     });
+  }
+
+  // Satıcının en kısa kiralama şartı. Müsaitliğe bakmadan önce: kısa bir
+  // aralık için "müsait" deyip sonra "ama en az 3 gün" demek anlamsız olurdu.
+  if (ayarlar.minGun && nightsBetween(okunan.baslangic, okunan.bitis) + 1 < ayarlar.minGun) {
+    return sonuc("tarih", taslak, { metin: metin.enAzGun(ayarlar.minGun) });
   }
 
   const sureler = await surelerOku(db, hesap.ownerId);
@@ -296,13 +440,15 @@ function adAdimi(taslak: Taslak, ham: string): AkisSonucu {
   });
 }
 
-function telefonAdimi(taslak: Taslak, ham: string, komut: string): AkisSonucu {
+/** Numara anlaşılamadı ve mesaj bir soruysa null. */
+function telefonAdimi(taslak: Taslak, ham: string, komut: string): AkisSonucu | null {
   if (ATLA_SOZLERI.has(komut)) {
     return sonuc("adres", { ...taslak, telefon: null }, { metin: metin.ADRES_ISTE });
   }
 
   const telefon = telefonOku(ham);
   if (!telefon) {
+    if (soruMu(ham)) return null;
     return sonuc("telefon", taslak, {
       metin: metin.TELEFON_HATALI,
       hizli: metin.HIZLI_ATLA,
@@ -312,12 +458,14 @@ function telefonAdimi(taslak: Taslak, ham: string, komut: string): AkisSonucu {
   return sonuc("adres", { ...taslak, telefon }, { metin: metin.ADRES_ISTE });
 }
 
-function adresAdimi(taslak: Taslak, ham: string): AkisSonucu {
+/** Adres anlaşılamadı ve mesaj bir soruysa null. */
+function adresAdimi(taslak: Taslak, ham: string): AkisSonucu | null {
   // İl bir önceki mesajda anlaşıldıysa artık yalnızca ilçe aranıyor: "Merkez"
   // tek başına anlamlı bir cevap ve il olmadan hiçbir listede bulunmaz.
   if (taslak.il) {
     const ilce = ilceOku(taslak.il, ham);
     if (!ilce) {
+      if (soruMu(ham)) return null;
       return sonuc("adres", taslak, { metin: metin.ilceIste(taslak.il) });
     }
     return ozetAdimi({ ...taslak, ilce });
@@ -326,6 +474,7 @@ function adresAdimi(taslak: Taslak, ham: string): AkisSonucu {
   const okunan = adresOku(ham);
 
   if (!okunan) {
+    if (soruMu(ham)) return null;
     return sonuc("adres", taslak, { metin: metin.ADRES_HATALI });
   }
 
@@ -345,22 +494,23 @@ function ozetAdimi(taslak: Taslak): AkisSonucu {
   });
 }
 
-async function onayAdimi(
-  db: Db,
-  hesap: BagliHesap,
-  konusma: Konusma,
-  taslak: Taslak,
-  komut: string
-): Promise<AkisSonucu> {
+async function onayAdimi(o: Ortam, taslak: Taslak, komut: string): Promise<AkisSonucu> {
+  const { db, hesap, konusma, ayarlar } = o;
+
   if (HAYIR_SOZLERI.has(komut)) {
     return sonuc("kod", { urunler: [] }, { metin: metin.IPTAL_EDILDI });
   }
 
   if (!EVET_SOZLERI.has(komut)) {
-    return sonuc("onay", taslak, {
-      metin: metin.ozet(taslak, deliveryModeForCity(taslak.il) === "kargo"),
-      hizli: metin.HIZLI_ONAY,
-    });
+    return soruYaDa(
+      o,
+      "onay",
+      taslak,
+      sonuc("onay", taslak, {
+        metin: metin.ozet(taslak, deliveryModeForCity(taslak.il) === "kargo"),
+        hizli: metin.HIZLI_ONAY,
+      })
+    );
   }
 
   if (
@@ -411,7 +561,7 @@ async function onayAdimi(
   return {
     adim: "bekliyor",
     taslak: { ...taslak },
-    cevaplar: [{ metin: metin.TALEP_ALINDI }],
+    cevaplar: [{ metin: ayarlar.talepAlindi || metin.TALEP_ALINDI }],
     talepId: talep.id,
   };
 }
@@ -429,14 +579,40 @@ const MAX_DENEME = 3;
 export async function mesajiIsle(
   db: Db,
   hesap: BagliHesap,
+  ayarlar: InstagramAyarlari,
   senderId: string,
   ham: string
 ): Promise<AkisSonucu | null> {
+  // Katalog bir kez okunuyor, o da yalnızca asistana soru gittiğinde.
+  let katalog: Awaited<ReturnType<typeof katalogOku>> | null = null;
+
   for (let deneme = 0; deneme < MAX_DENEME; deneme += 1) {
     const { konusma, yeni } = await konusmaBul(db, hesap, senderId);
-    const cikti = await adimIsle(db, hesap, konusma, ham);
 
-    if (!(await konusmaYaz(db, konusma, cikti.adim, cikti.taslak))) continue;
+    const sor = async (bekleyen?: string) => {
+      katalog ??= await katalogOku(db, hesap.ownerId);
+      return soruyaCevap({
+        ayarlar,
+        katalog,
+        isletmeAdi: hesap.username,
+        gecmis: konusma.gecmis,
+        mesaj: ham,
+        // Yeni konuşmada karşılama mesajı cevabın önüne ekleniyor (webhook);
+        // asistan ikinci kez selam vermesin.
+        karsilamaGitti: yeni,
+        bekleyenAdim: bekleyen,
+      });
+    };
+
+    const cikti = await adimIsle({ db, hesap, ayarlar, konusma, ham, yeni, sor });
+
+    const gecmis: GecmisMesaj[] = [
+      ...konusma.gecmis,
+      { kim: "musteri", metin: ham },
+      ...cikti.cevaplar.map((c): GecmisMesaj => ({ kim: "biz", metin: c.metin })),
+    ];
+
+    if (!(await konusmaYaz(db, konusma, cikti.adim, cikti.taslak, gecmis))) continue;
 
     return { ...cikti, yeni };
   }

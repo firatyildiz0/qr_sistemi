@@ -3,8 +3,8 @@ import { recordSecurityEvent } from "@/lib/security";
 import { mesajiIsle } from "@/lib/instagram/akis";
 import { kartGonder, mesajGonder, yaziyorGoster } from "@/lib/instagram/graph";
 import { belirtecGecerli, imzaGecerli } from "@/lib/instagram/imza";
-import { KARSILAMA, KOD_ISTE, METIN_DEGIL } from "@/lib/instagram/metin";
-import { adminIstemci, hesapBul, olayYeni } from "@/lib/instagram/veri";
+import { KARSILAMA, KARSILAMA_SORU, KOD_ISTE, METIN_DEGIL } from "@/lib/instagram/metin";
+import { adminIstemci, ayarlarOku, hesapBul, olayYeni } from "@/lib/instagram/veri";
 
 /**
  * Instagram mesajlarının girdiği kapı.
@@ -51,7 +51,13 @@ type Olay = {
   message?: Mesaj;
 };
 
-type Girdi = { id?: string; messaging?: Olay[] };
+/**
+ * `standby`: hesapta mesajları birincil olarak başka bir uygulama (ör. Meta
+ * Business Suite gelen kutusu otomasyonu) karşılıyorsa olaylar `messaging`
+ * yerine buradan geliyor — mesaj istekleri kutusuna düşen yeni müşterilerinki
+ * de dahil. Yalnızca `messaging`'e bakıldığında o müşteriler cevapsız kalıyordu.
+ */
+type Girdi = { id?: string; messaging?: Olay[]; standby?: Olay[] };
 
 /**
  * Webhook kurulumunda Meta'nın bir kez sorduğu soru. Doğru belirteçle
@@ -112,7 +118,7 @@ export async function POST(request: NextRequest) {
     const igUserId = girdi.id;
     if (!igUserId) continue;
 
-    for (const olay of girdi.messaging ?? []) {
+    for (const olay of [...(girdi.messaging ?? []), ...(girdi.standby ?? [])]) {
       if (islenen >= MAX_OLAY) break;
 
       // Kendi gönderdiğimiz mesajlar da webhook'a düşüyor; onlara cevap
@@ -170,7 +176,8 @@ async function olayIsle(
 
   await yaziyorGoster(hesap.accessToken, senderId);
 
-  const sonuc = await mesajiIsle(db, hesap, senderId, ham);
+  const ayarlar = await ayarlarOku(db, hesap.ownerId);
+  const sonuc = await mesajiIsle(db, hesap, ayarlar, senderId, ham);
 
   if (!sonuc) {
     console.error("[instagram] konuşma durumu yazılamadı", { senderId });
@@ -180,12 +187,16 @@ async function olayIsle(
   const cevaplar = [...sonuc.cevaplar];
 
   // İlk mesajda karşılama: müşteri "merhaba" yazdıysa yalnızca karşılama,
-  // doğrudan ürün kodu yazdıysa karşılama cevabın önüne ekleniyor.
+  // doğrudan ürün kodu ya da bir soru yazdıysa karşılama cevabın önüne
+  // ekleniyor. Satıcı panelden kendi karşılamasını yazdıysa o gidiyor.
   if (sonuc.yeni) {
+    const karsilama =
+      ayarlar.karsilama || (ayarlar.rezervasyonAcik ? KARSILAMA : KARSILAMA_SORU);
+
     if (cevaplar.length === 1 && cevaplar[0].metin === KOD_ISTE) {
-      cevaplar[0] = { metin: KARSILAMA };
+      cevaplar[0] = { metin: karsilama };
     } else {
-      cevaplar.unshift({ metin: KARSILAMA });
+      cevaplar.unshift({ metin: karsilama });
     }
   }
 

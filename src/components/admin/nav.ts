@@ -9,6 +9,7 @@ import {
   IconInstagram,
   IconLifebuoy,
   IconSettings,
+  IconSliders,
 } from "@/components/icons";
 
 export type NavItem = {
@@ -63,7 +64,16 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/talepler", label: "Talepler", icon: IconInbox, yeni: true },
   { href: "/admin/dashboard", label: "İstatistik", icon: IconChart },
   { href: "/admin/notifications", label: "Bildirimler", icon: IconBell, unread: true },
-  { href: "/admin/instagram", label: "Instagram", icon: IconInstagram, yeni: true },
+  // `exact`: aşağıdaki panelin adresi de "/admin/instagram" ile başlıyor.
+  { href: "/admin/instagram", label: "Instagram", icon: IconInstagram, exact: true, yeni: true },
+  // Asistanın ne söyleyeceğini satıcının yönettiği ekran; bağlantıdan ayrı.
+  {
+    href: "/admin/instagram-paneli",
+    label: "Instagram paneli",
+    shortLabel: "IG paneli",
+    icon: IconSliders,
+    yeni: true,
+  },
   { href: "/admin/support", label: "Destek", icon: IconLifebuoy },
   { href: "/admin/settings", label: "Ayarlar", icon: IconSettings },
 ];

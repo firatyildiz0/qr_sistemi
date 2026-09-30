@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Instagram'da sorulara da cevap veriliyor ve yeni Instagram paneli",
+  "aciklama": "Instagram mesajlarında artık yalnızca rezervasyon değil fiyat, kargo, kapora gibi sorulara da kısa ve doğal cevaplar veriliyor; mesaj istekleri kutusuna düşenler de atlanmıyor. Menüye eklenen Instagram paneli ekranından ilk mesajı, işletme bilgisini, kuralları, örnek cevapları, hitabı ve üslubu kendiniz yönetebilir; gerçek konuşmalarınızın ekran görüntüsünü ekleyerek asistanın sizin gibi cevap vermesini sağlayabilir, kaydetmeden önce deneyebilirsiniz.",
+  "dikkat": "Canlıya almadan önce supabase/migrations/0029_instagram_asistan_ayarlari.sql Supabase SQL editöründe çalıştırılmalı (yerel önizleme için çalıştırıldı). İstekler kutusundakilere cevap için Instagram'da Ayarlar > Mesaj kontrolleri > Bağlı araçlar > Mesajlara erişime izin ver açık olmalı."
+}

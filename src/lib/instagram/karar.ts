@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mesajGonder } from "@/lib/instagram/graph";
 import { onaylandi, reddedildi } from "@/lib/instagram/metin";
+import { ayarlarOku } from "@/lib/instagram/veri";
 
 /**
  * Satıcının kararını müşteriye bildirir.
@@ -58,11 +59,15 @@ export async function kararBildir(
       })
       .join("\n");
 
-    govde = onaylandi({
-      urunler,
-      baslangic: talep.start_date as string,
-      bitis: talep.end_date as string,
-    });
+    const ayarlar = await ayarlarOku(db, talep.owner_id as string);
+    govde = onaylandi(
+      {
+        urunler,
+        baslangic: talep.start_date as string,
+        bitis: talep.end_date as string,
+      },
+      ayarlar.onayNotu
+    );
   }
 
   const sonuc = await mesajGonder(hesap.access_token as string, talep.sender_id as string, govde);

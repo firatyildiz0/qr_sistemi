@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { displayStatus } from "@/lib/bookings";
 import type { Booking } from "@/lib/types";
-import QrScanner from "@/components/scan/QrScanner";
+import HomeShortcuts from "@/components/admin/HomeShortcuts";
 import BookingHistory, { type BookingHistoryRow } from "@/components/admin/BookingHistory";
 import { coverImage } from "@/components/admin/ProductThumb";
 
@@ -51,11 +51,7 @@ export default async function AdminHomePage() {
       </header>
 
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-12 p-4 sm:p-8">
-        <div className="mx-auto w-full max-w-md">
-          <div className="card">
-            <QrScanner />
-          </div>
-        </div>
+        <HomeShortcuts />
 
         <section>
           <h2 className="mb-5 text-lg font-semibold text-ink">Rezervasyon geçmişi</h2>

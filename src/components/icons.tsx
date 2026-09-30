@@ -317,6 +317,15 @@ export function IconImage(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconBarcode(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
+      <path d="M7.5 8v8M10 8v8M12.5 8v8M16.5 8v8M14.5 8v5" />
+    </svg>
+  );
+}
+
 export function IconMinus(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base(props)}>

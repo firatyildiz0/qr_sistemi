@@ -5,7 +5,7 @@ import QrScanner from "@/components/scan/QrScanner";
 import ImageScanner from "@/components/scan/ImageScanner";
 import { IconImage, IconQrCode } from "@/components/icons";
 
-type Mode = "qr" | "image";
+export type ScanMode = "qr" | "image";
 
 /**
  * Görselden aramanın açma/kapama düğmesi.
@@ -32,14 +32,17 @@ const GORSEL_ARAMA_ACIK = true;
  */
 export default function ScanPanel({
   autoStart = false,
+  initialMode = "qr",
   onResolved,
   onProduct,
 }: {
   autoStart?: boolean;
+  /** Hangi sekmeyle açılacağı; ana sayfadaki kısayollar doğrudan birini seçiyor. */
+  initialMode?: ScanMode;
   onResolved?: () => void;
   onProduct?: (product: { id: string; name: string }) => void;
 }) {
-  const [mode, setMode] = useState<Mode>("qr");
+  const [mode, setMode] = useState<ScanMode>(initialMode);
   const showingImage = GORSEL_ARAMA_ACIK && mode === "image";
 
   return (

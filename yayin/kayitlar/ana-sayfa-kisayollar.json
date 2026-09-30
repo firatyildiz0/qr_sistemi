@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Ana sayfada büyük QR alanı yerine dört kısayol düğmesi",
+  "aciklama": "Ana sayfanın ortasındaki büyük QR okutma alanı kaldırıldı. Yerine küçük düğmeler geldi: Ürün ekle, QR okut, Görsel okut ve Barkod arat. Barkod numarası tam eşleşirse doğrudan ürün açılıyor, eşleşmezse benzer ürünler listeleniyor.",
+  "dikkat": null
+}

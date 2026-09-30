@@ -28,9 +28,19 @@ export const HIZLI_YENI: HizliCevap[] = [
 ];
 
 export const KARSILAMA =
-  "Merhaba! 👋 Buradan rezervasyon oluşturabilirsiniz.\n\n" +
-  "Başlamak için istediğiniz ürünün *kodunu* yazın (ilanda ya da etikette yazan numara).\n\n" +
+  "Merhaba! 👋 Merak ettiğiniz bir şey varsa yazabilirsiniz.\n\n" +
+  "Rezervasyon için ürünün *kodunu* yazmanız yeterli (ilanda ya da etikette yazan numara).\n\n" +
   "Örnek: 104523";
+
+/** Satıcı mesajdan rezervasyonu kapattığında varsayılan karşılama. */
+export const KARSILAMA_SORU = "Merhaba! 👋 Merak ettiğiniz bir şey varsa yazabilirsiniz.";
+
+/** Asistan cevap veremediğinde (kapalı ya da ulaşılamıyor). */
+export const SATICI_DONECEK = "Mesajınızı aldık, en kısa sürede buradan dönüş yapacağız. 🙏";
+
+export function enAzGun(gun: number): string {
+  return `En az ${gun} günlük kiralama yapabiliyoruz. Tarih aralığını buna göre yazar mısınız?`;
+}
 
 export const KOD_ISTE =
   "Ürün kodunu yazar mısınız? İlanda ya da etikette yazan numara.\n\nÖrnek: 104523";
@@ -197,16 +207,22 @@ export const YARDIM =
 export const METIN_DEGIL =
   "Şu an yalnızca yazıyla ilerleyebiliyorum. 🙏 İsteğinizi yazar mısınız?";
 
-/** Satıcı onayladığında müşteriye giden mesaj. */
-export function onaylandi(taslak: {
-  urunler: string;
-  baslangic: string;
-  bitis: string;
-}): string {
+/**
+ * Satıcı onayladığında müşteriye giden mesaj. Satıcı panelden bir not
+ * yazdıysa (ödeme, teslim adresi...) son satırın yerine o gidiyor.
+ */
+export function onaylandi(
+  taslak: {
+    urunler: string;
+    baslangic: string;
+    bitis: string;
+  },
+  not = ""
+): string {
   return (
     "Harika haber! 🎉 Rezervasyonunuz onaylandı.\n\n" +
     `${taslak.urunler}\n📅 ${araligiYaz(taslak.baslangic, taslak.bitis)}\n\n` +
-    "Teslimat için satıcı sizinle iletişime geçecek."
+    (not || "Teslimat için satıcı sizinle iletişime geçecek.")
   );
 }
 

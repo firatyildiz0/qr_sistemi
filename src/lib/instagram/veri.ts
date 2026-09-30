@@ -14,10 +14,13 @@ import {
   type DeliveryMode,
   type Turnaround,
 } from "@/lib/turnaround";
+import { ayarlariOku, type InstagramAyarlari } from "@/lib/instagram/ayarlar";
 import {
   adimMi,
   BOS_TASLAK,
+  MAX_GECMIS,
   type BagliHesap,
+  type GecmisMesaj,
   type Konusma,
   type Taslak,
   type TaslakUrun,
@@ -142,6 +145,65 @@ function taslakOku(ham: unknown): Taslak {
   };
 }
 
+function gecmisOku(ham: unknown): GecmisMesaj[] {
+  if (!Array.isArray(ham)) return [];
+  return ham
+    .flatMap((m): GecmisMesaj[] => {
+      if (typeof m !== "object" || m === null) return [];
+      const r = m as Record<string, unknown>;
+      if (typeof r.metin !== "string") return [];
+      return [{ kim: r.kim === "biz" ? "biz" : "musteri", metin: r.metin.slice(0, 1000) }];
+    })
+    .slice(-MAX_GECMIS);
+}
+
+/**
+ * Satıcının asistan ayarları. Hiç kaydedilmemişse (ya da okunamadıysa)
+ * varsayılanlar: sohbet eskisi gibi rezervasyon alır, sorulara da cevap verir.
+ */
+export async function ayarlarOku(db: Admin, ownerId: string): Promise<InstagramAyarlari> {
+  const { data } = await db
+    .from("instagram_settings")
+    .select("settings")
+    .eq("owner_id", ownerId)
+    .maybeSingle();
+
+  return ayarlariOku(data?.settings);
+}
+
+/** Asistanın bildiği bir ürün. */
+export type KatalogUrunu = {
+  kod: string | null;
+  ad: string;
+  aciklama: string | null;
+  gunlukFiyat: number | null;
+  stok: number;
+};
+
+/** Katalogdan asistana verilen en fazla ürün; istem şişmesin. */
+const MAX_KATALOG = 200;
+
+/**
+ * Asistanın "şu ürün var mı, fiyatı ne" sorularına dayanağı. Yalnızca
+ * müşteriye zaten açık olan bilgiler: ad, kod, açıklama, günlük fiyat.
+ */
+export async function katalogOku(db: Admin, ownerId: string): Promise<KatalogUrunu[]> {
+  const { data } = await db
+    .from("products")
+    .select("name, barcode, description, daily_price, stock")
+    .eq("owner_id", ownerId)
+    .order("created_at", { ascending: false })
+    .limit(MAX_KATALOG);
+
+  return (data ?? []).map((u) => ({
+    kod: (u.barcode ?? null) as string | null,
+    ad: u.name as string,
+    aciklama: typeof u.description === "string" ? u.description.slice(0, 240) : null,
+    gunlukFiyat: (u.daily_price ?? null) as number | null,
+    stok: (u.stock ?? 0) as number,
+  }));
+}
+
 /**
  * Konuşmayı açar ya da bulur.
  *
@@ -158,7 +220,7 @@ export async function konusmaBul(
   const oku = async () => {
     const { data } = await db
       .from("instagram_threads")
-      .select("id, owner_id, ig_user_id, sender_id, state, draft, updated_at")
+      .select("id, owner_id, ig_user_id, sender_id, state, draft, history, updated_at")
       .eq("ig_user_id", hesap.igUserId)
       .eq("sender_id", senderId)
       .maybeSingle();
@@ -172,6 +234,7 @@ export async function konusmaBul(
     senderId: satir.sender_id as string,
     adim: adimMi(satir.state) ? satir.state : "kod",
     taslak: taslakOku(satir.draft),
+    gecmis: gecmisOku(satir.history),
     updatedAt: satir.updated_at as string,
   });
 
@@ -187,7 +250,7 @@ export async function konusmaBul(
       state: "kod",
       draft: BOS_TASLAK,
     })
-    .select("id, owner_id, ig_user_id, sender_id, state, draft, updated_at")
+    .select("id, owner_id, ig_user_id, sender_id, state, draft, history, updated_at")
     .single();
 
   if (eklenen) return { konusma: cevir(eklenen), yeni: true };
@@ -215,13 +278,15 @@ export async function konusmaYaz(
   db: Admin,
   konusma: Konusma,
   adim: string,
-  taslak: Taslak
+  taslak: Taslak,
+  gecmis: GecmisMesaj[]
 ): Promise<boolean> {
   const { data } = await db
     .from("instagram_threads")
     .update({
       state: adim,
       draft: taslak,
+      history: gecmis.slice(-MAX_GECMIS),
       updated_at: new Date().toISOString(),
       last_message_at: new Date().toISOString(),
     })

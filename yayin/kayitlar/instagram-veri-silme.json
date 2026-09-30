@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Instagram'dan erişim kaldırılınca ya da veri silme istenince bağlantı otomatik siliniyor",
+  "aciklama": "Bir satıcı Instagram ayarlarından uygulamanın erişimini kaldırdığında ya da verilerinin silinmesini istediğinde, bağlantısı ve erişim anahtarı artık hemen siliniyor ve kişiye bir takip kodu gösteriliyor. Meta, uygulamanın herkese açılması için bunu şart koşuyor.",
+  "dikkat": null
+}

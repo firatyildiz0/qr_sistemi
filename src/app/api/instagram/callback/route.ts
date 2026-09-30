@@ -1,10 +1,9 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { hesapBilgisiOku, tokenAl } from "@/lib/instagram/graph";
-import { instagramYapilandirildi, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
+import { hesapBilgisiOku, mesajlaraAboneOl, tokenAl } from "@/lib/instagram/graph";
+import { instagramYapilandirildi, stateCoz, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
 
 /**
  * İzin ekranından dönüş: kod belirtece çevrilir ve hesap satıcıya bağlanır.
@@ -21,31 +20,31 @@ function panele(durum: string) {
   return NextResponse.redirect(yonlendirmeAdresi(`/admin/instagram?durum=${durum}`));
 }
 
-function stateEsitMi(a: string | undefined, b: string | undefined): boolean {
-  if (!a || !b) return false;
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-}
-
 export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams;
   const [user, profil] = await Promise.all([getCurrentUser(), getProfile()]);
 
-  if (!user || profil?.status !== "approved") {
-    return NextResponse.redirect(yonlendirmeAdresi("/login"));
+  // Dönüş oturumsuz bir tarayıcıda açılmış olabilir (telefonda Instagram
+  // uygulamasından dönüş gibi). Satıcıyı kaybetmek yerine giriş yaptırıp aynı
+  // adrese geri getiriyoruz; kod o sırada hâlâ geçerli.
+  if (!user) {
+    const giris = yonlendirmeAdresi("/login");
+    giris.searchParams.set("next", `/api/instagram/callback?${params.toString()}`);
+    return NextResponse.redirect(giris);
   }
+
+  if (profil?.status !== "approved") return NextResponse.redirect(yonlendirmeAdresi("/admin"));
 
   if (!instagramYapilandirildi()) return panele("yapilandirilmadi");
 
-  const params = request.nextUrl.searchParams;
-
   // Satıcı izin ekranında vazgeçtiyse Instagram `error` ile döner.
-  if (params.get("error")) return panele("vazgecildi");
-
-  const beklenen = request.cookies.get("ig_state")?.value;
-  if (!stateEsitMi(params.get("state") ?? undefined, beklenen)) {
-    return panele("dogrulanamadi");
+  if (params.get("error")) {
+    return panele(params.get("error_reason") === "user_denied" ? "vazgecildi" : "baglanamadi");
   }
+
+  // İmzalı state bu oturumdaki satıcıya ait olmalı. Başkasının başlattığı bir
+  // bağlantıyı (CSRF) ya da süresi geçmiş bir denemeyi burada durduruyoruz.
+  if (stateCoz(params.get("state")) !== user.id) return panele("dogrulanamadi");
 
   const kod = params.get("code");
   if (!kod) return panele("kod-yok");
@@ -116,7 +115,14 @@ export async function GET(request: NextRequest) {
     return panele("baglanamadi");
   }
 
-  const cevap = panele("bagli");
-  cevap.cookies.delete("ig_state");
-  return cevap;
+  // Abone olunamazsa bağlantı kaydı yine duruyor — belirteç geçerli ve
+  // satıcı tekrar bastığında aynı satır güncellenir — ama satıcı mesajların
+  // gelmeyeceğini bilmeli.
+  const abonelik = await mesajlaraAboneOl(belirtec.token);
+  if (!abonelik.ok) {
+    console.error("[instagram] webhook aboneliği yapılamadı", abonelik.hata);
+    return panele("abone-olunamadi");
+  }
+
+  return panele("bagli");
 }

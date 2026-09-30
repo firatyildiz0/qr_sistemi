@@ -300,6 +300,18 @@ export async function tokenAl(
 }
 
 /**
+ * Hesabı uygulamanın webhook'una abone eder.
+ *
+ * Instagram girişiyle bağlanan hesap, uygulamanın Meta panelindeki webhook
+ * ayarından otomatik olarak yararlanmıyor: hesap başına bu çağrı yapılmazsa
+ * izin verilmiş olsa bile müşteri mesajları bize hiç ulaşmıyor. Bağlantı
+ * "kuruldu" görünüp sessizce çalışmıyordu — bu çağrı eksikti.
+ */
+export async function mesajlaraAboneOl(token: string): Promise<GonderimSonucu> {
+  return istek("/me/subscribed_apps?subscribed_fields=messages", token, {});
+}
+
+/**
  * Uzun ömürlü belirteci tazeler. Günlük cron son on güne giren bağlantıları
  * buradan geçiriyor: 60 günde bir elle yenilenen bir entegrasyon, 61. günde
  * sessizce duran bir entegrasyondur.

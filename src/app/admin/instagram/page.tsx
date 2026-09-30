@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { instagramYapilandirildi, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
+import { instagramYapilandirildi } from "@/lib/instagram/kurulum";
 import { IconAlertTriangle, IconCheckCircle, IconInstagram } from "@/components/icons";
 import BaglantiyiKesButonu from "@/components/instagram/BaglantiyiKesButonu";
-import KopyalanabilirAdres from "@/components/instagram/KopyalanabilirAdres";
 
 /**
  * Instagram bağlantısının kurulduğu ekran.
@@ -21,13 +20,18 @@ const DURUM_MESAJLARI: Record<string, { metin: string; iyi: boolean }> = {
   vazgecildi: { metin: "Bağlantı yarıda kaldı — izin ekranında vazgeçildi.", iyi: false },
   dogrulanamadi: { metin: "Bağlantı doğrulanamadı. Lütfen baştan deneyin.", iyi: false },
   "kod-yok": { metin: "Instagram bir yetki kodu döndürmedi. Lütfen baştan deneyin.", iyi: false },
+  "abone-olunamadi": {
+    metin:
+      "Hesap bağlandı ama Instagram mesajları bize iletmeyi henüz kabul etmedi. Aşağıdaki düğmeyle bir kez daha bağlayın.",
+    iyi: false,
+  },
   baglanamadi: { metin: "Instagram'a bağlanılamadı. Birkaç dakika sonra tekrar deneyin.", iyi: false },
   "baska-hesapta": {
     metin: "Bu Instagram hesabı başka bir satıcıya bağlı. Önce oradan bağlantıyı kesmelisiniz.",
     iyi: false,
   },
   yapilandirilmadi: {
-    metin: "Instagram entegrasyonu bu kurulumda yapılandırılmamış.",
+    metin: "Instagram bağlantısı henüz açılmadı. Destek ekibine haber verin.",
     iyi: false,
   },
 };
@@ -54,7 +58,9 @@ export default async function InstagramPage({
 
   const mesaj = durum ? DURUM_MESAJLARI[durum] : null;
   const yapilandirildi = instagramYapilandirildi();
-  const webhookAdresi = yonlendirmeAdresi("/api/instagram/webhook").toString();
+  // Mesajlar gelmiyorsa tek düğmeyle aynı akış baştan: kayıt satıcı başına
+  // tek satır, yeniden bağlamak onu günceller — önce kesmeye gerek yok.
+  const yenidenBaglanmali = hesap && (!hesap.is_active || durum === "abone-olunamadi");
 
   return (
     <div className="flex flex-1 flex-col">
@@ -121,25 +127,39 @@ export default async function InstagramPage({
 
           {!yapilandirildi ? (
             <p className="notice-warning text-sm">
-              Bu kurulumda Instagram anahtarları tanımlı değil. Sunucu ortam değişkenlerine
-              <code className="mx-1">INSTAGRAM_APP_ID</code>,
-              <code className="mx-1">INSTAGRAM_APP_SECRET</code> ve
-              <code className="mx-1">INSTAGRAM_VERIFY_TOKEN</code> eklenmeli.
+              Instagram bağlantısı henüz açılmadı. Destek ekibine haber verin.
             </p>
           ) : hesap ? (
             <>
               {!hesap.is_active && (
                 <p className="notice-warning text-sm">
-                  Instagram yetkisi süresi doldu ve yenilenemedi. Mesajlara cevap verilmiyor —
-                  bağlantıyı kesip yeniden bağlayın.
+                  Instagram yetkisinin süresi doldu. Mesajlara cevap verilmiyor — aşağıdan
+                  yeniden bağlayın.
                 </p>
               )}
-              <BaglantiyiKesButonu />
+              <div className="flex flex-wrap gap-2">
+                {yenidenBaglanmali && (
+                  <a href="/api/instagram/baglan" className="btn btn-primary w-full sm:w-auto">
+                    Yeniden bağla
+                  </a>
+                )}
+                <BaglantiyiKesButonu />
+              </div>
             </>
           ) : (
-            <a href="/api/instagram/baglan" className="btn btn-primary w-full sm:w-auto">
-              Instagram hesabını bağla
-            </a>
+            <>
+              <a href="/api/instagram/baglan" className="btn btn-primary w-full sm:w-auto">
+                <IconInstagram className="h-4 w-4" />
+                Instagram ile bağlan
+              </a>
+              <p className="text-xs text-ink-muted">
+                Instagram açılır, hesabınızla giriş yapıp izin verirsiniz, buraya geri
+                dönersiniz. Hesabınızın <span className="font-medium text-ink">İşletme</span> ya
+                da <span className="font-medium text-ink">İçerik üreticisi</span> hesabı olması
+                gerekir — kişisel hesaplar mesaj iznini vermiyor. Değiştirmek için Instagram’da
+                Ayarlar → Hesap türü ve araçlar → Profesyonel hesaba geç.
+              </p>
+            </>
           )}
         </section>
 
@@ -166,15 +186,6 @@ export default async function InstagramPage({
               ekranınıza düşüyor. Siz onaylayana kadar hiçbir tarih kapanmıyor.
             </li>
           </ol>
-        </section>
-
-        <section className="card space-y-3 p-5">
-          <h2 className="font-semibold text-ink">Meta uygulama ayarı</h2>
-          <p className="text-sm text-ink-muted">
-            Meta geliştirici panelinde Instagram → Webhooks altına aşağıdaki adresi ekleyin ve{" "}
-            <code>messages</code> alanına abone olun.
-          </p>
-          <KopyalanabilirAdres adres={webhookAdresi} />
         </section>
       </div>
     </div>

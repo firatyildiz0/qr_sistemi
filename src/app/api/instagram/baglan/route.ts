@@ -1,19 +1,17 @@
-import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profile";
-import { instagramYapilandirildi, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
+import { instagramYapilandirildi, stateUret, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
 
 /**
  * Satıcıyı Instagram'ın izin ekranına yollar.
  *
  * Bağlantı satıcının kendi hesabına ait, o yüzden oturum şart ve onay bekleyen
  * hesap buradan geçemiyor — geçseydi onaylanmamış biri sisteme dışarıdan mesaj
- * alan bir uç bağlayabilirdi.
+ * alan bir uç bağlayabilirdi. Oturumu olmayan satıcı girişe, girişten de
+ * doğrudan buraya dönüyor: düğmeye bir kez basmak yetsin.
  *
- * `state` rastgele üretilip hem adrese hem çereze yazılıyor: dönüşte ikisi
- * tutmuyorsa istek başkası tarafından başlatılmış demektir (CSRF) ve bağlantı
- * kurulmuyor.
+ * `state` bağlantıyı başlatan satıcıyı imzalı taşıyor (bkz. `stateUret`).
  */
 
 export const runtime = "nodejs";
@@ -22,15 +20,19 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const [user, profil] = await Promise.all([getCurrentUser(), getProfile()]);
 
-  if (!user || profil?.status !== "approved") {
-    return NextResponse.redirect(new URL("/login", yonlendirmeAdresi("/")));
+  if (!user) {
+    const giris = yonlendirmeAdresi("/login");
+    giris.searchParams.set("next", "/api/instagram/baglan");
+    return NextResponse.redirect(giris);
+  }
+
+  if (profil?.status !== "approved") {
+    return NextResponse.redirect(yonlendirmeAdresi("/admin"));
   }
 
   if (!instagramYapilandirildi()) {
     return NextResponse.redirect(yonlendirmeAdresi("/admin/instagram?durum=yapilandirilmadi"));
   }
-
-  const state = randomBytes(24).toString("hex");
 
   const adres = new URL("https://www.instagram.com/oauth/authorize");
   adres.searchParams.set("client_id", process.env.INSTAGRAM_APP_ID!);
@@ -41,17 +43,11 @@ export async function GET() {
     // Mesaj okuma ve yazma izni; ürün/medya izinleri istenmiyor.
     "instagram_business_basic,instagram_business_manage_messages"
   );
-  adres.searchParams.set("state", state);
+  // Doğrudan Instagram girişi. Açık bırakılınca ekranda "Facebook ile devam
+  // et" çıkıyor ve o yol, Instagram'ı bir Facebook sayfasına bağlamamış
+  // işletmeleri yarı yolda bırakıyor.
+  adres.searchParams.set("enable_fb_login", "0");
+  adres.searchParams.set("state", stateUret(user.id));
 
-  const cevap = NextResponse.redirect(adres);
-
-  cevap.cookies.set("ig_state", state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/api/instagram",
-    maxAge: 600,
-  });
-
-  return cevap;
+  return NextResponse.redirect(adres);
 }

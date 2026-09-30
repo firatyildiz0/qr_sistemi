@@ -1,0 +1,6 @@
+{
+  "tip": "hata",
+  "baslik": "Instagram hesabı tek düğmeyle bağlanıyor ve mesajlar gerçekten geliyor",
+  "aciklama": "Bağlantı bazen doğrulanamadı diye yarıda kalıyor, kurulmuş görünse bile müşteri mesajları panele hiç düşmüyordu. Artık tek düğmeye basıp Instagram'da izin vermek yetiyor: telefonda dönüşte oturum kapalıysa giriş sonrası bağlantı kendiliğinden tamamlanıyor, mesajların iletilmesi de otomatik açılıyor. Sorun çıkarsa ekranda 'Yeniden bağla' düğmesi var.",
+  "dikkat": null
+}

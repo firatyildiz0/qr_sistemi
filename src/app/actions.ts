@@ -167,3 +167,33 @@ export async function saveImageSignatures(
     .eq("id", productId)
     .eq("owner_id", user.id);
 }
+
+export type BarcodeResult =
+  | { ok: true; href: string }
+  | { ok: false; error: string };
+
+/**
+ * Ana sayfadaki "Barkod arat" kısayolu.
+ *
+ * Tam eşleşme varsa doğrudan ürüne gidiyor: satıcı etiketteki numarayı
+ * yazdığında (ya da el tipi okuyucu yazdırdığında) bir liste değil o ürünü
+ * görmek istiyor. Tam eşleşme yoksa numaranın bir parçasıyla arayan ürün
+ * listesine düşüyor — orada zaten parçalı arama var.
+ */
+export async function findByBarcode(raw: string): Promise<BarcodeResult> {
+  const code = raw.trim();
+  if (!code) return { ok: false, error: "Bir barkod numarası yazın." };
+
+  const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
+  if (!user) return { ok: false, error: "Oturumunuz sona ermiş. Lütfen tekrar giriş yapın." };
+
+  const { data } = await supabase
+    .from("products")
+    .select("id")
+    .eq("owner_id", user.id)
+    .eq("barcode", code)
+    .limit(2);
+
+  if (data?.length === 1) return { ok: true, href: `/admin/products/${data[0].id}` };
+  return { ok: true, href: `/admin/products?q=${encodeURIComponent(code)}` };
+}

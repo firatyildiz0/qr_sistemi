@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import ScanPanel from "@/components/scan/ScanPanel";
+import ScanPanel, { type ScanMode } from "@/components/scan/ScanPanel";
 import { IconX } from "@/components/icons";
 
 /**
@@ -12,7 +12,13 @@ import { IconX } from "@/components/icons";
  * Mobilde tam ekran bir sayfa gibi açılıyor (uygulama hissiyatı), masaüstünde
  * ortalanmış bir kart olarak kalıyor.
  */
-export default function ScanSheet({ onClose }: { onClose: () => void }) {
+export default function ScanSheet({
+  onClose,
+  initialMode = "qr",
+}: {
+  onClose: () => void;
+  initialMode?: ScanMode;
+}) {
   // The scanner is unmounted while closed, which is what releases the camera;
   // this only stops the page behind the sheet from scrolling.
   useEffect(() => {
@@ -61,7 +67,7 @@ export default function ScanSheet({ onClose }: { onClose: () => void }) {
             <IconX className="h-4 w-4" />
           </button>
         </div>
-        <ScanPanel autoStart onResolved={onClose} />
+        <ScanPanel autoStart initialMode={initialMode} onResolved={onClose} />
       </div>
     </div>
   );

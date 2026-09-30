@@ -8,36 +8,22 @@ import {
   type VisualCandidate,
 } from "@/app/actions";
 import {
-  cosine,
   decodeEmbedding,
+  DETAY_KIRPIMLARI,
   encodeEmbedding,
+  eslestiriciKur,
+  kesinEslesme,
   MODEL_TAG,
+  puanla,
+  type Eslestirici,
   type ImageSignature,
+  type Puan,
+  type UrunGomuleri,
 } from "@/lib/vision";
 import { loadRecognizer } from "@/lib/recognizer";
 import ProductThumb from "@/components/admin/ProductThumb";
 import { IconImage, IconScan, IconX } from "@/components/icons";
 
-/**
- * Bir ürünün açılabilmesi için gereken en düşük benzerlik. Kaba bir elek:
- * kameranın tavana ya da zemine baktığı kareleri eliyor, ürünler arasında
- * seçim yapmıyor (bkz. `cosine`, ölçeğin neden dar olduğu orada).
- */
-const MATCH_MIN = 0.7;
-/**
- * Kataloğunda tek ürün olan satıcıda karşılaştıracak ikinci bir şey yok;
- * orada tek dayanak puanın kendisi, o yüzden çıta yüksek.
- */
-const MATCH_SOLO_MIN = 0.82;
-/** Birinci ile ikinci arasındaki en küçük açık ara. */
-const MATCH_MARGIN = 0.03;
-/**
- * Birincinin, kalabalığın geri kalanından kaç standart sapma ayrışması
- * gerektiği. Asıl karar bu: puanların mutlak değeri katalogdan kataloğa,
- * ışıktan ışığa kayıyor ama "diğerlerinden açık ara ayrıştı mı" sorusu her
- * yerde aynı şeyi soruyor.
- */
-const MATCH_Z = 2.5;
 /** Son kaç ölçümün oyuna bakılıyor, kaçının aynı ürünü göstermesi gerekiyor. */
 const WINDOW = 5;
 const VOTES = 3;
@@ -46,11 +32,12 @@ const INTERVAL_MS = 200;
 /** Bu kadar süre eşleşme çıkmazsa en yakın adaylar elle seçilsin diye listelenir. */
 const HINT_AFTER_MS = 3500;
 /**
- * Her ölçümde denenen kırpımlar: çerçevenin tamamı ve ortasındaki daha dar
- * alan. Ürün uzaktaysa birincisi, çerçeveyi taşıracak kadar yakınsa ikincisi
- * tutuyor.
+ * Her ölçümde denenen kırpımlar: çerçevenin tamamı, ortasındaki daha dar alan
+ * ve yakın plan. Ürün uzaktaysa birincisi, çerçeveyi taşıracak kadar yakınsa
+ * ikincisi tutuyor; üçüncüsü ürünün ayırt edici detayına (desen, logo,
+ * etiket) yaklaşıldığında katalogdaki detay parçalarıyla buluşuyor.
  */
-const CROPS = [1, 0.7];
+const CROPS = [1, 0.7, 0.4];
 /** Modelin girdi boyu; kare bu ölçüde bir tuvale çiziliyor. */
 const FRAME_SIZE = 224;
 
@@ -63,9 +50,7 @@ type Phase =
   | "opening"
   | "failed";
 
-type Entry = { product: VisualCandidate; vectors: Float32Array[] };
-type Matcher = { entries: Entry[] };
-type Scored = { product: VisualCandidate; score: number };
+type Matcher = Eslestirici<VisualCandidate>;
 
 /**
  * Kamerayı ürünün kendisine tutarak rezervasyon ekranını açan tarayıcı.
@@ -79,8 +64,9 @@ type Scored = { product: VisualCandidate; score: number };
  * bir görüntü modeline dayanıyor (bkz. `recognizer.ts`). Yine de yanılabilir,
  * o yüzden bir ürüne gitmek için üç şart birden aranıyor: puanı eşiği geçecek,
  * ikinciyi açık ara geçecek ve son beş ölçümün üçünü kazanacak. Emin
- * olunamadığında sistem tahmin yürütmüyor; en yakın üç adayı satıcının
- * dokunması için listeliyor.
+ * olunamadığında sistem tahmin yürütmüyor; tek bir aday belirgin biçimde öne
+ * çıkıyorsa onu soruyor, çıkmıyorsa ayırt edici bir detayı göstermesini
+ * istiyor.
  */
 export default function ImageScanner({
   autoStart = false,
@@ -104,7 +90,8 @@ export default function ImageScanner({
   const [phase, setPhase] = useState<Phase>("loading");
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [nearest, setNearest] = useState<Scored[]>([]);
+  /** Emin olunamadığında gösterilen tek aday. */
+  const [nearest, setNearest] = useState<VisualCandidate | null>(null);
   const [showHints, setShowHints] = useState(false);
 
   /**
@@ -113,7 +100,7 @@ export default function ImageScanner({
    * güncellemede bütün ekran yeniden çizilirdi, hem de döngü kapanışında
    * dondurduğu listeye takılırdı.
    */
-  const matcherRef = useRef<Matcher>({ entries: [] });
+  const matcherRef = useRef<Matcher>(eslestiriciKur<VisualCandidate>([]));
   /** Kamera karesinin modele verilmeden önce çizildiği tuval. */
   const frameCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const embedRef = useRef<((source: CanvasImageSource) => Float32Array) | null>(null);
@@ -154,27 +141,24 @@ export default function ImageScanner({
           return;
         }
 
-        const ready: { product: VisualCandidate; embeddings: Float32Array[] }[] = [];
+        const ready: UrunGomuleri<VisualCandidate>[] = [];
 
         for (const [index, product] of products.entries()) {
           if (!alive) return;
           setProgress(`Ürünler hazırlanıyor… ${index + 1}/${products.length}`);
 
-          const { embeddings, fresh } = await embeddingsOf(product, embed);
+          const { genel, detaylar, fresh } = await embeddingsOf(product, embed);
           if (!alive) return;
 
-          if (embeddings.length) ready.push({ product, embeddings });
+          if (genel.length) ready.push({ urun: product, genel, detaylar });
           if (fresh) void saveImageSignatures(product.id, fresh);
         }
 
-        matcherRef.current = {
-          entries: ready.map((item) => ({
-            product: item.product,
-            vectors: item.embeddings,
-          })),
-        };
+        // Her ürünün diğerlerinden farkı burada, bir kez hesaplanıyor; kamera
+        // açıkken yapılan iş yalnızca karşılaştırma.
+        matcherRef.current = eslestiriciKur(ready);
         setProgress(null);
-        setPhase(matcherRef.current.entries.length ? "idle" : "empty");
+        setPhase(matcherRef.current.urunler.length ? "idle" : "empty");
       } catch {
         if (!alive) return;
         setProgress(null);
@@ -211,7 +195,7 @@ export default function ImageScanner({
 
   const startCamera = useCallback(async () => {
     setError(null);
-    setNearest([]);
+    setNearest(null);
     setShowHints(false);
     hintKeyRef.current = "";
     votesRef.current = [];
@@ -249,10 +233,11 @@ export default function ImageScanner({
         const embed = embedRef.current;
         if (!embed) return null;
 
-        let ranked: Scored[];
+        const matcher = matcherRef.current;
+        let ranked: Puan<VisualCandidate>[];
         try {
-          ranked = rank(
-            matcherRef.current,
+          ranked = puanla(
+            matcher,
             CROPS.map((crop) => embed(squareFrame(video, frameCanvasRef, crop)))
           );
         } catch {
@@ -260,20 +245,27 @@ export default function ImageScanner({
           return null;
         }
 
-        // Saniyede beş ölçüm yapılıyor ama liste ancak sıralaması
-        // değiştiğinde yeniden çiziliyor: her ölçümde durum güncellenseydi
-        // satıcı dokunmaya çalıştığı satırın altından kayan bir liste görürdü.
+        // Emin olunamadığında tek bir aday gösteriliyor, o da yalnızca
+        // ikinciden belirgin biçimde öndeyse. Eskiden en yakın üç ürün
+        // listeleniyordu ve satıcı her seferinde bir seçim yapmak zorunda
+        // kalıyordu; aday gerçekten öne çıkmıyorsa hiç göstermemek daha doğru.
         if (hinting) {
-          const top = ranked.slice(0, 3);
-          const key = top.map((item) => item.product.id).join(",");
+          const [best, second] = ranked;
+          const candidate =
+            best &&
+            best.puan >= matcher.esik * 0.85 &&
+            (!second || best.puan - second.puan >= matcher.fark / 2)
+              ? best.urun
+              : null;
+          const key = candidate?.id ?? "";
           if (key !== hintKeyRef.current) {
             hintKeyRef.current = key;
-            setNearest(top);
+            setNearest(candidate);
           }
           setShowHints(true);
         }
 
-        const winner = decide(ranked);
+        const winner = kesinEslesme(matcher, ranked);
 
         const votes = votesRef.current;
         votes.push(winner?.id ?? null);
@@ -431,29 +423,33 @@ export default function ImageScanner({
       {/* Sistem emin olamadığında sessizce beklemek yerine ne gördüğünü
           söylüyor: satıcı doğru ürünü listeden tek dokunuşla açıyor, kameranın
           bir gün tanımasını beklemiyor. */}
-      {live && showHints && nearest.length > 0 && (
+      {live && showHints && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Bunlardan biri mi?
-          </p>
-          {nearest.map(({ product }) => (
-            <button
-              key={product.id}
-              type="button"
-              onClick={() => openProduct(product)}
-              className="flex items-center gap-3 rounded-lg border border-border bg-surface p-2 text-left transition hover:border-accent"
-            >
-              <ProductThumb src={product.images[0] ?? null} />
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-semibold text-ink">
-                  {product.name}
+          {nearest ? (
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                Bu mu?
+              </p>
+              <button
+                type="button"
+                onClick={() => openProduct(nearest)}
+                className="flex items-center gap-3 rounded-lg border border-border bg-surface p-2 text-left transition hover:border-accent"
+              >
+                <ProductThumb src={nearest.images[0] ?? null} />
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate text-sm font-semibold text-ink">{nearest.name}</span>
+                  {nearest.barcode && (
+                    <span className="text-xs text-ink-muted">No: {nearest.barcode}</span>
+                  )}
                 </span>
-                {product.barcode && (
-                  <span className="text-xs text-ink-muted">No: {product.barcode}</span>
-                )}
-              </span>
-            </button>
-          ))}
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              Ürünü tanıyamadım. Onu diğerlerinden ayıran bir detayı (desen, logo,
+              etiket, süsleme) çerçeveye yaklaştırın.
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -502,7 +498,8 @@ function squareFrame(
 }
 
 /**
- * Ürünün gömüleri; eksik olanlar fotoğraf indirilip çıkarılıyor.
+ * Ürünün gömüleri — her fotoğrafın tamamı ve detay parçaları. Eksik olanlar
+ * fotoğraf indirilip çıkarılıyor.
  *
  * `fresh`, yalnızca yeni bir şey hesaplandığında dolu dönüyor — hiçbir şey
  * değişmediyse veritabanına yazmanın anlamı yok.
@@ -510,11 +507,16 @@ function squareFrame(
 async function embeddingsOf(
   product: VisualCandidate,
   embed: (source: CanvasImageSource) => Float32Array
-): Promise<{ embeddings: Float32Array[]; fresh: ImageSignature[] | null }> {
+): Promise<{
+  genel: Float32Array[];
+  detaylar: Float32Array[];
+  fresh: ImageSignature[] | null;
+}> {
   const known = new Map(product.signatures.map((s) => [s.url, s]));
   const complete = product.images.every((url) => known.has(url));
 
-  const embeddings: Float32Array[] = [];
+  const genel: Float32Array[] = [];
+  const detaylar: Float32Array[] = [];
   const signatures: ImageSignature[] = [];
 
   for (const url of product.images) {
@@ -523,7 +525,11 @@ async function embeddingsOf(
     if (existing) {
       const decoded = decodeEmbedding(existing.embedding);
       if (decoded) {
-        embeddings.push(decoded);
+        genel.push(decoded);
+        for (const detail of existing.details) {
+          const parca = decodeEmbedding(detail);
+          if (parca) detaylar.push(parca);
+        }
         signatures.push(existing);
       }
       continue;
@@ -534,68 +540,51 @@ async function embeddingsOf(
 
     try {
       const embedding = embed(image);
-      embeddings.push(embedding);
-      signatures.push({ url, model: MODEL_TAG, embedding: encodeEmbedding(embedding) });
+      const parts = DETAY_KIRPIMLARI.map(([x, y, size]) => embed(cropImage(image, x, y, size)));
+
+      genel.push(embedding);
+      detaylar.push(...parts);
+      signatures.push({
+        url,
+        model: MODEL_TAG,
+        embedding: encodeEmbedding(embedding),
+        details: parts.map(encodeEmbedding),
+      });
     } catch {
       // Tek bir fotoğrafın işlenememesi ürünü aramadan düşürmemeli.
     }
   }
 
-  return { embeddings, fresh: complete ? null : signatures };
+  return { genel, detaylar, fresh: complete ? null : signatures };
 }
 
 /**
- * Adayları kamera karesine benzerliklerine göre sıralar.
- *
- * Kare tek bir gömüyle değil, birkaçıyla temsil ediliyor: satıcı ürünü
- * çerçeveye katalog fotoğrafındakiyle aynı uzaklıkta tutmuyor. Aynı karenin
- * farklı yakınlıktaki kırpımlarından en iyi eşleşeni alınınca, "biraz geride
- * durmak" tanımayı kaçırmanın sebebi olmaktan çıkıyor.
+ * Fotoğrafın bir parçası, modele verilecek boyda. Konum ve boy kısa kenara
+ * oranla; parça fotoğrafın ortasına hizalı kare bölgenin içinden alınıyor.
  */
-function rank(matcher: Matcher, queries: Float32Array[]): Scored[] {
-  return matcher.entries
-    .map((entry) => {
-      let score = -1;
-      for (const query of queries) {
-        // Ürünün iki fotoğrafı olabilir; hangi yüzü gösterilirse gösterilsin
-        // tanınsın diye en iyi eşleşen alınıyor.
-        for (const vector of entry.vectors) {
-          const value = cosine(query, vector);
-          if (value > score) score = value;
-        }
-      }
-      return { product: entry.product, score };
-    })
-    .sort((a, b) => b.score - a.score);
-}
+function cropImage(image: HTMLImageElement, x: number, y: number, size: number): HTMLCanvasElement {
+  const side = Math.min(image.naturalWidth, image.naturalHeight);
+  const offsetX = (image.naturalWidth - side) / 2;
+  const offsetY = (image.naturalHeight - side) / 2;
 
-/**
- * Sıralamanın tepesindeki ürün gerçekten "bulundu" sayılır mı?
- *
- * Üç soru birden soruluyor: puan yeterince yüksek mi, ikinciyi açık ara geçti
- * mi, ve kalabalığın geri kalanından ayrıştı mı. Sonuncusu az sayıda ürünü
- * olan satıcıda anlamsız (üç ürünün "dağılımı" olmaz), orada ilk iki soru
- * yetiyor.
- */
-function decide(ranked: Scored[]): VisualCandidate | null {
-  const [best, runnerUp] = ranked;
-  if (!best || best.score < MATCH_MIN) return null;
-  if (!runnerUp) return best.score >= MATCH_SOLO_MIN ? best.product : null;
-  if (best.score - runnerUp.score < MATCH_MARGIN) return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = FRAME_SIZE;
+  canvas.height = FRAME_SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D bağlam açılamadı.");
 
-  const rest = ranked.slice(1).map((item) => item.score);
-  if (rest.length < 3) return best.product;
-
-  const mean = rest.reduce((total, score) => total + score, 0) / rest.length;
-  const variance =
-    rest.reduce((total, score) => total + (score - mean) ** 2, 0) / rest.length;
-  const deviation = Math.sqrt(variance);
-
-  // Bütün adaylar aynı puandaysa sapma sıfıra iner; o durumda açık arayı
-  // geçmiş olması yeterli.
-  if (deviation < 1e-6) return best.product;
-
-  return (best.score - mean) / deviation >= MATCH_Z ? best.product : null;
+  ctx.drawImage(
+    image,
+    offsetX + x * side,
+    offsetY + y * side,
+    size * side,
+    size * side,
+    0,
+    0,
+    FRAME_SIZE,
+    FRAME_SIZE
+  );
+  return canvas;
 }
 
 /**

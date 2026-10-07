@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Ana sayfadaki 'Sahip olarak giriş yap' düğmesi 'Hemen başla' oldu",
+  "aciklama": "Sayfa sonundaki düğmede ve özellik kartlarından birinde geçen 'sahip' ifadesi garip duruyordu. Düğme artık sayfadaki diğer düğmeler gibi 'Hemen başla', kartın başlığı da 'Güvenli yönetim paneli'.",
+  "dikkat": null
+}

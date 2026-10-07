@@ -66,7 +66,7 @@ const features = [
   },
   {
     icon: IconGrid,
-    title: "Güvenli sahip paneli",
+    title: "Güvenli yönetim paneli",
     body: "Envanteri yönetin, rezervasyonları takip edin ve kiracı geçmişini tek bir yerden inceleyin.",
   },
   {
@@ -397,7 +397,7 @@ export default async function Home() {
               İlk ürününüzü listelemeye hazır mısınız?
             </h2>
             <Link href={ctaHref} className="btn btn-primary h-14 px-10 text-base">
-              {onayli ? "Panele git" : "Sahip olarak giriş yap"}
+              {onayli ? "Panele git" : "Hemen başla"}
             </Link>
           </Reveal>
         </section>

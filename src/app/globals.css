@@ -1733,3 +1733,10 @@ summary,
     opacity: 0;
   }
 }
+
+/* Ödeme logo bandı: iyzico paketinde renkli ve beyaz iki ayrı dosya var;
+   temaya göre biri gösterilir (bkz. SiteFooter). */
+:root[data-theme="dark"] .logo-tema-acik,
+:root:not([data-theme="dark"]) .logo-tema-koyu {
+  display: none;
+}

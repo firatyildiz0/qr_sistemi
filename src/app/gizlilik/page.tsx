@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import {
+  Bolum,
+  EpostaLink,
+  Liste,
+  SaticiKunyesi,
+  YasalSayfa,
+} from "@/components/yasal/YasalSayfa";
+import { SATICI } from "@/lib/yasal";
 
 /**
  * Gizlilik politikası.
@@ -10,78 +17,34 @@ import Link from "next/link";
  * doğru söylemek. Yeni bir alan eklendiğinde burası da güncellenmeli, yoksa
  * metin sessizce yalan söylemeye başlar.
  *
- * Sayfa herkese açık ve oturum istemiyor: Meta uygulama incelemesi adresi
+ * Sayfa herkese açık ve oturum istemiyor: ödeme kuruluşu incelemesi adresi
  * dışarıdan açabilmek zorunda, müşteri de rezervasyon yapmadan önce okuyabilmeli.
  */
 
 export const metadata: Metadata = {
-  title: "Gizlilik Politikası — RentQR",
+  title: "Gizlilik Sözleşmesi — RentQR",
   description:
     "RentQR'ın hangi verileri topladığı, neden topladığı, ne kadar sakladığı ve nasıl sildirebileceğiniz.",
 };
 
-const GUNCELLEME = "8 Eylül 2026";
-const EPOSTA = "veyro.ro@gmail.com";
-
-function Bolum({
-  id,
-  baslik,
-  children,
-}: {
-  id?: string;
-  baslik: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section id={id} className="scroll-mt-8 space-y-3">
-      <h2 className="text-xl font-bold tracking-tight text-ink">{baslik}</h2>
-      {children}
-    </section>
-  );
-}
-
-function Liste({ maddeler }: { maddeler: React.ReactNode[] }) {
-  return (
-    <ul className="space-y-2 text-ink-muted">
-      {maddeler.map((madde, sira) => (
-        <li key={sira} className="flex gap-2.5">
-          <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-ink-muted" />
-          <span>{madde}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
+const GUNCELLEME = "7 Ekim 2026";
+const EPOSTA = SATICI.eposta;
 
 export default function GizlilikPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-12 sm:py-16">
-      <header className="space-y-3 border-b border-border pb-8">
-        <Link
-          href="/"
-          className="text-sm font-medium text-ink-muted transition-colors hover:text-accent-hover"
-        >
-          ← RentQR
-        </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-          Gizlilik Politikası
-        </h1>
-        <p className="text-ink-muted">
-          Son güncelleme: {GUNCELLEME}. Bu metin RentQR’ın hangi verileri topladığını, neden
-          topladığını, ne kadar sakladığını ve nasıl sildirebileceğinizi anlatır.
-        </p>
-      </header>
-
-      <div className="mt-10 space-y-10">
+    <YasalSayfa
+      baslik="Gizlilik Sözleşmesi"
+      guncelleme={GUNCELLEME}
+      giris="Bu metin RentQR’ın hangi verileri topladığını, neden topladığını, ne kadar sakladığını ve nasıl sildirebileceğinizi anlatır. 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamındaki aydınlatma metni yerine de geçer."
+    >
         <Bolum baslik="Kim işliyor?">
           <p className="text-ink-muted">
-            RentQR, <strong className="font-semibold text-ink">Veyro Labs</strong> tarafından
-            işletilen bir kiralama takip sistemidir. Veri sorumlusu Veyro Labs’tır. Her konuda{" "}
-            <a href={`mailto:${EPOSTA}`} className="link-underline font-medium text-accent">
-              {EPOSTA}
-            </a>{" "}
-            adresinden ulaşabilirsiniz.
+            RentQR, <strong className="font-semibold text-ink">{SATICI.marka}</strong> tarafından
+            işletilen bir kiralama takip sistemidir. Veri sorumlusu, {SATICI.marka} adıyla faaliyet
+            gösteren şahıs işletmesi sahibi {SATICI.unvan}’dır. Her konuda <EpostaLink /> adresinden
+            ulaşabilirsiniz.
           </p>
+          <SaticiKunyesi />
         </Bolum>
 
         <Bolum baslik="İki farklı kişi, iki farklı veri">
@@ -97,8 +60,7 @@ export default function GizlilikPage() {
               </>,
               <>
                 <strong className="font-semibold text-ink">Müşteri:</strong> bir ürünü kiralayan
-                kişi. Müşterinin panelde hesabı yoktur; bilgilerini ya satıcı girer ya da müşteri
-                Instagram üzerinden kendisi gönderir.
+                kişi. Müşterinin panelde hesabı yoktur; bilgilerini satıcı girer.
               </>,
             ]}
           />
@@ -138,6 +100,24 @@ export default function GizlilikPage() {
           </p>
         </Bolum>
 
+        <Bolum id="odeme" baslik="Abonelik ödemeleri">
+          <p className="text-ink-muted">
+            Satıcıların abonelik ödemeleri lisanslı ödeme kuruluşu{" "}
+            <strong className="font-semibold text-ink">iyzico</strong> altyapısı üzerinden alınır.
+            Kart numarası, son kullanma tarihi ve güvenlik kodu{" "}
+            <strong className="font-semibold text-ink">bize hiçbir zaman ulaşmaz</strong>; doğrudan
+            iyzico tarafından, kart kuruluşlarının güvenlik standartlarına (PCI-DSS) uygun olarak
+            işlenir.
+          </p>
+          <Liste
+            maddeler={[
+              "Bizde yalnızca ödemenin sonucu (tutar, tarih, başarılı/başarısız) ve fatura düzenlemek için gereken ad soyad/unvan, e-posta, telefon ve fatura adresi tutulur.",
+              "Bu bilgiler aboneliğin yürütülmesi, faturalandırma ve vergi mevzuatından doğan saklama yükümlülükleri için işlenir; fatura kayıtları yasal süre boyunca saklanır.",
+              "Müşterilerin (kiracıların) ödeme bilgisi RentQR üzerinden toplanmaz.",
+            ]}
+          />
+        </Bolum>
+
         <Bolum baslik="QR kodu okutan ziyaretçiler">
           <p className="text-ink-muted">
             Bir ürünün QR kodu okutulduğunda satıcının kaç kez okutulduğunu görebilmesi için bir
@@ -161,42 +141,10 @@ export default function GizlilikPage() {
           </p>
         </Bolum>
 
-        <Bolum id="instagram" baslik="Instagram üzerinden rezervasyon">
-          <p className="text-ink-muted">
-            Satıcı isterse Instagram işletme hesabını RentQR’a bağlayabilir. Bağlandığında,
-            hesabına mesaj yazan müşteriler rezervasyon talebi oluşturabilir. Bu durumda:
-          </p>
-          <Liste
-            maddeler={[
-              "Müşterinin Instagram kullanıcı kimliği, sohbetin hangi adımda olduğu ve talebi tamamlamak için yazdığı bilgiler (ürün kodu, tarihler, ad, telefon, il/ilçe) saklanır.",
-              "Sohbetin tamamı saklanmaz; yalnızca rezervasyon talebini oluşturmak için gereken alanlar tutulur.",
-              "Aynı mesajın iki kez işlenmesini önlemek için mesaj kimlikleri 7 gün boyunca tutulur ve sonra silinir.",
-              "Satıcı adına mesaj gönderebilmek için Instagram’dan alınan erişim anahtarı sunucuda saklanır; tarayıcıya hiçbir zaman gönderilmez.",
-            ]}
-          />
-          <p className="text-ink-muted">
-            Instagram’a giden tek şey müşteriye yazılan cevap mesajlarıdır. Instagram üzerindeki
-            mesajlaşma ayrıca Meta’nın kendi gizlilik politikasına tabidir. Satıcı bağlantıyı
-            panelden istediği an kesebilir; kestiğinde erişim anahtarı silinir.
-          </p>
-        </Bolum>
-
         <Bolum baslik="Ne kadar saklanıyor?">
-          <Liste
-            maddeler={[
-              "Güvenlik kayıtları: 90 gün",
-              "QR okutma kayıtları: 400 gün",
-              "Instagram mesaj kimlikleri: 7 gün",
-              "Anlık ziyaretçi kayıtları: 1 gün",
-              <>
-                Rezervasyonlar, müşteri bilgileri ve katalog: satıcı silene kadar. Satıcı bir
-                rezervasyonu sildiğinde kayıt tamamen kaldırılır, arşivlenmez.
-              </>,
-            ]}
-          />
           <p className="text-ink-muted">
-            İlk dört kalem her gün çalışan otomatik bir bakım işiyle silinir; elle müdahale
-            gerekmez.
+            Rezervasyonlar, müşteri bilgileri ve katalog satıcı silene kadar saklanır. Satıcı bir
+            rezervasyonu sildiğinde kayıt tamamen kaldırılır, arşivlenmez.
           </p>
         </Bolum>
 
@@ -216,12 +164,8 @@ export default function GizlilikPage() {
                 barındırılması.
               </>,
               <>
-                <strong className="font-semibold text-ink">Meta (Instagram)</strong> — yalnızca
-                Instagram bağlantısı kuran satıcılar için, mesajlaşma.
-              </>,
-              <>
-                <strong className="font-semibold text-ink">Resend</strong> — yalnızca sistem
-                yöneticisine gönderilen güvenlik uyarı e-postaları. Müşteri verisi içermez.
+                <strong className="font-semibold text-ink">iyzico Ödeme Hizmetleri A.Ş.</strong> —
+                abonelik ödemelerinin alınması. Kart bilgileri yalnızca iyzico’da işlenir.
               </>,
             ]}
           />
@@ -248,7 +192,7 @@ export default function GizlilikPage() {
             maddeler={[
               <>
                 <strong className="font-semibold text-ink">Müşteriyseniz</strong> (bir ürün
-                kiraladınız ya da Instagram’dan talep gönderdiniz): kiralama yaptığınız işletmeye
+                kiraladınız): kiralama yaptığınız işletmeye
                 başvurun; kaydınızı panelinden silebilir. İşletmeye ulaşamıyorsanız{" "}
                 <a href={`mailto:${EPOSTA}`} className="link-underline font-medium text-accent">
                   {EPOSTA}
@@ -256,22 +200,9 @@ export default function GizlilikPage() {
                 adresine yazın, kaydı bulup sileriz.
               </>,
               <>
-                <strong className="font-semibold text-ink">Instagram sohbet verileriniz için:</strong>{" "}
-                aynı adrese Instagram kullanıcı adınızla birlikte yazmanız yeterli. Ayrıca{" "}
-                <a
-                  href="https://www.instagram.com/accounts/manage_access/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link-underline font-medium text-accent"
-                >
-                  Instagram ayarlarınızdan
-                </a>{" "}
-                uygulamanın erişimini kaldırabilirsiniz.
-              </>,
-              <>
                 <strong className="font-semibold text-ink">Satıcıysanız:</strong> hesabınızın ve
                 bağlı bütün verilerin silinmesi için {EPOSTA} adresine yazın. Hesap silindiğinde
-                ürünleriniz, rezervasyonlarınız ve Instagram bağlantınız da birlikte silinir.
+                ürünleriniz ve rezervasyonlarınız da birlikte silinir.
               </>,
             ]}
           />
@@ -300,17 +231,6 @@ export default function GizlilikPage() {
             yürürlükteki sürümü gösterir.
           </p>
         </Bolum>
-      </div>
-
-      <footer className="mt-12 border-t border-border pt-8 text-sm text-ink-muted">
-        <p>
-          Sorularınız için:{" "}
-          <a href={`mailto:${EPOSTA}`} className="link-underline font-medium text-accent">
-            {EPOSTA}
-          </a>
-        </p>
-        <p className="mt-2">© {new Date().getFullYear()} Veyro Labs — RentQR</p>
-      </footer>
-    </main>
+    </YasalSayfa>
   );
 }

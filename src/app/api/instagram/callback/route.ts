@@ -4,7 +4,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hesapBilgisiOku, tokenAl } from "@/lib/instagram/graph";
-import { instagramYapilandirildi, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
+import {
+  INSTAGRAM_AKTIF,
+  instagramYapilandirildi,
+  yonlendirmeAdresi,
+} from "@/lib/instagram/kurulum";
 
 /**
  * İzin ekranından dönüş: kod belirtece çevrilir ve hesap satıcıya bağlanır.
@@ -29,6 +33,7 @@ function stateEsitMi(a: string | undefined, b: string | undefined): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  if (!INSTAGRAM_AKTIF) return new NextResponse(null, { status: 404 });
   const [user, profil] = await Promise.all([getCurrentUser(), getProfile()]);
 
   if (!user || profil?.status !== "approved") {

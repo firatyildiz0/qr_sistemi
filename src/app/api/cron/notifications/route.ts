@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordSecurityEvent } from "@/lib/security";
 import { tokenTazele } from "@/lib/instagram/graph";
+import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 
 /**
  * Guards the only endpoint that reaches for the service-role key, so it has to
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
     supabase.rpc("expire_booking_requests"),
   ]);
 
-  await instagramBelirteclerimiTazele(supabase);
+  if (INSTAGRAM_AKTIF) await instagramBelirteclerimiTazele(supabase);
 
   const { data: bookings, error } = await supabase
     .from("bookings")

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 import { recordSecurityEvent } from "@/lib/security";
 import { mesajiIsle } from "@/lib/instagram/akis";
 import { kartGonder, mesajGonder, yaziyorGoster } from "@/lib/instagram/graph";
@@ -64,6 +65,7 @@ type Girdi = { id?: string; messaging?: Olay[]; standby?: Olay[] };
  * gelmeyen istek "challenge" değerini öğrenemez.
  */
 export async function GET(request: NextRequest) {
+  if (!INSTAGRAM_AKTIF) return new NextResponse(null, { status: 404 });
   const params = request.nextUrl.searchParams;
 
   if (
@@ -86,6 +88,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!INSTAGRAM_AKTIF) return new NextResponse(null, { status: 404 });
   const govde = await request.text();
 
   if (!imzaGecerli(govde, request.headers.get("x-hub-signature-256"), process.env.INSTAGRAM_APP_SECRET)) {

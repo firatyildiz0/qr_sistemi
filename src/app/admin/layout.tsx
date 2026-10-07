@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 import { getProfile } from "@/lib/profile";
 import { greetingFor } from "@/lib/greeting";
 import { basHarf } from "@/lib/hesap";
@@ -39,11 +40,14 @@ async function loadUnreadCount(): Promise<number> {
   // ürünü olmadığı için ürün üzerinden filtrelemek onları dışarıda bırakırdı.
   // RLS de aynı kolona bakıyor; buradaki filtre sorgunun eleyeceği satırları
   // hiç taramaması için.
-  const { count } = await supabase
+  let sorgu = supabase
     .from("notifications")
     .select("id", { count: "exact", head: true })
     .eq("owner_id", user.id)
     .eq("is_read", false);
+  // Bildirimler ekranıyla aynı süzgeç: Instagram kapalıyken talepler sayılmaz.
+  if (!INSTAGRAM_AKTIF) sorgu = sorgu.neq("kind", "talep");
+  const { count } = await sorgu;
   return count ?? 0;
 }
 

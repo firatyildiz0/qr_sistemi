@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { instagramYapilandirildi, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
+import { notFound } from "next/navigation";
+import {
+  INSTAGRAM_AKTIF,
+  instagramYapilandirildi,
+  yonlendirmeAdresi,
+} from "@/lib/instagram/kurulum";
 import { IconAlertTriangle, IconCheckCircle, IconInstagram } from "@/components/icons";
 import BaglantiyiKesButonu from "@/components/instagram/BaglantiyiKesButonu";
 import KopyalanabilirAdres from "@/components/instagram/KopyalanabilirAdres";
@@ -45,6 +50,7 @@ export default async function InstagramPage({
 }: {
   searchParams: Promise<{ durum?: string }>;
 }) {
+  if (!INSTAGRAM_AKTIF) notFound();
   const [{ durum }, supabase] = await Promise.all([searchParams, createClient()]);
 
   // Tablo doğrudan okunamıyor (belirteç orada duruyor); bu fonksiyon yalnızca

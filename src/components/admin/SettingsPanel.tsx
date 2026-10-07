@@ -284,7 +284,7 @@ export default function SettingsPanel({
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-ink">{email}</p>
-                  <p className="text-xs text-ink-muted">Sahip</p>
+                  <p className="text-xs text-ink-muted">İşletme hesabı</p>
                 </div>
               </div>
               <p className="mt-4 text-sm text-ink-muted">

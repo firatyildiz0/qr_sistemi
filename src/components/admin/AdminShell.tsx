@@ -238,7 +238,7 @@ function AccountFallback() {
       <AvatarShell className="h-10 w-10" />
       <div className="sidebar-label flex min-w-0 flex-col gap-1.5">
         <span className="h-3.5 w-28 animate-pulse rounded-full bg-border" />
-        <span className="text-xs text-ink-muted">Sahip</span>
+        <span className="text-xs text-ink-muted">İşletme hesabı</span>
       </div>
     </>
   );
@@ -251,7 +251,7 @@ function Account({ promise }: { promise: Promise<Identity> }) {
       <ProfilAvatari url={avatarUrl} renk={avatarColor} harf={initial} className="h-10 w-10" />
       <div className="sidebar-label flex min-w-0 flex-col">
         <span className="truncate text-sm text-ink">{email}</span>
-        <span className="text-xs text-ink-muted">Sahip</span>
+        <span className="text-xs text-ink-muted">İşletme hesabı</span>
       </div>
     </>
   );

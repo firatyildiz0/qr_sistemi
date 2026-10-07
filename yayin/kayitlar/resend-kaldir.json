@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Güvenlik uyarısı e-postaları kaldırıldı",
+  "aciklama": "Şüpheli giriş denemelerinde yöneticiye otomatik e-posta gönderme özelliği tamamen kaldırıldı. Bu olaylar eskisi gibi kaydediliyor ve yönetim panelindeki Güvenlik sekmesinde görünmeye devam ediyor.",
+  "dikkat": "Canlıya aldıktan sonra Vercel'deki RESEND_API_KEY, ALERT_EMAIL_TO ve ALERT_EMAIL_FROM ortam değişkenleri silinebilir; artık kullanılmıyorlar."
+}

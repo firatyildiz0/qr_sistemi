@@ -9,7 +9,7 @@
  */
 
 export const SATICI = {
-  marka: "Veyro Labs",
+  marka: "Voyo Labs",
   urun: "RentQR",
   /** Şahıs şirketi: ticari unvan sahibinin adı soyadıdır. */
   unvan: "Nihat Yavuz",

@@ -4,17 +4,26 @@ import { getProfile, homePathFor } from "@/lib/profile";
 import Reveal from "@/components/marketing/Reveal";
 import Logo from "@/components/Logo";
 import SiteFooter from "@/components/SiteFooter";
+import { ABONELIK } from "@/lib/yasal";
 import Counter from "@/components/marketing/Counter";
 import {
   IconArrowRight,
   IconBell,
   IconBolt,
   IconCalendar,
+  IconCheck,
   IconGrid,
   IconPackage,
   IconQrCode,
   IconScan,
 } from "@/components/icons";
+
+const fiyatMaddeleri = [
+  "Sınırsız ürün ve QR etiketi",
+  "Canlı müsaitlik takvimi ve rezervasyon takibi",
+  "Müşteri ve iade takibi",
+  "Instagram mesajlarından rezervasyon talebi",
+];
 
 const steps = [
   {
@@ -316,6 +325,69 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* FİYATLANDIRMA — ödeme kuruluşu incelemesi fiyatı ve ödeme yöntemini
+            sitede açıkça görmek istiyor; "iyzico ile Öde" logosu iyzico'nun
+            resmî ödeme adımı (checkout) paketinden. */}
+        <section id="fiyat" className="scroll-mt-24 px-6 py-12 lg:py-20">
+          <Reveal className="mb-10 text-center">
+            <h2 className="text-3xl font-extrabold tracking-tight text-balance text-ink lg:text-[38px]">
+              Tek plan, sürpriz yok
+            </h2>
+            <p className="mt-4 text-ink-muted">Bütün özellikler dahil, dilediğiniz zaman iptal edin.</p>
+          </Reveal>
+          <Reveal className="card mx-auto flex max-w-md flex-col gap-6 rounded-[32px] p-8">
+            <div>
+              <h3 className="text-lg font-bold text-ink">{ABONELIK.ad}</h3>
+              <p className="mt-3 flex items-end gap-1.5">
+                <span className="text-5xl font-extrabold tracking-tight text-ink">
+                  {ABONELIK.fiyat}
+                </span>
+                <span className="pb-1.5 text-ink-muted">/ ay</span>
+              </p>
+            </div>
+            <ul className="space-y-3 text-sm text-ink-muted">
+              {fiyatMaddeleri.map((madde) => (
+                <li key={madde} className="flex gap-3">
+                  <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                  <span>{madde}</span>
+                </li>
+              ))}
+            </ul>
+            <Link href={ctaHref} className="btn btn-primary h-13 w-full text-base">
+              {onayli ? "Panele git" : "Hemen başla"}
+            </Link>
+            <div className="flex flex-col items-center gap-3 border-t border-border pt-6">
+              {/* eslint-disable-next-line @next/next/no-img-element -- statik SVG, optimizasyon gerekmez */}
+              <img
+                src="/odeme/iyzico-ile-ode-renkli.svg"
+                alt="iyzico ile Öde"
+                width={210}
+                height={31}
+                className="logo-tema-acik h-7 w-auto"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element -- statik SVG, optimizasyon gerekmez */}
+              <img
+                src="/odeme/iyzico-ile-ode-beyaz.svg"
+                alt="iyzico ile Öde"
+                width={210}
+                height={31}
+                className="logo-tema-koyu h-7 w-auto"
+              />
+              <p className="text-center text-xs leading-relaxed text-ink-muted">
+                Ödemeler iyzico güvencesiyle kredi kartı veya banka kartı ile alınır. Satın alarak{" "}
+                <Link href="/mesafeli-satis-sozlesmesi" className="link-underline text-accent">
+                  Mesafeli Satış Sözleşmesi
+                </Link>{" "}
+                ve{" "}
+                <Link href="/teslimat-ve-iade" className="link-underline text-accent">
+                  Teslimat ve İade Şartları
+                </Link>
+                ’nı kabul etmiş olursunuz.
+              </p>
+            </div>
+          </Reveal>
+        </section>
+
         {/* FINAL CTA */}
         <section className="px-6 py-12 lg:py-20">
           <Reveal className="mx-auto flex max-w-3xl flex-col items-center rounded-[40px] bg-card px-6 py-14 text-center shadow-[var(--app-lift)]">
@@ -347,6 +419,12 @@ export default async function Home() {
               className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
             >
               Ürün
+            </a>
+            <a
+              href="#fiyat"
+              className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
+            >
+              Fiyatlandırma
             </a>
           </>
         }

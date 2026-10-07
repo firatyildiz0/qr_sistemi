@@ -39,8 +39,8 @@ export default function GizlilikPage() {
     >
         <Bolum baslik="Kim işliyor?">
           <p className="text-ink-muted">
-            RentQR, <strong className="font-semibold text-ink">Veyro Labs</strong> tarafından
-            işletilen bir kiralama takip sistemidir. Veri sorumlusu, Veyro Labs adıyla faaliyet
+            RentQR, <strong className="font-semibold text-ink">{SATICI.marka}</strong> tarafından
+            işletilen bir kiralama takip sistemidir. Veri sorumlusu, {SATICI.marka} adıyla faaliyet
             gösteren şahıs işletmesi sahibi {SATICI.unvan}’dır. Her konuda <EpostaLink /> adresinden
             ulaşabilirsiniz.
           </p>

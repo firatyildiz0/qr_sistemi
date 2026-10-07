@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getProfile, homePathFor } from "@/lib/profile";
 import Reveal from "@/components/marketing/Reveal";
 import Logo from "@/components/Logo";
+import SiteFooter from "@/components/SiteFooter";
 import Counter from "@/components/marketing/Counter";
 import {
   IconArrowRight,
@@ -331,36 +332,25 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="flex flex-col items-center gap-6 border-t border-border px-6 py-12 md:flex-row md:justify-between">
-        <span className="text-lg font-extrabold tracking-tight text-ink">RentQR</span>
-        <div className="flex flex-wrap justify-center gap-1">
-          <Link
-            href={ctaHref}
-            className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-          >
-            {onayli ? "Panel" : "Giriş yap"}
-          </Link>
-          <a
-            href="#features"
-            className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-          >
-            Ürün
-          </a>
-          <a
-            href="#"
-            className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-          >
-            İletişim
-          </a>
-          <Link
-            href="/gizlilik"
-            className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-          >
-            Gizlilik
-          </Link>
-        </div>
-        <span className="text-sm text-ink-muted">© {new Date().getFullYear()} RentQR</span>
-      </footer>
+      <SiteFooter
+        className="pb-32 sm:pb-12"
+        ekLinkler={
+          <>
+            <Link
+              href={ctaHref}
+              className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
+            >
+              {onayli ? "Panel" : "Giriş yap"}
+            </Link>
+            <a
+              href="#features"
+              className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
+            >
+              Ürün
+            </a>
+          </>
+        }
+      />
 
       {/* Telefonda sayfanın altına sabitlenen eylem çubuğu: bir uygulamanın
           birincil düğmesi gibi her zaman parmağın altında duruyor, kullanıcının

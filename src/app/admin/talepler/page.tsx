@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -150,6 +152,7 @@ function talebeCevir(satir: TalepSatiri, cakisma: string | undefined): Talep {
 }
 
 export default async function TaleplerPage() {
+  if (!INSTAGRAM_AKTIF) notFound();
   const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
 
   const [{ data: bekleyenler }, { data: sonuclananlar }] = await Promise.all([

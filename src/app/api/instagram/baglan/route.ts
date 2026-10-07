@@ -2,7 +2,11 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profile";
-import { instagramYapilandirildi, yonlendirmeAdresi } from "@/lib/instagram/kurulum";
+import {
+  INSTAGRAM_AKTIF,
+  instagramYapilandirildi,
+  yonlendirmeAdresi,
+} from "@/lib/instagram/kurulum";
 
 /**
  * Satıcıyı Instagram'ın izin ekranına yollar.
@@ -20,6 +24,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  if (!INSTAGRAM_AKTIF) return new NextResponse(null, { status: 404 });
   const [user, profil] = await Promise.all([getCurrentUser(), getProfile()]);
 
   if (!user || profil?.status !== "approved") {

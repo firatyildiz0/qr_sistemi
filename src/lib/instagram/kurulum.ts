@@ -1,4 +1,14 @@
 /**
+ * Instagram özelliğinin ana anahtarı.
+ *
+ * Kapalıyken menüde görünmez, ekranları ve uçları 404 döner, cron belirteç
+ * tazelemez — Meta'ya hiçbir istek gitmez ve gelen webhook işlenmez. Kod ve
+ * tablolar yerinde duruyor; özelliği geri açmak için bunu `true` yapmak
+ * yeterli.
+ */
+export const INSTAGRAM_AKTIF = false;
+
+/**
  * Entegrasyonun yapılandırma yüzü.
  *
  * Dört ortam değişkeni olmadan Instagram akışı çalışamaz. Eksik olduğunda

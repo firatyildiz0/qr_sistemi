@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -21,6 +23,7 @@ export const dynamic = "force-dynamic";
  * cevaplar, üslup. Asistan bu ekranda yazılanların dışına çıkmıyor.
  */
 export default async function InstagramPaneliPage() {
+  if (!INSTAGRAM_AKTIF) notFound();
   const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
 
   const [{ data: satir }, { data: durum }] = await Promise.all([

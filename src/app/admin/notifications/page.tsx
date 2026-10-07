@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import NotificationRow from "@/components/admin/NotificationRow";
 import MarkAllReadButton from "@/components/admin/MarkAllReadButton";
 import { IconCheckCircle } from "@/components/icons";
+import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 
 export default async function NotificationsPage() {
   const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
@@ -10,10 +11,13 @@ export default async function NotificationsPage() {
   // Sahiplik bildirimin kendi kolonundan geliyor; RLS de aynı koşulu arkada
   // uyguluyor. Ürün bağlantısı isteğe bağlı: talep bildirimlerinin tek bir
   // ürünü olmayabilir (toplu talep), o yüzden join `!inner` değil.
-  const { data: rows } = await supabase
+  let sorgu = supabase
     .from("notifications")
     .select("id, kind, request_id, product_id, message, is_read, created_at, products(name)")
-    .eq("owner_id", user?.id ?? "")
+    .eq("owner_id", user?.id ?? "");
+  // Instagram kapalıyken talep bildirimleri açılamayan bir ekrana götürür.
+  if (!INSTAGRAM_AKTIF) sorgu = sorgu.neq("kind", "talep");
+  const { data: rows } = await sorgu
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -33,7 +37,7 @@ export default async function NotificationsPage() {
     created_at: n.created_at,
     product_name:
       (n.products as unknown as { name: string } | null)?.name ??
-      (n.kind === "talep" ? "Instagram talebi" : "Ürün"),
+      (n.kind === "talep" ? "Rezervasyon talebi" : "Ürün"),
   }));
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -53,7 +57,7 @@ export default async function NotificationsPage() {
             </span>
             <p className="font-semibold text-ink">Her şey güncel</p>
             <p className="text-sm text-ink-muted">
-              İade hatırlatmaları ve Instagram’dan gelen rezervasyon talepleri burada görünecek.
+              İade hatırlatmaları burada görünecek.
             </p>
           </div>
         ) : (

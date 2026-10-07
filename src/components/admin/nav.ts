@@ -11,6 +11,7 @@ import {
   IconSettings,
   IconSliders,
 } from "@/components/icons";
+import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 
 export type NavItem = {
   href: string;
@@ -46,7 +47,7 @@ export type NavItem = {
  * tarayıcının ayrı bir girdisi yok — mobilde sekme çubuğunun ortasındaki
  * düğme, masaüstünde sağ alttaki buton onu açıyor.
  */
-export const NAV_ITEMS: NavItem[] = [
+const TUM_OGELER: NavItem[] = [
   { href: "/admin", label: "Ana sayfa", icon: IconHome, exact: true, primary: true },
   { href: "/admin/products", label: "Ürünler", icon: IconGrid, primary: true },
   // Ekran müşteri profilleri değil rezervasyonlar için açılıyor: satıcı buraya
@@ -77,6 +78,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/support", label: "Destek", icon: IconLifebuoy },
   { href: "/admin/settings", label: "Ayarlar", icon: IconSettings },
 ];
+
+/** Instagram'a bağlı ekranlar; özellik kapalıyken menüden çıkıyor. */
+const INSTAGRAM_EKRANLARI = new Set(["/admin/talepler", "/admin/instagram", "/admin/instagram-paneli"]);
+
+export const NAV_ITEMS: NavItem[] = INSTAGRAM_AKTIF
+  ? TUM_OGELER
+  : TUM_OGELER.filter((oge) => !INSTAGRAM_EKRANLARI.has(oge.href));
 
 export function isActive(item: NavItem, pathname: string): boolean {
   return item.exact ? pathname === item.href : pathname.startsWith(item.href);

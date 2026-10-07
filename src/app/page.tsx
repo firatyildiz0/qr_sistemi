@@ -370,6 +370,10 @@ export default async function Home() {
               />
               <p className="text-center text-xs leading-relaxed text-ink-muted">
                 Ödemeler iyzico güvencesiyle kredi kartı veya banka kartı ile alınır. Satın alarak{" "}
+                <Link href="/on-bilgilendirme-formu" className="link-underline text-accent">
+                  Ön Bilgilendirme Formu
+                </Link>
+                ,{" "}
                 <Link href="/mesafeli-satis-sozlesmesi" className="link-underline text-accent">
                   Mesafeli Satış Sözleşmesi
                 </Link>{" "}

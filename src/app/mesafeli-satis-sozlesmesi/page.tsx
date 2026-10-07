@@ -145,7 +145,11 @@ export default function MesafeliSatisPage() {
 
       <Bolum baslik="11. Yürürlük">
         <Paragraf>
-          Alıcı, ödeme adımında bu sözleşmeyi ve{" "}
+          Alıcı, ödeme adımında{" "}
+          <Link href="/on-bilgilendirme-formu" className={linkSinifi}>
+            Ön Bilgilendirme Formu
+          </Link>
+          ’nu, bu sözleşmeyi ve{" "}
           <Link href="/teslimat-ve-iade" className={linkSinifi}>
             Teslimat ve İade Şartları
           </Link>

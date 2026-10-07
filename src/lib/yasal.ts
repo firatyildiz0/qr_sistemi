@@ -30,6 +30,7 @@ export const ABONELIK = {
 
 export const YASAL_SAYFALAR = [
   { href: "/hakkimizda", ad: "Hakkımızda" },
+  { href: "/on-bilgilendirme-formu", ad: "Ön Bilgilendirme Formu" },
   { href: "/mesafeli-satis-sozlesmesi", ad: "Mesafeli Satış Sözleşmesi" },
   { href: "/teslimat-ve-iade", ad: "Teslimat ve İade Şartları" },
   { href: "/gizlilik", ad: "Gizlilik Sözleşmesi" },

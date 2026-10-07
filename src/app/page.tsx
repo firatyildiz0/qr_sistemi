@@ -5,6 +5,7 @@ import Reveal from "@/components/marketing/Reveal";
 import Logo from "@/components/Logo";
 import SiteFooter from "@/components/SiteFooter";
 import { ABONELIK } from "@/lib/yasal";
+import { vitrinSayilari } from "@/lib/vitrin";
 import Counter from "@/components/marketing/Counter";
 import {
   IconArrowRight,
@@ -88,7 +89,11 @@ const features = [
  * anlamı yok.
  */
 export default async function Home() {
-  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
+  const [user, profile, sayilar] = await Promise.all([
+    getCurrentUser(),
+    getProfile(),
+    vitrinSayilari(),
+  ]);
   const onayli = profile?.status === "approved";
   const ctaHref = onayli ? homePathFor(profile) : "/login";
   const ctaLabel = onayli ? "Panele git" : "Hemen başla";
@@ -285,44 +290,35 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* STATS */}
-        <section className="px-3 py-10 lg:py-16">
-          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[40px] bg-deep py-16">
-            <div
-              className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: "radial-gradient(var(--color-on-deep) 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-              }}
-            />
-            <div className="relative mx-auto grid max-w-6xl grid-cols-2 gap-8 px-6 text-center md:grid-cols-4">
-              <Reveal className="flex flex-col items-center">
-                <span className="text-4xl font-extrabold tracking-tight text-on-deep sm:text-5xl">
-                  <Counter target={1240} />
-                </span>
-                <span className="eyebrow mt-2 text-on-deep/60">Listelenen ürün</span>
-              </Reveal>
-              <Reveal delay={100} className="flex flex-col items-center">
-                <span className="text-4xl font-extrabold tracking-tight text-on-deep sm:text-5xl">
-                  <Counter target={38600} />
-                </span>
-                <span className="eyebrow mt-2 text-on-deep/60">QR taraması</span>
-              </Reveal>
-              <Reveal delay={200} className="flex flex-col items-center">
-                <span className="text-4xl font-extrabold tracking-tight text-on-deep sm:text-5xl">
-                  4.9<span className="text-xl text-on-deep/50">/5</span>
-                </span>
-                <span className="eyebrow mt-2 text-on-deep/60">Ortalama puan</span>
-              </Reveal>
-              <Reveal delay={300} className="flex flex-col items-center">
-                <span className="text-4xl font-extrabold tracking-tight text-on-deep sm:text-5xl">
-                  <Counter target={92} suffix="%" />
-                </span>
-                <span className="eyebrow mt-2 text-on-deep/60">Onaylanma oranı</span>
-              </Reveal>
+        {/* STATS — canlı veritabanından (bkz. lib/vitrin.ts); okunamazsa bant hiç
+            çizilmiyor, uydurma ya da sıfır bir sayı gösterilmesin. */}
+        {sayilar && (
+          <section className="px-3 py-10 lg:py-16">
+            <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[40px] bg-deep py-16">
+              <div
+                className="absolute inset-0 opacity-10"
+                style={{
+                  backgroundImage: "radial-gradient(var(--color-on-deep) 1px, transparent 1px)",
+                  backgroundSize: "24px 24px",
+                }}
+              />
+              <div className="relative mx-auto grid max-w-4xl grid-cols-3 gap-6 px-6 text-center">
+                {[
+                  { deger: sayilar.urun, etiket: "Listelenen ürün" },
+                  { deger: sayilar.rezervasyon, etiket: "Rezervasyon" },
+                  { deger: sayilar.isletme, etiket: "İşletme" },
+                ].map((oge, sira) => (
+                  <Reveal key={oge.etiket} delay={sira * 100} className="flex flex-col items-center">
+                    <span className="text-4xl font-extrabold tracking-tight text-on-deep sm:text-5xl">
+                      <Counter target={oge.deger} />
+                    </span>
+                    <span className="eyebrow mt-2 text-on-deep/60">{oge.etiket}</span>
+                  </Reveal>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* FİYATLANDIRMA — ödeme kuruluşu incelemesi fiyatı ve ödeme yöntemini
             sitede açıkça görmek istiyor; "iyzico ile Öde" logosu iyzico'nun

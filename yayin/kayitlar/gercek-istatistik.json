@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Ana sayfadaki istatistikler artık gerçek",
+  "aciklama": "Ana sayfadaki koyu banttaki uydurma sayılar (1.240 ürün, 38.600 tarama, 4.9 puan, %92 oran) kaldırıldı. Yerine sistemdeki gerçek ürün, rezervasyon ve işletme sayıları geliyor ve bunlar 10 dakikada bir kendiliğinden güncelleniyor. İptal edilen rezervasyonlar ve yönetici hesabı sayılmıyor.",
+  "dikkat": null
+}

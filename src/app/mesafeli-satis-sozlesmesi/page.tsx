@@ -53,7 +53,7 @@ export default function MesafeliSatisPage() {
             <>
               <Vurgu>Hizmet:</Vurgu> {ABONELIK.ad} — QR kodlu kiralama takip sistemi panelini
               kullanım hakkı (ürün kataloğu, QR etiketleri, müsaitlik takvimi, rezervasyon ve
-              müşteri takibi, Instagram üzerinden rezervasyon talebi).
+              müşteri takibi).
             </>,
             <>
               <Vurgu>Süre:</Vurgu> Bir aylık dönem; iptal edilmediği sürece her dönem sonunda

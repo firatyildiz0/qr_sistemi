@@ -22,7 +22,6 @@ const fiyatMaddeleri = [
   "Sınırsız ürün ve QR etiketi",
   "Canlı müsaitlik takvimi ve rezervasyon takibi",
   "Müşteri ve iade takibi",
-  "Instagram mesajlarından rezervasyon talebi",
 ];
 
 const steps = [

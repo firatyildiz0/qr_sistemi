@@ -42,7 +42,6 @@ export default function HakkimizdaPage() {
             "Ürün kataloğu ve baskıya hazır QR etiketleri",
             "Çakışmaları önleyen canlı müsaitlik takvimi",
             "Rezervasyon, iade ve müşteri takibi",
-            "Instagram mesajlarından rezervasyon talebi alma",
           ]}
         />
       </Bolum>

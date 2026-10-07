@@ -17,7 +17,7 @@ import { SATICI } from "@/lib/yasal";
  * doğru söylemek. Yeni bir alan eklendiğinde burası da güncellenmeli, yoksa
  * metin sessizce yalan söylemeye başlar.
  *
- * Sayfa herkese açık ve oturum istemiyor: Meta uygulama incelemesi adresi
+ * Sayfa herkese açık ve oturum istemiyor: ödeme kuruluşu incelemesi adresi
  * dışarıdan açabilmek zorunda, müşteri de rezervasyon yapmadan önce okuyabilmeli.
  */
 
@@ -60,8 +60,7 @@ export default function GizlilikPage() {
               </>,
               <>
                 <strong className="font-semibold text-ink">Müşteri:</strong> bir ürünü kiralayan
-                kişi. Müşterinin panelde hesabı yoktur; bilgilerini ya satıcı girer ya da müşteri
-                Instagram üzerinden kendisi gönderir.
+                kişi. Müşterinin panelde hesabı yoktur; bilgilerini satıcı girer.
               </>,
             ]}
           />
@@ -142,42 +141,10 @@ export default function GizlilikPage() {
           </p>
         </Bolum>
 
-        <Bolum id="instagram" baslik="Instagram üzerinden rezervasyon">
-          <p className="text-ink-muted">
-            Satıcı isterse Instagram işletme hesabını RentQR’a bağlayabilir. Bağlandığında,
-            hesabına mesaj yazan müşteriler rezervasyon talebi oluşturabilir. Bu durumda:
-          </p>
-          <Liste
-            maddeler={[
-              "Müşterinin Instagram kullanıcı kimliği, sohbetin hangi adımda olduğu ve talebi tamamlamak için yazdığı bilgiler (ürün kodu, tarihler, ad, telefon, il/ilçe) saklanır.",
-              "Sohbetin tamamı saklanmaz; yalnızca rezervasyon talebini oluşturmak için gereken alanlar tutulur.",
-              "Aynı mesajın iki kez işlenmesini önlemek için mesaj kimlikleri 7 gün boyunca tutulur ve sonra silinir.",
-              "Satıcı adına mesaj gönderebilmek için Instagram’dan alınan erişim anahtarı sunucuda saklanır; tarayıcıya hiçbir zaman gönderilmez.",
-            ]}
-          />
-          <p className="text-ink-muted">
-            Instagram’a giden tek şey müşteriye yazılan cevap mesajlarıdır. Instagram üzerindeki
-            mesajlaşma ayrıca Meta’nın kendi gizlilik politikasına tabidir. Satıcı bağlantıyı
-            panelden istediği an kesebilir; kestiğinde erişim anahtarı silinir.
-          </p>
-        </Bolum>
-
         <Bolum baslik="Ne kadar saklanıyor?">
-          <Liste
-            maddeler={[
-              "Güvenlik kayıtları: 90 gün",
-              "QR okutma kayıtları: 400 gün",
-              "Instagram mesaj kimlikleri: 7 gün",
-              "Anlık ziyaretçi kayıtları: 1 gün",
-              <>
-                Rezervasyonlar, müşteri bilgileri ve katalog: satıcı silene kadar. Satıcı bir
-                rezervasyonu sildiğinde kayıt tamamen kaldırılır, arşivlenmez.
-              </>,
-            ]}
-          />
           <p className="text-ink-muted">
-            İlk dört kalem her gün çalışan otomatik bir bakım işiyle silinir; elle müdahale
-            gerekmez.
+            Rezervasyonlar, müşteri bilgileri ve katalog satıcı silene kadar saklanır. Satıcı bir
+            rezervasyonu sildiğinde kayıt tamamen kaldırılır, arşivlenmez.
           </p>
         </Bolum>
 
@@ -197,16 +164,8 @@ export default function GizlilikPage() {
                 barındırılması.
               </>,
               <>
-                <strong className="font-semibold text-ink">Meta (Instagram)</strong> — yalnızca
-                Instagram bağlantısı kuran satıcılar için, mesajlaşma.
-              </>,
-              <>
                 <strong className="font-semibold text-ink">iyzico Ödeme Hizmetleri A.Ş.</strong> —
                 abonelik ödemelerinin alınması. Kart bilgileri yalnızca iyzico’da işlenir.
-              </>,
-              <>
-                <strong className="font-semibold text-ink">Resend</strong> — yalnızca sistem
-                yöneticisine gönderilen güvenlik uyarı e-postaları. Müşteri verisi içermez.
               </>,
             ]}
           />
@@ -233,7 +192,7 @@ export default function GizlilikPage() {
             maddeler={[
               <>
                 <strong className="font-semibold text-ink">Müşteriyseniz</strong> (bir ürün
-                kiraladınız ya da Instagram’dan talep gönderdiniz): kiralama yaptığınız işletmeye
+                kiraladınız): kiralama yaptığınız işletmeye
                 başvurun; kaydınızı panelinden silebilir. İşletmeye ulaşamıyorsanız{" "}
                 <a href={`mailto:${EPOSTA}`} className="link-underline font-medium text-accent">
                   {EPOSTA}
@@ -241,22 +200,9 @@ export default function GizlilikPage() {
                 adresine yazın, kaydı bulup sileriz.
               </>,
               <>
-                <strong className="font-semibold text-ink">Instagram sohbet verileriniz için:</strong>{" "}
-                aynı adrese Instagram kullanıcı adınızla birlikte yazmanız yeterli. Ayrıca{" "}
-                <a
-                  href="https://www.instagram.com/accounts/manage_access/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link-underline font-medium text-accent"
-                >
-                  Instagram ayarlarınızdan
-                </a>{" "}
-                uygulamanın erişimini kaldırabilirsiniz.
-              </>,
-              <>
                 <strong className="font-semibold text-ink">Satıcıysanız:</strong> hesabınızın ve
                 bağlı bütün verilerin silinmesi için {EPOSTA} adresine yazın. Hesap silindiğinde
-                ürünleriniz, rezervasyonlarınız ve Instagram bağlantınız da birlikte silinir.
+                ürünleriniz ve rezervasyonlarınız da birlikte silinir.
               </>,
             ]}
           />

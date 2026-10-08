@@ -1,20 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import * as Sentry from "@sentry/nextjs";
-
 /**
- * Kök layout'un kendisi çökerse React buraya düşer. Sentry'nin bu sınırı ayrıca
- * görmesi gerekiyor: `onRequestError` sunucu hatalarını yakalıyor, buradaki
- * tarayıcıda oluşan render hatalarını.
+ * Kök layout'un kendisi çökerse React buraya düşer.
  *
  * Kök layout devre dışı kaldığı için `html`/`body` burada yeniden kuruluyor.
  */
-export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
-  useEffect(() => {
-    Sentry.captureException(error);
-  }, [error]);
-
+export default function GlobalError() {
   return (
     <html lang="tr">
       <body
@@ -31,7 +22,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
         <div>
           <h1 style={{ fontSize: "1.25rem", fontWeight: 700 }}>Bir şeyler ters gitti</h1>
           <p style={{ marginTop: "0.5rem", color: "#666" }}>
-            Hata kaydedildi. Sayfayı yenileyip tekrar deneyebilirsiniz.
+            Sayfayı yenileyip tekrar deneyebilirsiniz.
           </p>
           <button
             onClick={() => window.location.reload()}

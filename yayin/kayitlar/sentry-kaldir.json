@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Kullanılmayan hata takip servisi siteden kaldırıldı",
+  "aciklama": "Sitede kurulu ama hiç açılmamış bir yurt dışı hata takip servisi vardı. Tamamen kaldırıldı; böylece ileride yanlışlıkla açılıp kişisel veriyi yurt dışına göndermesi ihtimali de ortadan kalktı. Sitenin çalışmasında görünür bir değişiklik yok.",
+  "dikkat": null
+}

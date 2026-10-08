@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -57,27 +56,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-/**
- * Sentry sarmalayıcısı yalnızca DSN tanımlıysa devrede.
- *
- * Sarmalayıcı derleme sırasında kaynak haritası yükleme adımı ekliyor; kurulum
- * yapılmamışken bu adım her derlemede uyarı basar ve `npm run build`'i
- * yavaşlatır. Kurulmadığı sürece yapılandırma olduğu gibi kalıyor.
- */
-export default process.env.NEXT_PUBLIC_SENTRY_DSN
-  ? withSentryConfig(nextConfig, {
-      org: process.env.SENTRY_ORG,
-      project: process.env.SENTRY_PROJECT,
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-
-      // Kaynak haritaları yüklendikten sonra sunucudan siliniyor: yüklenmiş
-      // hâlde kalırlarsa herkes derlenmiş kodun okunabilir kaynağını indirebilir.
-      sourcemaps: { deleteSourcemapsAfterUpload: true },
-
-      // Reklam engelleyiciler Sentry'nin adresini kesiyor; istekler kendi
-      // alan adımız üzerinden geçsin.
-      tunnelRoute: "/monitoring",
-
-      silent: true,
-    })
-  : nextConfig;
+export default nextConfig;

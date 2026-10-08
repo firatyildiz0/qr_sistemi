@@ -88,22 +88,15 @@ export function EpostaLink() {
   );
 }
 
-/** Satıcı künyesi: sözleşmede, iade şartlarında ve hakkımızda aynı tablo. */
-export function SaticiKunyesi() {
-  const satirlar: [string, React.ReactNode][] = [
-    ["Unvan", `${SATICI.unvan} (${SATICI.marka})`],
-    ["Adres", SATICI.adres],
-    ["Vergi dairesi / No", `${SATICI.vergiDairesi} / ${SATICI.vergiNo}`],
-    [
-      "Telefon",
-      <a key="t" href={SATICI.telefonHref} className="link-underline font-medium text-accent">
-        {SATICI.telefon}
-      </a>,
-    ],
-    ["E-posta", <EpostaLink key="e" />],
-  ];
+/**
+ * Etiket–değer tablosu: satıcı künyesi, alıcı bilgileri ve sipariş özeti aynı
+ * görünümü paylaşır. Yazı boyutu gövdeyle aynı (16px ≈ 12 punto); Mesafeli
+ * Sözleşmeler Yönetmeliği ön bilgilerin en az 12 punto verilmesini istiyor,
+ * o yüzden burada küçük yazı kullanılmıyor.
+ */
+export function BilgiTablosu({ satirlar }: { satirlar: [string, React.ReactNode][] }) {
   return (
-    <dl className="grid gap-x-6 gap-y-2 rounded-2xl border border-border bg-card p-5 text-sm sm:grid-cols-[auto_1fr]">
+    <dl className="grid gap-x-6 gap-y-2 rounded-2xl border border-border bg-card p-5 sm:grid-cols-[auto_1fr]">
       {satirlar.map(([etiket, deger]) => (
         <div key={etiket} className="contents">
           <dt className="font-semibold text-ink">{etiket}</dt>
@@ -112,4 +105,29 @@ export function SaticiKunyesi() {
       ))}
     </dl>
   );
+}
+
+/** Ödeme adımında alıcının bilgileriyle dolan alanların yer tutucusu. */
+export function OdemedeDoldurulur() {
+  return <span className="italic">Ödeme adımında doldurulur</span>;
+}
+
+/** Satıcı künyesi: sözleşmede, iade şartlarında ve hakkımızda aynı tablo. */
+export function SaticiKunyesi() {
+  const satirlar: [string, React.ReactNode][] = [
+    ["Unvan", `${SATICI.unvan} (${SATICI.marka})`],
+    ["Adres", SATICI.adres],
+    ["Vergi dairesi / No", `${SATICI.vergiDairesi} / ${SATICI.vergiNo}`],
+  ];
+  if (SATICI.mersisNo) satirlar.push(["MERSİS No", SATICI.mersisNo]);
+  satirlar.push(
+    [
+      "Telefon",
+      <a key="t" href={SATICI.telefonHref} className="link-underline font-medium text-accent">
+        {SATICI.telefon}
+      </a>,
+    ],
+    ["E-posta", <EpostaLink key="e" />]
+  );
+  return <BilgiTablosu satirlar={satirlar} />;
 }

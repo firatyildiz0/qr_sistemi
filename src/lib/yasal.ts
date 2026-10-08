@@ -16,6 +16,11 @@ export const SATICI = {
   adres: "Karapınar Mah. B162. Sok. No:7 Daire:9 Hatipoğlu Apartmanı, Yıldırım / Bursa",
   vergiDairesi: "Gökdere Vergi Dairesi",
   vergiNo: "9421013839",
+  /**
+   * Ticaret siciline kayıtlıysa MERSİS numarası. Boşken künyede hiç
+   * görünmez; doldurulduğu an bütün yasal sayfalara aynı anda girer.
+   */
+  mersisNo: "" as string,
   telefon: "0534 587 54 56",
   telefonHref: "tel:+905345875456",
   eposta: "veyro.ro@gmail.com",

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  BilgiTablosu,
   Bolum,
   EpostaLink,
   Liste,
@@ -16,8 +17,10 @@ import { ABONELIK, SATICI } from "@/lib/yasal";
  *
  * Mesafeli Sözleşmeler Yönetmeliği'nin 5. maddesi, sözleşme kurulmadan önce
  * alıcıya hangi bilgilerin verilmesi gerektiğini sayıyor; bölümler o sırayı
- * izliyor. Ödeme adımında bu form, sözleşmeden önce gösterilip ayrıca
- * onaylatılmalı — sayfanın kendisi bunu sağlamaz.
+ * izliyor. 7. madde bu bilgilerin teyit edilmesini istiyor, teyit yoksa
+ * sözleşme kurulmamış sayılıyor. "Onay" bölümündeki iki cümle ödeme
+ * adımındaki iki ayrı kutunun metnidir; ödeme ekranı bunları birebir
+ * kullanmalı, sayfanın kendisi teyidi sağlamaz.
  */
 
 export const metadata: Metadata = {
@@ -31,8 +34,8 @@ export default function OnBilgilendirmePage() {
   return (
     <YasalSayfa
       baslik="Ön Bilgilendirme Formu"
-      guncelleme="7 Ekim 2026"
-      giris={`6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği uyarınca, ${SATICI.urun} aboneliği satın alınmadan önce alıcının bilgilendirilmesi için hazırlanmıştır.`}
+      guncelleme="8 Ekim 2026"
+      giris={`6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği uyarınca, ${SATICI.urun} aboneliği satın alınmadan önce alıcının bilgilendirilmesi için hazırlanmıştır. Hizmet işletmelere yöneliktir; form, alıcının tüketici sayıldığı durumlarda istenen bilgilerin tamamını içerir.`}
     >
       <Bolum baslik="1. Satıcı bilgileri">
         <SaticiKunyesi />
@@ -52,47 +55,85 @@ export default function OnBilgilendirmePage() {
       </Bolum>
 
       <Bolum baslik="3. Fiyat ve ödeme">
+        <BilgiTablosu
+          satirlar={[
+            ["Hizmet", ABONELIK.ad],
+            ["Dönem bedeli", `${ABONELIK.fiyat}, KDV dahil`],
+            ["Ödeme sıklığı", "Her ay, dönemin başında peşin"],
+            ["Ek masraf", "Yoktur; kargo veya teslimat ücreti alınmaz"],
+          ]}
+        />
         <Liste
           maddeler={[
-            <>
-              <Vurgu>Bedel:</Vurgu> Aylık {ABONELIK.fiyat}, tüm vergiler dahil. Ödeme adımında
-              gösterilen toplam tutar, alıcıdan tahsil edilecek nihai tutardır.
-            </>,
-            "Kargo, teslimat veya başka bir ek masraf yoktur.",
+            "Ödeme adımında gösterilen toplam tutar, tüm vergiler dahil alıcıdan tahsil edilecek nihai tutardır.",
             "Ödeme, kredi kartı veya banka kartı ile, lisanslı ödeme kuruluşu iyzico Ödeme Hizmetleri A.Ş. altyapısı üzerinden alınır. Kart bilgileri satıcıya iletilmez.",
-            "Taksitli ödemelerde vade farkı uygulanıp uygulanmadığı ve toplam tutar ödeme adımında ayrıca gösterilir.",
+            "Siparişin onaylanmasıyla alıcı ödeme yükümlülüğü altına girer.",
           ]}
         />
       </Bolum>
 
-      <Bolum baslik="4. Sözleşmenin süresi ve yenilenmesi">
+      <Bolum baslik="4. Sözleşmenin süresi ve feshi">
         <Paragraf>
-          Abonelik bir aylık dönem için kurulur ve iptal edilmediği sürece her dönem sonunda aynı
-          ödeme aracından {ABONELIK.fiyat} tahsil edilerek kendiliğinden yenilenir. Asgari bir
-          taahhüt süresi yoktur. Alıcı aboneliğini dilediği zaman iptal edebilir; iptal, içinde
-          bulunulan dönemin sonunda geçerli olur ve sonraki dönem için ücret alınmaz.
+          Abonelik <Vurgu>belirsiz sürelidir</Vurgu>; asgari kullanım süresi veya taahhüt yoktur.
+          Bedel aylık dönemler hâlinde, her dönemin başında aynı ödeme aracından peşin tahsil
+          edilir.
+        </Paragraf>
+        <Paragraf>
+          Alıcı sözleşmeyi dilediği zaman, gerekçe göstermeden ve cezai şart ödemeden, <EpostaLink />{" "}
+          adresine e-posta göndererek veya satıcının adresine yazarak feshedebilir. Fesihte iki
+          seçenek vardır:
+        </Paragraf>
+        <Liste
+          maddeler={[
+            <>
+              <Vurgu>Hemen sona erme:</Vurgu> abonelik en geç 7 gün içinde sona erer ve kullanılmayan
+              günlerin bedeli en geç 14 gün içinde iade edilir. Alıcı bir seçim belirtmezse bu
+              seçenek uygulanır.
+            </>,
+            <>
+              <Vurgu>Dönem sonunda sona erme:</Vurgu> erişim ödenmiş dönemin sonuna kadar sürer,
+              sonraki dönem için ücret alınmaz.
+            </>,
+          ]}
+        />
+        <Paragraf>
+          Fiyat değişiklikleri en az 30 gün önce e-posta ile bildirilir; yeni fiyatı kabul etmeyen
+          alıcı, yeni fiyat uygulanmadan önce feshedebilir. Ayrıntılar{" "}
+          <Link href="/mesafeli-satis-sozlesmesi#fesih" className={linkSinifi}>
+            Mesafeli Satış Sözleşmesi
+          </Link>
+          ’ndedir.
         </Paragraf>
       </Bolum>
 
       <Bolum baslik="5. İfa (teslimat)">
         <Paragraf>
           Hizmet, ödemenin iyzico tarafından onaylanmasıyla birlikte alıcının hesabında anında
-          etkinleştirilir. Ödeme onayı alıcının kayıtlı e-posta adresine bildirilir. Teknik bir
-          sorun nedeniyle hizmet 24 saat içinde etkinleşmezse ödeme eksiksiz iade edilir.
+          etkinleştirilir. Ödeme onayı alıcının kayıtlı e-posta adresine bildirilir. Hizmet ödeme
+          onayından itibaren 24 saat içinde satıcıdan kaynaklanan bir nedenle etkinleşmezse ödeme
+          eksiksiz iade edilir.
         </Paragraf>
       </Bolum>
 
       <Bolum baslik="6. Cayma hakkı">
         <Paragraf>
-          Mesafeli Sözleşmeler Yönetmeliği’nin 15. maddesinin birinci fıkrasının (ğ) bendi
-          uyarınca, <Vurgu>elektronik ortamda anında ifa edilen hizmetlere ilişkin sözleşmelerde
-          cayma hakkı bulunmamaktadır</Vurgu>. {SATICI.urun} aboneliği ödeme onayıyla birlikte
-          anında başladığından, alıcı bu sözleşmede cayma hakkını kullanamaz.
+          Mesafeli Sözleşmeler Yönetmeliği’nin 15. maddesinin birinci fıkrasının (ğ) ve (h) bentleri
+          uyarınca,{" "}
+          <Vurgu>
+            elektronik ortamda anında ifa edilen ve tüketicinin onayıyla cayma süresi dolmadan
+            ifasına başlanan hizmetlerde cayma hakkı kullanılamaz
+          </Vurgu>
+          .
         </Paragraf>
         <Paragraf>
-          Bu durum, alıcının aboneliği istediği zaman iptal etme hakkını ortadan kaldırmaz (bkz.
-          madde 4). Hatalı veya mükerrer tahsilatlarda ücret, en geç 14 gün içinde ödemenin
-          yapıldığı karta iade edilir. Ayrıntılar{" "}
+          {SATICI.urun} aboneliği, alıcının ödeme adımında hizmetin hemen başlamasını açıkça talep
+          etmesi ve ödemenin onaylanmasıyla anında başlar. Alıcı bu talebi onayladığında cayma
+          hakkını kaybeder; bu onay verilmeden abonelik başlatılamaz.
+        </Paragraf>
+        <Paragraf>
+          Cayma hakkının bulunmaması, aboneliği istediği zaman feshetme ve kullanılmayan günlerin
+          bedelini geri alma hakkını ortadan kaldırmaz (bkz. madde 4). Hatalı veya mükerrer
+          tahsilatlar da en geç 14 gün içinde iade edilir; ayrıntılar{" "}
           <Link href="/teslimat-ve-iade" className={linkSinifi}>
             Teslimat ve İade Şartları
           </Link>{" "}
@@ -110,25 +151,38 @@ export default function OnBilgilendirmePage() {
         />
       </Bolum>
 
-      <Bolum baslik="8. Şikâyet ve itirazlar">
+      <Bolum baslik="8. Şikâyet ve uyuşmazlıklar">
         <Paragraf>
           Şikâyet ve talepler için <EpostaLink /> adresine yazabilir veya {SATICI.telefon}{" "}
-          numarasından satıcıya ulaşabilirsiniz. Uyuşmazlık hâlinde, Ticaret Bakanlığı’nca her yıl
+          numarasından satıcıya ulaşabilirsiniz.
+        </Paragraf>
+        <Paragraf>
+          Alıcının tüketici sayıldığı durumlarda uyuşmazlıklar için, Ticaret Bakanlığı’nca her yıl
           ilan edilen parasal sınırlar dahilinde alıcının veya satıcının yerleşim yerindeki
-          Tüketici Hakem Heyetleri’ne, bu sınırları aşan durumlarda Tüketici Mahkemeleri’ne
-          başvurulabilir.
+          tüketici hakem heyetine başvurulabilir. Bu sınırları aşan uyuşmazlıklarda, 6502 sayılı
+          Kanun’un 73/A maddesi uyarınca dava açılmadan önce arabulucuya başvurulması şartıyla
+          tüketici mahkemesine başvurulabilir.
         </Paragraf>
       </Bolum>
 
       <Bolum baslik="9. Onay">
         <Paragraf>
-          Alıcı, ödeme adımında bu formu ve{" "}
+          Ödeme adımında alıcıdan, ödeme düğmesine basmadan önce iki ayrı onay alınır:
+        </Paragraf>
+        <Liste
+          maddeler={[
+            "“Ön Bilgilendirme Formu’nu ve Mesafeli Satış Sözleşmesi’ni okudum ve onaylıyorum. Siparişi onayladığımda ödeme yükümlülüğü altına gireceğimi biliyorum.”",
+            "“Hizmetin cayma süresi dolmadan hemen başlamasını istiyorum. Bu nedenle cayma hakkımın bulunmadığını biliyorum.”",
+          ]}
+        />
+        <Paragraf>
+          Bu form,{" "}
           <Link href="/mesafeli-satis-sozlesmesi" className={linkSinifi}>
             Mesafeli Satış Sözleşmesi
           </Link>
-          ’ni okuduğunu, hizmetin ödeme onayıyla birlikte anında başlayacağını ve bu nedenle cayma
-          hakkının bulunmadığını bildiğini elektronik ortamda onaylar. Formun bir örneği alıcının
-          e-posta adresine gönderilir ve bu sayfada her zaman erişilebilir durumdadır.
+          ’nin ayrılmaz parçasıdır. Alıcının bilgileriyle doldurulan formun bir örneği, ödeme
+          onayıyla birlikte alıcının e-posta adresine gönderilir; form bu sayfada her zaman
+          erişilebilir durumdadır.
         </Paragraf>
       </Bolum>
     </YasalSayfa>

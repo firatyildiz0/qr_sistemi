@@ -368,8 +368,8 @@ export default async function Home() {
                 height={31}
                 className="logo-tema-koyu h-7 w-auto"
               />
-              <p className="text-center text-xs leading-relaxed text-ink-muted">
-                Ödemeler iyzico güvencesiyle kredi kartı veya banka kartı ile alınır. Satın alarak{" "}
+              <p className="text-center text-sm leading-relaxed text-ink-muted">
+                Ödemeler iyzico güvencesiyle kredi kartı veya banka kartı ile alınır.{" "}
                 <Link href="/on-bilgilendirme-formu" className="link-underline text-accent">
                   Ön Bilgilendirme Formu
                 </Link>
@@ -381,7 +381,7 @@ export default async function Home() {
                 <Link href="/teslimat-ve-iade" className="link-underline text-accent">
                   Teslimat ve İade Şartları
                 </Link>
-                ’nı kabul etmiş olursunuz.
+                ödeme adımında ayrıca onaylanır.
               </p>
             </div>
           </Reveal>

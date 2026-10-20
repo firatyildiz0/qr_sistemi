@@ -243,7 +243,22 @@ function MenuSheet({
         </div>
 
         <div className="flex flex-col">
-          {SECONDARY.map((item) => (
+          {SECONDARY.map((item) =>
+            item.yakinda ? (
+              <div
+                key={item.href}
+                aria-disabled="true"
+                className="flex items-center gap-3 rounded-2xl px-2 py-3.5 text-ink-muted opacity-70"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface">
+                  <item.icon className="h-5 w-5" />
+                </span>
+                <span className="text-[15px] font-semibold">{item.label}</span>
+                <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-ink-muted">
+                  Yakında
+                </span>
+              </div>
+            ) : (
             <Link
               key={item.href}
               href={item.href}
@@ -268,7 +283,8 @@ function MenuSheet({
               )}
               <IconChevronRight className="ml-auto h-4 w-4 text-ink-muted" />
             </Link>
-          ))}
+            ),
+          )}
         </div>
 
         {/* Masaüstündeki kenar çubuğunun karşılığı: yalnızca superuser görüyor,

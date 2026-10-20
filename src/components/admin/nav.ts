@@ -37,6 +37,11 @@ export type NavItem = {
    * yeni sayılmadığında buradan kaldırılır.
    */
   yeni?: boolean;
+  /**
+   * Henüz açılmamış bir özellik: menüde "Yakında" rozetiyle görünür ama
+   * tıklanmaz — ekranı 404 döndüğü için bağlantı boşa giderdi.
+   */
+  yakinda?: boolean;
 };
 
 /**
@@ -79,12 +84,18 @@ const TUM_OGELER: NavItem[] = [
   { href: "/admin/settings", label: "Ayarlar", icon: IconSettings },
 ];
 
-/** Instagram'a bağlı ekranlar; özellik kapalıyken menüden çıkıyor. */
-const INSTAGRAM_EKRANLARI = new Set(["/admin/talepler", "/admin/instagram", "/admin/instagram-paneli"]);
+/**
+ * Instagram'a bağlı ekranlar. Özellik kapalıyken talepler ve panel menüden
+ * çıkıyor; Instagram'ın kendisi "Yakında" olarak kalıyor ki satıcı geleceğini
+ * bilsin.
+ */
+const INSTAGRAM_EKRANLARI = new Set(["/admin/talepler", "/admin/instagram-paneli"]);
 
 export const NAV_ITEMS: NavItem[] = INSTAGRAM_AKTIF
   ? TUM_OGELER
-  : TUM_OGELER.filter((oge) => !INSTAGRAM_EKRANLARI.has(oge.href));
+  : TUM_OGELER.filter((oge) => !INSTAGRAM_EKRANLARI.has(oge.href)).map((oge) =>
+      oge.href === "/admin/instagram" ? { ...oge, yeni: false, yakinda: true } : oge,
+    );
 
 export function isActive(item: NavItem, pathname: string): boolean {
   return item.exact ? pathname === item.href : pathname.startsWith(item.href);

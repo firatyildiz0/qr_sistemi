@@ -12,6 +12,22 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
       {NAV_ITEMS.map((item) => {
         const active = isActive(item, pathname);
         const badge = item.unread ? unreadCount : 0;
+        if (item.yakinda) {
+          return (
+            <div
+              key={item.href}
+              title={`${item.label} yakında`}
+              aria-disabled="true"
+              className="sidebar-item relative flex cursor-default items-center gap-3 rounded-full px-4 py-3 text-ink-muted opacity-70"
+            >
+              <item.icon className="h-5 w-5 shrink-0" />
+              <span className="sidebar-label text-sm font-semibold">{item.label}</span>
+              <span className="sidebar-badge ml-auto rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-ink-muted">
+                Yakında
+              </span>
+            </div>
+          );
+        }
         return (
           <Link
             key={item.href}

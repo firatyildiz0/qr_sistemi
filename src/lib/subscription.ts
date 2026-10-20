@@ -6,17 +6,43 @@ import { getCurrentUser } from "@/lib/auth";
  * Abonelik durumu — panelin kapısı buna bakıyor.
  *
  * Erişim ölçütü veritabanındaki `has_subscription()` ile birebir aynı
- * (bkz. 0025). Aynı kural iki yerde duruyor çünkü iki farklı işi yapıyorlar:
+ * (bkz. 0031). Aynı kural iki yerde duruyor çünkü iki farklı işi yapıyorlar:
  * buradaki kullanıcıyı doğru ekrana yönlendiriyor ve ona kaç günü kaldığını
  * söylüyor, oradaki ise veriyi koruyor. Arayüz atlatılsa bile yazma yine
  * RLS'te duruyor; bu dosyayı kimse zorlayamaz, yalnızca yanlış ekran görür.
  */
 
-/** Aylık ücret, TL, KDV dahil. Kullanıcının kartından çekilen tutar. */
-export const MONTHLY_PRICE_TRY = 999;
+/**
+ * Aylık ücret, TL, KDV dahil. Kullanıcının kartından çekilen tutar.
+ *
+ * Asıl tahsilat tutarı iyzico'daki planda (`npm run iyzico:plan`); bu sabit
+ * ekranda gösterilen ve kayda yazılan değer. Ana sayfadaki fiyat kartı
+ * (`ABONELIK.fiyat`, lib/yasal.ts) da aynı tutarı söylemeli.
+ */
+export const MONTHLY_PRICE_TRY = 1999;
 
-/** Kartsız deneme süresi. 0025'teki tetikleyicideki `interval` ile aynı olmalı. */
-export const TRIAL_DAYS = 14;
+/**
+ * Dönem sonuna eklenen tolerans.
+ *
+ * iyzico yenilemeyi dönemin bittiği gün çekiyor ve sonucu webhook'la
+ * bildiriyor; bildirim dakikalar, tekrar denemede saatler sonra gelebiliyor.
+ * Tolerans olmasa düzenli ödeyen satıcının paneli her ay o arada kilitlenirdi.
+ */
+const GRACE_DAYS = 2;
+
+/**
+ * Ödenen bir ayın erişim bitişi: `from` + 1 ay + tolerans.
+ *
+ * iyzico'nun döndürdüğü `endDate` *aboneliğin* bitişi, dönemin değil —
+ * süresiz abonelikte ya boş ya çok ileri bir tarih. O yüzden dönem burada
+ * hesaplanıyor; ödeme geri dönüşü de webhook da bunu kullanıyor.
+ */
+export function paidPeriodEnd(from: Date = new Date()): string {
+  const end = new Date(from);
+  end.setMonth(end.getMonth() + 1);
+  end.setDate(end.getDate() + GRACE_DAYS);
+  return end.toISOString();
+}
 
 /** Faturada gösterilen KDV oranı. Fiyat KDV *dahil* olduğu için içinden ayrılıyor. */
 export const VAT_RATE = 0.2;
@@ -50,7 +76,7 @@ export type SubscriptionView = Subscription & {
   accessEndsAt: Date | null;
   /** Bugünden itibaren kalan tam gün. Bitmişse 0. */
   daysLeft: number;
-  /** Hiç ödeme yapılmamış, deneme sürüyor. Ekran farklı bir dil kullanıyor. */
+  /** Elle verilmiş deneme sürüyor. Ekran farklı bir dil kullanıyor. */
   onTrial: boolean;
 };
 
@@ -99,8 +125,8 @@ function describe(sub: Subscription): SubscriptionView {
  * `cache()` ile sarılı — `getProfile` ile aynı gerekçe: kapı kontrolü, ödeme
  * ekranı ve kenar çubuğundaki uyarı şeridi aynı isteği paylaşıyor.
  *
- * Satır yoksa `null`: henüz onaylanmamış hesap (tetikleyici onayla birlikte
- * yazıyor) ya da 0025 çalıştırılmamış bir veritabanı. İkisinde de erişim yok.
+ * Satır yoksa `null`: hiç ödeme yapmamış hesap (satır ilk ödemede açılıyor)
+ * ya da 0031 çalıştırılmamış bir veritabanı. İkisinde de erişim yok.
  */
 export const getSubscription = cache(async (): Promise<SubscriptionView | null> => {
   const user = await getCurrentUser();

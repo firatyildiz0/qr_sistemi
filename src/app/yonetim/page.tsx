@@ -122,7 +122,7 @@ export default async function YonetimPage() {
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Kullanıcılar</h1>
       <p className="mt-1 text-sm text-ink-muted">
         Yeni kayıtlar siz onaylayana kadar giriş yapamaz ve veri ekleyemez.
-        Onaylanan hesap 14 günlük denemeyle başlar, sonrasında abonelik gerekir.
+        Onaylanan hesap paneli kullanmak için aylık abonelik ödemelidir.
       </p>
 
       <RevenueSummary rows={rows} />
@@ -185,9 +185,13 @@ function RevenueSummary({ rows }: { rows: Row[] }) {
   const paying = rows.filter(
     (r) => r.subscription?.status === "active" || r.subscription?.status === "past_due"
   );
-  const trialing = rows.filter((r) => r.subscription?.status === "trialing");
+  const exempt = rows.filter(
+    (r) => r.role === "seller" && r.subscription?.status === "lifetime"
+  );
+  // Hiç ödememiş (satırı olmayan) onaylı satıcılar da kapalı sayılıyor: deneme
+  // yok, satır ilk ödemede açılıyor.
   const lapsed = rows.filter(
-    (r) => r.subscription !== null && !r.subscription.active && r.role === "seller"
+    (r) => r.role === "seller" && r.status === "approved" && !r.subscription?.active
   );
 
   // Her abone kendi ödediği tutardan sayılıyor: fiyat sonradan değişirse eski
@@ -197,7 +201,7 @@ function RevenueSummary({ rows }: { rows: Row[] }) {
   const stats: { label: string; value: string; hint?: string }[] = [
     { label: "Aylık gelir", value: TRY.format(mrr), hint: "KDV dahil, komisyon öncesi" },
     { label: "Ödeyen abone", value: String(paying.length) },
-    { label: "Denemede", value: String(trialing.length) },
+    { label: "Muaf", value: String(exempt.length) },
     { label: "Erişimi kapalı", value: String(lapsed.length) },
   ];
 

@@ -134,6 +134,14 @@ export async function startCheckout(
   const customer = readCustomer(formData, user.email);
   if ("error" in customer) return { error: customer.error };
 
+  // Mesafeli satışta ön bilgilendirme ve sözleşme ödemeden *önce* onaylanmak
+  // zorunda; kutu tarayıcıda `required` olsa da istek elle atılabilir.
+  if (formData.get("sozlesme") !== "on") {
+    return {
+      error: "Devam etmek için Ön Bilgilendirme Formu'nu ve Mesafeli Satış Sözleşmesi'ni onaylayın.",
+    };
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   if (!siteUrl) {
     return { error: "Site adresi yapılandırılmadı, ödeme başlatılamıyor." };
@@ -148,15 +156,20 @@ export async function startCheckout(
   if (!result.ok) return { error: result.error };
 
   // Service role: satıcının kendi abonelik satırına yazma politikası yok
-  // (bilinçli — bkz. 0025). Token'ı yazan taraf sunucu.
+  // (bilinçli — bkz. 0031). Token'ı yazan taraf sunucu.
+  //
+  // `upsert`: satır ilk ödemede açılıyor, yani ilk kez abone olan satıcının
+  // henüz satırı yok. Var olan satırın durumuna dokunulmuyor — yalnızca token
+  // ve plan yazılıyor; yeni satır varsayılan `expired` ile, erişimsiz açılıyor.
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("subscriptions")
-    .update({
+  const { error } = await admin.from("subscriptions").upsert(
+    {
+      owner_id: user.id,
       pending_checkout_token: result.data.token,
       iyzico_plan_ref: config.pricingPlanRef,
-    })
-    .eq("owner_id", user.id);
+    },
+    { onConflict: "owner_id" }
+  );
 
   if (error) {
     // Token saklanamadıysa forma hiç girmemek daha iyi: kullanıcı öderdi ama

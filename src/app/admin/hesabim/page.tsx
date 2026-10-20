@@ -34,7 +34,7 @@ async function planOku(ownerId: string): Promise<PlanGorunumu> {
     .maybeSingle();
 
   if (error || !data) {
-    return { ad: "Ücretsiz plan", ayrinti: "Ücretli bir plana geçmediniz.", ton: "muted" };
+    return { ad: "Abonelik yok", ayrinti: "Aylık plana henüz geçmediniz.", ton: "muted" };
   }
 
   const bitis = (tarih: string | null) => (tarih ? TARIH.format(new Date(tarih)) : null);

@@ -258,8 +258,6 @@ export type SubscriptionResult = {
   subscriptionRef: string;
   customerRef: string | null;
   status: IyzicoSubscriptionStatus;
-  /** Dönem bitişi, epoch ms. iyzico vermezse çağıran taraf bir ay ekliyor. */
-  endDate: number | null;
 };
 
 /**
@@ -279,7 +277,6 @@ export async function retrieveSubscriptionCheckout(
     subscriptionReferenceCode?: string;
     customerReferenceCode?: string;
     subscriptionStatus?: string;
-    endDate?: number | string;
   }>(config, "GET", `/v2/subscription/checkoutform/${encodeURIComponent(token)}`);
 
   if (!result.ok) return result;
@@ -291,15 +288,12 @@ export async function retrieveSubscriptionCheckout(
     return { ok: false, error: "Abonelik sonucu okunamadı." };
   }
 
-  const endDate = result.data.endDate;
-
   return {
     ok: true,
     data: {
       subscriptionRef,
       customerRef: result.data.customerReferenceCode ?? null,
       status: (result.data.subscriptionStatus ?? "PENDING").toUpperCase() as IyzicoSubscriptionStatus,
-      endDate: endDate === undefined ? null : Number(new Date(endDate)) || Number(endDate) || null,
     },
   };
 }

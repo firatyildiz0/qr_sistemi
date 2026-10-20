@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { MONTHLY_PRICE_TRY, paidPeriodEnd } from "@/lib/subscription";
 import {
   iyzicoConfig,
   retrieveSubscriptionCheckout,
@@ -62,15 +63,6 @@ function mapStatus(status: IyzicoSubscriptionStatus): {
   }
 }
 
-/** Dönem bitişi: iyzico söylediyse onu, söylemediyse bir ay sonrası. */
-function periodEnd(endDate: number | null): string {
-  if (endDate) return new Date(endDate).toISOString();
-
-  const next = new Date();
-  next.setMonth(next.getMonth() + 1);
-  return next.toISOString();
-}
-
 async function readToken(request: NextRequest): Promise<string | null> {
   const contentType = request.headers.get("content-type") ?? "";
 
@@ -120,10 +112,10 @@ export async function POST(request: NextRequest) {
       status: mapped.status,
       // Erişim yoksa dönem bitişi de yazılmıyor: yazılsaydı ödenmemiş bir
       // abonelik bir ay boyunca açık kalırdı.
-      current_period_end: mapped.grantsAccess ? periodEnd(result.data.endDate) : null,
+      current_period_end: mapped.grantsAccess ? paidPeriodEnd() : null,
       iyzico_subscription_ref: result.data.subscriptionRef,
       iyzico_customer_ref: result.data.customerRef,
-      price_try: mapped.grantsAccess ? Number(process.env.IYZICO_PRICE_TRY ?? 999) : null,
+      price_try: mapped.grantsAccess ? MONTHLY_PRICE_TRY : null,
       last_event_at: new Date().toISOString(),
       last_failure_reason: mapped.grantsAccess ? null : `iyzico: ${result.data.status}`,
       // Token tek kullanımlık: temizlenmezse aynı token'la tekrar tekrar

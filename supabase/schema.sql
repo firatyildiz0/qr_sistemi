@@ -61,7 +61,7 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- Abonelik (premium üyelik) — bkz. 0025
+-- Abonelik (premium üyelik) — bkz. 0031
 -- ---------------------------------------------------------------------------
 -- Onay ("bu hesap gerçek mi") ve abonelik ("ödemesi yapıldı mı") ayrı tutuluyor,
 -- çünkü ayrı sebeplerle kapanıyorlar: reddedilen hesap geri dönmez, ödemesi
@@ -72,13 +72,13 @@ $$;
 create table if not exists subscriptions (
   owner_id uuid primary key references auth.users(id) on delete cascade,
 
-  -- trialing : deneme sürüyor, kart istenmedi
+  -- trialing : elle verilmiş deneme (varsayılan akışta deneme yok)
   -- active   : ödeme alındı, dönem sonuna kadar erişim var
   -- past_due : yenileme başarısız — erişim ödenmiş dönemin sonuna kadar sürer
   -- canceled : kullanıcı iptal etti; dönem sonuna kadar erişim yine sürer
   -- expired  : dönem de bitti, erişim yok
   -- lifetime : ödeme beklenmiyor (kurucu, demo, muaf hesaplar)
-  status text not null default 'trialing'
+  status text not null default 'expired'
     check (status in ('trialing', 'active', 'past_due', 'canceled', 'expired', 'lifetime')),
 
   -- Deneme kartsız olduğu için iyzico'nun `trialPeriodDays` alanı
@@ -149,44 +149,8 @@ as $$
   select is_approved() and (is_superuser() or has_subscription());
 $$;
 
--- Deneme onayla birlikte başlıyor. Tetikleyici tabloda, uygulamada değil: onay
--- bir `profiles` update'i ile veriliyor ve ileride başka bir yerden de
--- verilebilir.
-create or replace function start_trial_on_approval()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if new.status <> 'approved' or new.role <> 'seller' then
-    return new;
-  end if;
-
-  -- Yalnızca onaya *geçiş* anında. `old`'a iç içe `if` ile, sadece UPDATE
-  -- dalında dokunuluyor: PL/pgSQL birleşik boole ifadelerinde kısa devre
-  -- garantisi vermiyor ve INSERT tetiklenmesinde `old` atanmamış olurdu.
-  if tg_op = 'UPDATE' then
-    if old.status = 'approved' then
-      return new;
-    end if;
-  end if;
-
-  insert into subscriptions (owner_id, status, trial_ends_at, price_try)
-  values (new.id, 'trialing', now() + interval '14 days', 999.00)
-  -- Reddedilip yeniden onaylanan hesap ikinci bir deneme kazanmasın.
-  on conflict (owner_id) do nothing;
-
-  return new;
-end;
-$$;
-
-drop trigger if exists profiles_start_trial on profiles;
-
-create trigger profiles_start_trial
-  after insert or update of status on profiles
-  for each row
-  execute function start_trial_on_approval();
+-- Deneme yok: abonelik satırı ilk ödemede açılıyor, satırı olmayan satıcının
+-- erişimi yok. Elle muaf tutma / deneme verme örnekleri 0031'de.
 
 create or replace function touch_subscription()
 returns trigger

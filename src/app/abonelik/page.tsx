@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/profile";
 import {
   MONTHLY_PRICE_TRY,
-  TRIAL_DAYS,
   VAT_RATE,
   getSubscription,
   netPrice,
@@ -204,9 +203,8 @@ function PlanCard({ subscription }: { subscription: SubscriptionView | null }) {
       </ul>
 
       <p className="mt-5 border-t border-border pt-4 text-xs text-ink-muted">
-        Yeni hesaplar kart bilgisi vermeden {TRIAL_DAYS} gün ücretsiz deniyor.
-        Abonelik aylık yenilenir, taahhüt yoktur; iptal ettiğinizde ödediğiniz
-        dönemin sonuna kadar erişiminiz sürer.
+        Abonelik her ay aynı karttan otomatik yenilenir, taahhüt yoktur. İptal
+        ettiğinizde ödediğiniz dönemin sonuna kadar erişiminiz sürer.
       </p>
     </section>
   );

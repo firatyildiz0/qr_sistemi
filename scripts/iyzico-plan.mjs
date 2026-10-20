@@ -23,7 +23,7 @@ const SANDBOX = "https://sandbox-api.iyzipay.com";
 const PRODUCTION = "https://api.iyzipay.com";
 
 /** Aylık ücret, TL, KDV dahil. `src/lib/subscription.ts` ile aynı olmalı. */
-const PRICE_TRY = Number(process.env.IYZICO_PRICE_TRY ?? 999);
+const PRICE_TRY = Number(process.env.IYZICO_PRICE_TRY ?? 1999);
 
 const PRODUCT_NAME = "RentQR Premium";
 const PLAN_NAME = `Aylık ${PRICE_TRY} TL`;
@@ -130,8 +130,8 @@ async function main() {
       // Süresiz: `recurrenceCount` verilmiyor, abonelik iptal edilene kadar
       // her ay yenileniyor.
       planPaymentType: "RECURRING",
-      // `trialPeriodDays` bilinçli olarak yok: denemeyi kartsız veriyoruz ve
-      // süreyi kendi veritabanımızda tutuyoruz (bkz. 0025).
+      // `trialPeriodDays` bilinçli olarak yok: deneme süresi verilmiyor, ilk
+      // ay kart doğrulanır doğrulanmaz tahsil ediliyor (bkz. 0031).
     }
   );
 

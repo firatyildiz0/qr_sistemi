@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { startCheckout, type CheckoutState } from "./actions";
@@ -139,6 +140,28 @@ export default function SubscribeForm({ nonce }: { nonce?: string }) {
           className={`${FIELD} resize-none`}
         />
       </div>
+
+      {/* Mesafeli Sözleşmeler Yönetmeliği: ön bilgilendirme ve sözleşme
+          ödemeden önce okunup onaylanmalı. Sunucu da kontrol ediyor. */}
+      <label className="flex items-start gap-2.5 text-sm text-ink">
+        <input
+          type="checkbox"
+          name="sozlesme"
+          required
+          className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+        />
+        <span>
+          <Link href="/on-bilgilendirme-formu" target="_blank" className="link-underline font-medium text-accent">
+            Ön Bilgilendirme Formu
+          </Link>
+          &apos;nu ve{" "}
+          <Link href="/mesafeli-satis-sozlesmesi" target="_blank" className="link-underline font-medium text-accent">
+            Mesafeli Satış Sözleşmesi
+          </Link>
+          &apos;ni okudum, onaylıyorum. Hizmetin ödemeyle birlikte anında başladığını
+          ve bu nedenle cayma hakkı bulunmadığını biliyorum.
+        </span>
+      </label>
 
       <Submit />
 

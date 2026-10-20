@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { iyzicoConfig, verifyWebhook, type WebhookPayload } from "@/lib/iyzico";
 import { recordSecurityEvent } from "@/lib/security";
+import { paidPeriodEnd } from "@/lib/subscription";
 
 /**
  * iyzico webhook'u — aylık yenilemelerin haberi buradan geliyor.
@@ -22,13 +23,6 @@ import { recordSecurityEvent } from "@/lib/security";
  * ediyoruz, ama tanımadığımız olay türlerinde 200 dönüyoruz: onları tekrar
  * denemek de aynı sonucu verirdi.
  */
-
-/** Yenileme başarılıysa dönemin ne kadar uzayacağı. */
-function nextPeriodEnd(): string {
-  const next = new Date();
-  next.setMonth(next.getMonth() + 1);
-  return next.toISOString();
-}
 
 export async function POST(request: NextRequest) {
   const config = iyzicoConfig();
@@ -82,7 +76,7 @@ export async function POST(request: NextRequest) {
     case "subscription.order.success":
       update = {
         status: "active",
-        current_period_end: nextPeriodEnd(),
+        current_period_end: paidPeriodEnd(),
         last_event_at: now,
         last_failure_reason: null,
       };

@@ -25,14 +25,18 @@ export default async function AccessGuard({ expect }: { expect: ProfileRole }) {
   }
 
   // Abonelik yalnızca satıcı panelinin şartı: `/yonetim` paneli ücretli değil
-  // (bkz. `can_write`, 0025).
+  // (bkz. `can_write`, 0031).
   //
   // Bu yalnızca yönlendirme. Aboneliği bitmiş biri buradan geçse bile
   // veritabanındaki yazma politikaları onu durduruyor — ekran kilitli, veri de
   // kilitli, ikisi ayrı katmanda.
-  if (expect === "seller") {
+  //
+  // Superuser muaf — `can_write()` ile aynı kural. Yoksa yönetici kendi satıcı
+  // panelini açmaya çalıştığında ödeme ekranına düşer, o da onu `/yonetim`'e
+  // geri yollardı.
+  if (expect === "seller" && profile.role !== "superuser") {
     const subscription = await getSubscription();
-    // Satır hiç yoksa da erişim yok: 0025 çalıştırılmamış ya da abonelik
+    // Satır hiç yoksa da erişim yok: 0031 çalıştırılmamış ya da abonelik
     // henüz açılmamış demek. Fail-closed.
     if (!subscription?.active) redirect("/abonelik");
   }

@@ -1,4 +1,4 @@
--- Migration: aylık abonelik (premium üyelik).
+-- Migration: aylık abonelik (iyzico, 1.999 TL/ay, deneme yok).
 --
 -- Onay (`is_approved`) "bu hesap gerçek mi" sorusunu yanıtlıyordu; abonelik
 -- "bu hesap ödemesini yaptı mı" sorusunu ekliyor. İkisi ayrı tutuluyor çünkü
@@ -22,17 +22,17 @@
 create table if not exists subscriptions (
   owner_id uuid primary key references auth.users(id) on delete cascade,
 
-  -- trialing : deneme sürüyor, kart istenmedi
+  -- trialing : elle verilmiş deneme (varsayılan akışta deneme yok)
   -- active   : ödeme alındı, dönem sonuna kadar erişim var
   -- past_due : yenileme başarısız — erişim ödenmiş dönemin sonuna kadar sürer
   -- canceled : kullanıcı iptal etti; dönem sonuna kadar erişim yine sürer
   -- expired  : dönem de bitti, erişim yok
   -- lifetime : ödeme beklenmiyor (kurucu, demo, muaf hesaplar)
-  status text not null default 'trialing'
+  status text not null default 'expired'
     check (status in ('trialing', 'active', 'past_due', 'canceled', 'expired', 'lifetime')),
 
-  -- Denemenin bittiği an. Deneme kartsız olduğu için iyzico'nun
-  -- `trialPeriodDays` alanı kullanılmıyor — süreyi biz tutuyoruz.
+  -- Elle verilen denemenin bittiği an. iyzico'nun `trialPeriodDays` alanı
+  -- kullanılmıyor — deneme verilecekse kartsız, süresi burada.
   trial_ends_at timestamptz,
 
   -- Ödenmiş dönemin bittiği an. Erişimin asıl ölçütü bu: iptal de, ödeme
@@ -124,53 +124,6 @@ set search_path = public
 as $$
   select is_approved() and (is_superuser() or has_subscription());
 $$;
-
--- ---------------------------------------------------------------------------
--- Deneme, onayla birlikte başlar
--- ---------------------------------------------------------------------------
--- Tetikleyici tabloda, uygulamada değil: onay `/yonetim`'den bir `profiles`
--- update'i ile veriliyor ve ileride başka bir yerden de verilebilir. Denemeyi
--- veritabanına bağlamak, onayın hangi yoldan geldiğinden bağımsız kılıyor.
-create or replace function start_trial_on_approval()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  -- Onaylı bir satıcı değilse yapacak bir şey yok.
-  if new.status <> 'approved' or new.role <> 'seller' then
-    return new;
-  end if;
-
-  -- Yalnızca onaya *geçiş* anında: zaten onaylı bir satırın başka bir alanı
-  -- güncellendiğinde deneme yeniden başlamasın.
-  --
-  -- `old`'a yalnızca UPDATE dalında dokunuluyor, iç içe `if` ile. Tek bir
-  -- birleşik koşulda (`tg_op = 'INSERT' or old.status <> ...`) yazılsaydı
-  -- güvenli olmazdı: PL/pgSQL boole ifadesini SQL çalıştırıcısına veriyor ve
-  -- kısa devre garantisi yok, INSERT tetiklenmesinde `old` ise atanmamış.
-  if tg_op = 'UPDATE' then
-    if old.status = 'approved' then
-      return new;
-    end if;
-  end if;
-
-  insert into subscriptions (owner_id, status, trial_ends_at, price_try)
-  values (new.id, 'trialing', now() + interval '14 days', 999.00)
-  -- Reddedilip sonra yeniden onaylanan hesap ikinci bir deneme kazanmasın.
-  on conflict (owner_id) do nothing;
-
-  return new;
-end;
-$$;
-
-drop trigger if exists profiles_start_trial on profiles;
-
-create trigger profiles_start_trial
-  after insert or update of status on profiles
-  for each row
-  execute function start_trial_on_approval();
 
 -- `updated_at` elle yazılmasın: webhook'un dokunduğu her satırda kendiliğinden
 -- ilerlesin.
@@ -330,16 +283,19 @@ create policy "rental_settings_update_owner" on rental_settings
   with check (owner_id = (select auth.uid()) and can_write());
 
 -- ---------------------------------------------------------------------------
--- Mevcut hesaplar
+-- Mevcut hesaplar ve deneme
 -- ---------------------------------------------------------------------------
--- Bugün onaylı olan herkes muaf: sistemi kullanan test ve demo hesapları bir
--- göç yüzünden kilitlenmesin. Ücret yalnızca bundan sonra onaylanan
--- hesaplardan bekleniyor.
+-- Deneme süresi yok ve mevcut hesaplar muaf tutulmuyor: abonelik satırı
+-- yalnızca ilk ödeme yapıldığında açılıyor. Satırı olmayan satıcının erişimi
+-- yok (`has_subscription()` false), panele girince ödeme ekranına gidiyor.
+-- Verisi silinmiyor; ödediği an kaldığı yerden devam ediyor.
 --
--- Bir hesabı sonradan ücretliye çevirmek için:
---   update subscriptions set status = 'expired' where owner_id = '...';
-insert into subscriptions (owner_id, status, price_try)
-select p.id, 'lifetime', null
-from profiles p
-where p.status = 'approved'
-on conflict (owner_id) do nothing;
+-- Bir hesabı elle muaf tutmak ya da deneme vermek için (superuser):
+--   insert into subscriptions (owner_id, status)
+--   values ('...', 'lifetime')
+--   on conflict (owner_id) do update set status = excluded.status;
+--
+--   insert into subscriptions (owner_id, status, trial_ends_at)
+--   values ('...', 'trialing', now() + interval '14 days')
+--   on conflict (owner_id) do update
+--     set status = excluded.status, trial_ends_at = excluded.trial_ends_at;

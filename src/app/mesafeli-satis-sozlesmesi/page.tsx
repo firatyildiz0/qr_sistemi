@@ -25,6 +25,9 @@ import { ABONELIK, SATICI } from "@/lib/yasal";
  * - Fesih en geç 7 günde işlenir, kullanılmayan günler iade edilir
  *   (Abonelik Sözleşmeleri Yönetmeliği m.24-25; bu iki madde her tür
  *   aboneliğe uygulanıyor).
+ * - 14 günlük cayma hakkı herkese tanınıyor. Yönetmelik m.15/1-ğ,h'deki
+ *   "hemen başlayan dijital hizmet" istisnasına bilerek dayanılmıyor;
+ *   hizmet kullanılmış olsa da bedelin tamamı iade ediliyor.
  * - Uyuşmazlık maddesi arabulucu şartını anıyor (Mesafeli Sözleşmeler
  *   Yönetmeliği m.5/1-k, 1/1/2026'dan beri).
  * - Abonelik Sözleşmeleri Yönetmeliği m.6'nın zorunlu içeriği (tarih, temerrüt,
@@ -171,19 +174,32 @@ export default function MesafeliSatisPage() {
         </Paragraf>
       </Bolum>
 
-      <Bolum baslik="8. Cayma hakkı">
+      <Bolum id="cayma" baslik="8. Cayma hakkı">
         <Paragraf>
-          Yönetmelik’in 15. maddesinin birinci fıkrasının (ğ) ve (h) bentleri uyarınca,{" "}
-          <Vurgu>
-            elektronik ortamda anında ifa edilen ve Alıcı’nın onayıyla cayma süresi dolmadan
-            ifasına başlanan hizmetlerde
-          </Vurgu>{" "}
-          cayma hakkı kullanılamaz. Alıcı, ödeme adımında Hizmet’in hemen başlamasını açıkça talep
-          eder ve bu nedenle cayma hakkının bulunmadığını bildiğini ayrıca onaylar.
+          Alıcı, sözleşmenin kurulduğu tarihten itibaren <Vurgu>14 gün</Vurgu> içinde herhangi bir
+          gerekçe göstermeksizin ve cezai şart ödemeksizin sözleşmeden cayma hakkına sahiptir.
         </Paragraf>
         <Paragraf>
-          Cayma hakkının bulunmaması, Alıcı’nın sözleşmeyi istediği zaman feshetme ve kullanılmayan
-          günlerin bedelini geri alma hakkını ortadan kaldırmaz.
+          Cayma bildirimi, bu süre içinde <EpostaLink /> adresine e-posta göndererek veya{" "}
+          {SATICI.adres} adresine yazılı olarak yapılabilir. Bildirimin süre içinde gönderilmiş
+          olması yeterlidir.
+        </Paragraf>
+        <Paragraf>
+          Cayma bildiriminin Satıcı’ya ulaşmasından itibaren en geç 14 gün içinde, tahsil edilen
+          bedelin tamamı ödemenin yapıldığı araçla ve Alıcı’ya herhangi bir masraf yüklenmeksizin
+          iade edilir.
+        </Paragraf>
+        <Paragraf>
+          Yönetmelik’in 15. maddesinin birinci fıkrasının (ğ) ve (h) bentleri, elektronik ortamda
+          anında ifa edilen hizmetlerde cayma hakkının kullanılamayacağını öngörse de Satıcı bu
+          istisnaya dayanmaz. Hizmet’in ödeme onayıyla hemen başlaması ve Alıcı’nın Hizmet’i bu
+          süre içinde kullanmış olması cayma hakkını ortadan kaldırmaz ve iade edilecek bedelden
+          kesinti yapılmasına yol açmaz.
+        </Paragraf>
+        <Paragraf>
+          Ticari veya mesleki amaçla hareket eden Alıcı’ya kanunen cayma hakkı tanınmamış olsa da
+          Satıcı aynı 14 günlük cayma hakkını ve aynı iade koşullarını ona da tanır. Cayma süresi
+          dolduktan sonra Alıcı sözleşmeyi 9. maddeye göre feshedebilir.
         </Paragraf>
       </Bolum>
 

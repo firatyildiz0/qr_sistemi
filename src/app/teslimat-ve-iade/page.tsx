@@ -95,23 +95,24 @@ export default function TeslimatVeIadePage() {
 
       <Bolum baslik="Cayma hakkı">
         <Paragraf>
-          Mesafeli Sözleşmeler Yönetmeliği’nin 15. maddesinin birinci fıkrasının (ğ) ve (h) bentleri
-          uyarınca,{" "}
-          <Vurgu>
-            elektronik ortamda anında ifa edilen ve onayınızla hemen başlatılan hizmetlerde
-          </Vurgu>{" "}
-          cayma hakkı kullanılamaz. Satın alma sırasında aboneliğin hemen başlamasını istediğinizi
-          ve bu nedenle cayma hakkınızın bulunmadığını ayrıca onaylarsınız.
+          Satın aldığınız günden itibaren <Vurgu>14 gün içinde</Vurgu> hiçbir gerekçe göstermeden
+          sözleşmeden cayabilirsiniz. Bunun için <EpostaLink /> adresine yazmanız yeterlidir.
         </Paragraf>
         <Paragraf>
-          Bu, aboneliği istediğiniz zaman iptal etme ve kullanmadığınız günlerin ücretini geri alma
-          hakkınızı ortadan kaldırmaz.
+          Aboneliği bu süre içinde kullanmış olsanız bile ödediğiniz ücretin tamamı, kesinti
+          yapılmadan en geç 14 gün içinde iade edilir. Bu hak, işletme olarak satın aldığınızda da
+          geçerlidir.
+        </Paragraf>
+        <Paragraf>
+          14 gün geçtikten sonra da aboneliği istediğiniz zaman iptal edip kullanmadığınız günlerin
+          ücretini geri alabilirsiniz.
         </Paragraf>
       </Bolum>
 
       <Bolum baslik="Ücret iadesi yapılan durumlar">
         <Liste
           maddeler={[
+            "Satın aldığınız günden itibaren 14 gün içinde cayma hakkınızı kullandığınızda, ödediğiniz ücretin tamamı",
             "Aboneliği hemen bitecek şekilde iptal ettiğinizde, dönemin kullanılmayan günleri",
             "Ödeme alındığı hâlde aboneliğin bizden kaynaklanan bir nedenle etkinleştirilememesi",
             "Aynı dönem için birden fazla kez ücret tahsil edilmesi",

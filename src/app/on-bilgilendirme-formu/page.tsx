@@ -18,9 +18,10 @@ import { ABONELIK, SATICI } from "@/lib/yasal";
  * Mesafeli Sözleşmeler Yönetmeliği'nin 5. maddesi, sözleşme kurulmadan önce
  * alıcıya hangi bilgilerin verilmesi gerektiğini sayıyor; bölümler o sırayı
  * izliyor. 7. madde bu bilgilerin teyit edilmesini istiyor, teyit yoksa
- * sözleşme kurulmamış sayılıyor. "Onay" bölümündeki iki cümle ödeme
- * adımındaki iki ayrı kutunun metnidir; ödeme ekranı bunları birebir
- * kullanmalı, sayfanın kendisi teyidi sağlamaz.
+ * sözleşme kurulmamış sayılıyor. "Onay" bölümündeki cümle ödeme adımındaki
+ * kutunun metnidir; ödeme ekranı onu birebir kullanmalı, sayfanın kendisi
+ * teyidi sağlamaz. Cayma hakkından feragat kutusu bilerek yok: 14 günlük
+ * cayma hakkı her durumda geçerli.
  */
 
 export const metadata: Metadata = {
@@ -117,22 +118,25 @@ export default function OnBilgilendirmePage() {
 
       <Bolum baslik="6. Cayma hakkı">
         <Paragraf>
-          Mesafeli Sözleşmeler Yönetmeliği’nin 15. maddesinin birinci fıkrasının (ğ) ve (h) bentleri
-          uyarınca,{" "}
-          <Vurgu>
-            elektronik ortamda anında ifa edilen ve tüketicinin onayıyla cayma süresi dolmadan
-            ifasına başlanan hizmetlerde cayma hakkı kullanılamaz
-          </Vurgu>
-          .
+          Alıcı, sözleşmenin kurulduğu tarihten itibaren{" "}
+          <Vurgu>14 gün içinde, herhangi bir gerekçe göstermeden ve cezai şart ödemeden</Vurgu>{" "}
+          sözleşmeden cayabilir. Bu hak, alıcının tüketici olup olmadığına bakılmaksızın tanınır.
         </Paragraf>
         <Paragraf>
-          {SATICI.urun} aboneliği, alıcının ödeme adımında hizmetin hemen başlamasını açıkça talep
-          etmesi ve ödemenin onaylanmasıyla anında başlar. Alıcı bu talebi onayladığında cayma
-          hakkını kaybeder; bu onay verilmeden abonelik başlatılamaz.
+          Cayma bildirimi, süre içinde <EpostaLink /> adresine e-posta göndererek veya{" "}
+          {SATICI.adres} adresine yazılı olarak yapılır. Bildirimin satıcıya ulaşmasından itibaren
+          en geç 14 gün içinde tahsil edilen bedelin tamamı, ödemenin yapıldığı araçla ve
+          masrafsız olarak iade edilir.
         </Paragraf>
         <Paragraf>
-          Cayma hakkının bulunmaması, aboneliği istediği zaman feshetme ve kullanılmayan günlerin
-          bedelini geri alma hakkını ortadan kaldırmaz (bkz. madde 4). Hatalı veya mükerrer
+          {SATICI.urun} aboneliği ödemenin onaylanmasıyla anında başlar; ancak hizmetin başlamış
+          veya kullanılmış olması cayma hakkını ortadan kaldırmaz ve iade tutarından kesinti
+          yapılmaz. Satıcı, Mesafeli Sözleşmeler Yönetmeliği’nin 15. maddesinin birinci fıkrasının
+          (ğ) ve (h) bentlerindeki istisnaya dayanmaz.
+        </Paragraf>
+        <Paragraf>
+          Cayma süresi dolduktan sonra da alıcı aboneliği istediği zaman feshedip kullanılmayan
+          günlerin bedelini geri alabilir (bkz. madde 4). Hatalı veya mükerrer
           tahsilatlar da en geç 14 gün içinde iade edilir; ayrıntılar{" "}
           <Link href="/teslimat-ve-iade" className={linkSinifi}>
             Teslimat ve İade Şartları
@@ -167,12 +171,11 @@ export default function OnBilgilendirmePage() {
 
       <Bolum baslik="9. Onay">
         <Paragraf>
-          Ödeme adımında alıcıdan, ödeme düğmesine basmadan önce iki ayrı onay alınır:
+          Ödeme adımında alıcıdan, ödeme düğmesine basmadan önce şu onay alınır:
         </Paragraf>
         <Liste
           maddeler={[
-            "“Ön Bilgilendirme Formu’nu ve Mesafeli Satış Sözleşmesi’ni okudum ve onaylıyorum. Siparişi onayladığımda ödeme yükümlülüğü altına gireceğimi biliyorum.”",
-            "“Hizmetin cayma süresi dolmadan hemen başlamasını istiyorum. Bu nedenle cayma hakkımın bulunmadığını biliyorum.”",
+            "“Ön Bilgilendirme Formu’nu ve Mesafeli Satış Sözleşmesi’ni okudum ve onaylıyorum. Siparişi onayladığımda ödeme yükümlülüğü altına gireceğimi ve 14 gün içinde cayma hakkımı kullanabileceğimi biliyorum.”",
           ]}
         />
         <Paragraf>

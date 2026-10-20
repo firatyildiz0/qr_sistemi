@@ -85,16 +85,15 @@ const TUM_OGELER: NavItem[] = [
 ];
 
 /**
- * Instagram'a bağlı ekranlar. Özellik kapalıyken talepler ve panel menüden
- * çıkıyor; Instagram'ın kendisi "Yakında" olarak kalıyor ki satıcı geleceğini
- * bilsin.
+ * Instagram'a bağlı ekranlar. Özellik kapalıyken menüden çıkmıyor, "Yakında"
+ * olarak kalıyor ki satıcı neyin geleceğini bilsin.
  */
-const INSTAGRAM_EKRANLARI = new Set(["/admin/talepler", "/admin/instagram-paneli"]);
+const INSTAGRAM_EKRANLARI = new Set(["/admin/talepler", "/admin/instagram", "/admin/instagram-paneli"]);
 
 export const NAV_ITEMS: NavItem[] = INSTAGRAM_AKTIF
   ? TUM_OGELER
-  : TUM_OGELER.filter((oge) => !INSTAGRAM_EKRANLARI.has(oge.href)).map((oge) =>
-      oge.href === "/admin/instagram" ? { ...oge, yeni: false, yakinda: true } : oge,
+  : TUM_OGELER.map((oge) =>
+      INSTAGRAM_EKRANLARI.has(oge.href) ? { ...oge, yeni: false, yakinda: true } : oge,
     );
 
 export function isActive(item: NavItem, pathname: string): boolean {

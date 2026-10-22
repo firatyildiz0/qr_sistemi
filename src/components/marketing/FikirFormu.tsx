@@ -13,6 +13,8 @@ const baslangicDurumu: FikirFormDurumu = { hata: null, tamam: false };
  */
 export default function FikirFormu() {
   const [durum, formAction, bekliyor] = useActionState(fikirGonder, baslangicDurumu);
+  // Hata dönünce React formu bu değerlere sıfırlıyor, boşa değil.
+  const d = durum.degerler ?? {};
 
   if (durum.tamam) {
     return (
@@ -44,7 +46,7 @@ export default function FikirFormu() {
           <label htmlFor="fikir-ad" className="field-label">
             Adınız soyadınız
           </label>
-          <input id="fikir-ad" name="ad" required maxLength={80} autoComplete="name" className="input" />
+          <input id="fikir-ad" name="ad" defaultValue={d.ad} required maxLength={80} autoComplete="name" className="input" />
         </div>
         <div>
           <label htmlFor="fikir-isletme" className="field-label">
@@ -53,6 +55,7 @@ export default function FikirFormu() {
           <input
             id="fikir-isletme"
             name="isletme"
+            defaultValue={d.isletme}
             maxLength={120}
             autoComplete="organization"
             placeholder="Örneğin: Ayşe Gelinlik"
@@ -71,6 +74,7 @@ export default function FikirFormu() {
             <input
               id="fikir-eposta"
               name="eposta"
+            defaultValue={d.eposta}
               type="email"
               maxLength={200}
               autoComplete="email"
@@ -85,6 +89,7 @@ export default function FikirFormu() {
             <input
               id="fikir-telefon"
               name="telefon"
+            defaultValue={d.telefon}
               type="tel"
               inputMode="tel"
               autoComplete="tel"
@@ -103,6 +108,7 @@ export default function FikirFormu() {
         <textarea
           id="fikir-mesaj"
           name="mesaj"
+          defaultValue={d.mesaj}
           required
           rows={6}
           maxLength={2000}
@@ -112,7 +118,7 @@ export default function FikirFormu() {
       </div>
 
       <label className="flex items-start gap-2.5 text-sm text-ink-muted">
-        <input type="checkbox" name="onay" required className="mt-0.5 accent-[var(--color-accent)]" />
+        <input type="checkbox" name="onay" defaultChecked={d.onay === "on"} required className="mt-0.5 accent-[var(--color-accent)]" />
         <span>
           Adımın ve iletişim bilgilerimin bana dönüş yapılması için kullanılmasını kabul ediyorum.{" "}
           <Link href="/gizlilik" className="link-underline text-accent" target="_blank">

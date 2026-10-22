@@ -14,6 +14,14 @@ import { useEffect, useState } from "react";
 
 const EKSENLER = [
   {
+    ad: "ornek",
+    baslik: "Takvim verisi",
+    secenekler: [
+      { deger: "acik", ad: "Örnek veri" },
+      { deger: "kapali", ad: "Gerçek veri" },
+    ],
+  },
+  {
     ad: "hafta",
     baslik: "Önümüzdeki 7 gün",
     secenekler: [
@@ -36,7 +44,7 @@ const EKSENLER = [
 type Secim = Record<(typeof EKSENLER)[number]["ad"], string>;
 
 const ANAHTAR = "panel-kapak-secim-3";
-const VARSAYILAN: Secim = { hafta: "sigan", gecmis: "tarih" };
+const VARSAYILAN: Secim = { ornek: "acik", hafta: "sigan", gecmis: "tarih" };
 
 function uygula(secim: Secim) {
   const kok = document.documentElement;
@@ -140,7 +148,7 @@ export default function SecimPaneli() {
         ))}
       </div>
       <p className="m-0 mt-3 text-[11px] leading-snug text-paper/55">
-        İkisi de panelin ana sayfasında.
+        Hepsi panelin ana sayfasında. Örnek veri yalnızca ekranda; veritabanına yazılmıyor.
       </p>
     </div>
   );

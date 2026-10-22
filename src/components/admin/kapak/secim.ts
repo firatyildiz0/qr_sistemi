@@ -30,3 +30,5 @@ export type GecmisHali = (typeof GECMIS_HALLERI)[number];
 
 export const HAFTA_HALLERI = ["sigan", "ajanda", "secili"] as const;
 export type HaftaHali = (typeof HAFTA_HALLERI)[number];
+
+export const ORNEK_HALLERI = ["acik", "kapali"] as const;

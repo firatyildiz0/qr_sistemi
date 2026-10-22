@@ -8,7 +8,8 @@ import type { Booking } from "@/lib/types";
 import HomeShortcuts from "@/components/admin/HomeShortcuts";
 import BookingHistory, { type BookingHistoryRow } from "@/components/admin/BookingHistory";
 import { coverImage } from "@/components/admin/ProductThumb";
-import BugunKarti, { type Gun, type GunKiralama } from "@/components/admin/kapak/BugunKarti";
+import BugunKarti from "@/components/admin/kapak/BugunKarti";
+import { gunleriOlustur, type Gun, type TakvimKiralama } from "@/components/admin/kapak/takvim";
 import Sayac from "@/components/admin/kapak/Sayac";
 import Belir from "@/components/admin/kapak/Belir";
 
@@ -86,26 +87,22 @@ export default async function AdminHomePage() {
   const haftaSonu = gunAnahtari(SERIT_GUN);
   const gecerli = rezervasyonlar.filter((b) => b.status !== "cancelled");
 
-  const gunler: Gun[] = Array.from({ length: SERIT_GUN }, (_, i) => ({
-    tarih: gunAnahtari(i),
-    baslayan: [],
-    biten: [],
+  // Takvim bütün geçerli kiralamaları alıyor: hafta değiştirmek ya da
+  // takvimi büyütmek yeni bir istek açmasın, liste zaten elde.
+  const takvim: TakvimKiralama[] = gecerli.map((b) => ({
+    id: b.id,
+    urunAdi: b.products?.name ?? "Silinmiş ürün",
+    musteri: b.customer_name,
+    baslangic: b.start_date,
+    bitis: b.end_date,
   }));
-  const gunBul = new Map(gunler.map((g) => [g.tarih, g]));
+  const [bugunGun] = gunleriOlustur(takvim, gunAnahtari(0), 1);
 
   let kirada = 0;
   let yaklasan = 0;
   let siradaki: string | null = null;
 
   for (const b of gecerli) {
-    const kiralama: GunKiralama = {
-      id: b.id,
-      urunAdi: b.products?.name ?? "Silinmiş ürün",
-      musteri: b.customer_name,
-    };
-    gunBul.get(b.start_date)?.baslayan.push(kiralama);
-    gunBul.get(b.end_date)?.biten.push(kiralama);
-
     const durum = displayStatus(b);
     if (durum === "active") kirada += 1;
     if (durum === "upcoming") {
@@ -116,7 +113,7 @@ export default async function AdminHomePage() {
 
   const ad = profile?.fullName?.split(" ")[0] ?? profile?.username ?? user?.email?.split("@")[0] ?? "";
   const selam = ad ? `${greetingFor()}, ${ad}.` : `${greetingFor()}.`;
-  const ozet = gunOzeti(gunler[0], siradaki);
+  const ozet = gunOzeti(bugunGun, siradaki);
 
   const rakamlar = [
     { deger: urunSayisi ?? 0, etiket: "ürün" },
@@ -163,7 +160,7 @@ export default async function AdminHomePage() {
         </section>
 
         <div className="kapak-giris" style={{ "--i": 5 } as React.CSSProperties}>
-          <BugunKarti gunler={gunler} />
+          <BugunKarti kiralamalar={takvim} bugun={gunAnahtari(0)} />
         </div>
 
         <div className="kapak-giris" style={{ "--i": 6 } as React.CSSProperties}>

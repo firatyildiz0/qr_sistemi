@@ -68,19 +68,19 @@ function SatirMenusu({ b, onDelete }: { b: BookingHistoryRow; onDelete: (b: Book
         aria-haspopup="menu"
         aria-expanded={acik}
         aria-label={`${b.customerName} rezervasyonu için seçenekler`}
-        className="flex h-9 w-9 items-center justify-center rounded-md text-lg leading-none text-ink-muted transition-colors hover:bg-surface hover:text-ink"
+        className="flex h-9 w-9 items-center justify-center rounded-[6px] text-lg leading-none text-ink-muted transition-colors hover:bg-surface hover:text-ink"
       >
         ⋯
       </button>
       {acik && (
         <div
           role="menu"
-          className="modal-panel absolute right-0 top-10 z-20 flex w-48 flex-col rounded-md border border-border bg-card p-1 shadow-lg"
+          className="modal-panel absolute right-0 top-10 z-20 flex w-48 flex-col rounded-[6px] border border-border bg-card p-1 shadow-lg"
         >
           <Link
             role="menuitem"
             href={`/admin/bookings/${b.id}`}
-            className="rounded-md px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
+            className="rounded-[6px] px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
           >
             Rezervasyonu aç
           </Link>
@@ -91,7 +91,7 @@ function SatirMenusu({ b, onDelete }: { b: BookingHistoryRow; onDelete: (b: Book
               setAcik(false);
               onDelete(b);
             }}
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-danger hover:bg-danger-soft"
+            className="flex items-center gap-2 rounded-[6px] px-3 py-2 text-left text-sm font-semibold text-danger hover:bg-danger-soft"
           >
             <IconTrash className="h-4 w-4" />
             Sil
@@ -123,7 +123,7 @@ export function TarihRozetliListe({ bookings, onDelete }: Props) {
           />
           <span
             aria-hidden="true"
-            className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-md bg-surface leading-none"
+            className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-[6px] bg-surface leading-none"
           >
             <span className="kapak-baslik text-xl font-extrabold text-ink">{gunNo.format(utc(b.startDate))}</span>
             <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-ink-muted">
@@ -193,7 +193,7 @@ export function AylaraGoreListe({ bookings, onDelete }: Props) {
                   onClick={() => onDelete(b)}
                   aria-label={`${b.customerName} rezervasyonunu sil`}
                   title="Sil"
-                  className="relative hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 sm:flex"
+                  className="relative hidden h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 sm:flex"
                 >
                   <IconTrash className="h-4 w-4" />
                 </button>
@@ -281,7 +281,7 @@ function Bolum({
                     href={`tel:${b.customerPhone}`}
                     aria-label={`${b.customerName} kişisini ara`}
                     title={b.customerPhone}
-                    className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-ink-muted transition-colors hover:border-accent hover:text-accent"
+                    className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] border border-border text-ink-muted transition-colors hover:border-accent hover:text-accent"
                   >
                     <IconPhone className="h-4 w-4" />
                   </a>
@@ -295,7 +295,7 @@ function Bolum({
                   onClick={() => onDelete(b)}
                   aria-label={`${b.customerName} rezervasyonunu sil`}
                   title="Sil"
-                  className="relative hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 sm:flex"
+                  className="relative hidden h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 sm:flex"
                 >
                   <IconTrash className="h-4 w-4" />
                 </button>
@@ -338,7 +338,7 @@ export function SiradakilerListe({ bookings, onDelete }: Props) {
           <button
             type="button"
             onClick={() => setGecmisAcik(true)}
-            className="flex items-center justify-between rounded-md border border-dashed border-border-strong px-4 py-3 text-sm font-semibold text-ink-muted transition-colors hover:border-ink-muted hover:text-ink"
+            className="flex items-center justify-between rounded-[6px] border border-dashed border-border-strong px-4 py-3 text-sm font-semibold text-ink-muted transition-colors hover:border-ink-muted hover:text-ink"
           >
             Geçmiş kiralamaları göster ({gecmis.length})
             <IconChevronRight className="h-4 w-4" />

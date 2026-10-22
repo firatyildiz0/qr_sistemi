@@ -82,7 +82,10 @@ function needsSession(pathname: string): boolean {
     // başlatılamaz.
     pathname.startsWith("/abonelik") ||
     pathname === "/login" ||
-    pathname === "/signup"
+    pathname === "/signup" ||
+    // Sıfırlama bağlantısı oturumu burada açıyor, yeni şifre sayfası onu okuyor.
+    pathname.startsWith("/auth/") ||
+    pathname === "/sifre-yenile"
   );
 }
 

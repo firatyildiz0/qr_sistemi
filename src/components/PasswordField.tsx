@@ -19,7 +19,7 @@ import { IconCheck, IconEye, IconEyeOff } from "@/components/icons";
  * maddelik bir uyarı yığını göstermek, henüz bir şey yapmamış kullanıcıyı
  * hatalıymış gibi karşılamak olurdu.
  */
-export default function PasswordField() {
+export default function PasswordField({ label = "Şifre" }: { label?: string }) {
   const [value, setValue] = useState("");
   const [visible, setVisible] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -33,7 +33,7 @@ export default function PasswordField() {
   return (
     <div>
       <label htmlFor="signup-password" className="field-label">
-        Şifre
+        {label}
       </label>
 
       <div className="relative">

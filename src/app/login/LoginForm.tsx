@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { signIn, type LoginState } from "./actions";
 import PendingApprovalDialog from "@/components/PendingApprovalDialog";
@@ -38,9 +39,9 @@ export default function LoginForm({ next }: { next: string }) {
           <label htmlFor="password" className="field-label">
             Şifre
           </label>
-          <a href="#" className="link-underline mb-1.5 text-xs font-medium text-ink-muted">
+          <Link href="/sifremi-unuttum" className="link-underline mb-1.5 text-xs font-medium text-ink-muted">
             Şifremi unuttum
-          </a>
+          </Link>
         </div>
         <input
           id="password"

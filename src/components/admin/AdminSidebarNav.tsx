@@ -35,6 +35,7 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
             // `title` is what names the item once the rail is collapsed and the
             // label is hidden.
             title={item.label}
+            aria-current={active ? "page" : undefined}
             // Seçili öğe vurgu renkli, yumuşak gölgeli bir hap: rayın üstünde
             // duran tek yükseltilmiş yüzey o olduğu için göz nerede olduğunu
             // renkten önce yükseklikten buluyor.

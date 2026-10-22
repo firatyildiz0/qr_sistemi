@@ -40,7 +40,7 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
             // renkten önce yükseklikten buluyor.
             className={`sidebar-item relative flex items-center gap-3 rounded-full px-4 py-3 transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.97] ${
               active
-                ? "bg-accent text-white shadow-[0_10px_20px_-12px_var(--color-accent)]"
+                ? "bg-accent text-white"
                 : "text-ink-muted hover:bg-accent-soft hover:text-accent-hover"
             }`}
           >

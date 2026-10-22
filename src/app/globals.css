@@ -514,59 +514,36 @@ summary,
   /* Basış: kalkan yüzey parmağın altında küçülüyor. `!important` gerekli, çünkü
      hover aynı özelliği yazıyor ve basılı tutulurken hover da açık. */
   .btn:active {
-    transform: scale(0.95) !important;
+    transform: scale(0.97) !important;
   }
   .btn:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 3px;
   }
 
+  /* Düğmeler düz renk: parlama, renkli gölge ya da üstüne gelince kalkma yok.
+     Üstüne gelindiğini yalnızca ton değişimi söylüyor. */
   .btn-primary {
     background: var(--color-accent);
     color: #ffffff;
-    box-shadow: 0 8px 20px -12px color-mix(in oklab, var(--color-accent) 85%, transparent);
-  }
-  /* Üstüne gelince içinden bir parlama süpürülüyor — ekranın kendi ışığı
-     düğmenin üstünden geçiyormuş gibi. Yalnızca birincil düğmede var: sayfada
-     bir tane olduğu için parlama "asıl iş burada" demenin sessiz yolu. */
-  .btn-primary::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: linear-gradient(
-      105deg,
-      transparent 32%,
-      rgba(255, 255, 255, 0.32) 48%,
-      transparent 64%
-    );
-    transform: translateX(-120%);
-    transition: transform 620ms cubic-bezier(0.3, 0, 0.2, 1);
-  }
-  .btn-primary:hover::after {
-    transform: translateX(120%);
   }
   .btn-primary:hover {
     background: var(--color-accent-hover);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 16px 30px -14px color-mix(in oklab, var(--color-accent) 90%, transparent);
   }
   .btn-primary:disabled {
     opacity: 0.6;
     transform: none;
-    box-shadow: none;
     cursor: not-allowed;
   }
 
   .btn-secondary {
     background: var(--color-card);
     color: var(--color-ink);
-    box-shadow: inset 0 0 0 1.5px var(--color-border), var(--app-lift);
+    box-shadow: inset 0 0 0 1.5px var(--color-border);
   }
   .btn-secondary:hover {
     color: var(--color-accent-hover);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: inset 0 0 0 1.5px var(--color-accent), var(--app-lift-hover);
+    box-shadow: inset 0 0 0 1.5px var(--color-accent);
   }
 
   .btn-ghost {
@@ -586,23 +563,18 @@ summary,
   .btn-danger-ghost:hover {
     background: var(--color-danger-soft);
     box-shadow: inset 0 0 0 1.5px var(--color-danger);
-    transform: translateY(-2px) scale(1.02);
   }
 
   .btn-danger {
     background: var(--color-danger);
     color: #ffffff;
-    box-shadow: 0 1px 2px var(--app-shadow-soft);
   }
   .btn-danger:hover {
     background: color-mix(in oklab, var(--color-danger) 82%, #000000);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 16px 30px -14px color-mix(in oklab, var(--color-danger) 55%, transparent);
   }
   .btn-danger:disabled {
     opacity: 0.6;
     transform: none;
-    box-shadow: none;
     cursor: not-allowed;
   }
 

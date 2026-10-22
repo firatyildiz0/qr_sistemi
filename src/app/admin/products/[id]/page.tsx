@@ -13,7 +13,6 @@ import { getTurnaround } from "@/lib/settings";
 import BookingForm from "@/components/booking/BookingForm";
 import BookingList from "@/components/booking/BookingList";
 import { IconChevronRight } from "@/components/icons";
-import UrunDetayDuzeni from "@/components/admin/kapak/UrunDetayDuzeni";
 
 export default async function EditProductPage({
   params,
@@ -65,45 +64,50 @@ export default async function EditProductPage({
 
       <h1 className="mb-6 text-2xl font-bold text-ink sm:mb-8 sm:text-[28px]">{product.name}</h1>
 
-      {/* GEÇİCİ: dizilişi düzen seçimi belirliyor (bkz. kapak/duzen.ts). */}
-      <UrunDetayDuzeni
-        bilgiler={
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_300px]">
+        <div className="card">
           <ProductForm
             product={product}
             action={updateProduct.bind(null, id)}
             submitLabel="Değişiklikleri kaydet"
           />
-        }
-        qr={
-          <>
-            <QRCodeCard
+        </div>
+
+        <div className="space-y-6">
+          <QRCodeCard
+            productId={id}
+            productName={product.name}
+            productBarcode={product.barcode ?? null}
+          />
+          <DeleteProductButton productId={id} />
+        </div>
+      </div>
+
+      <section className="mt-16">
+        <h2 className="mb-6 text-lg font-semibold text-ink">Müsaitlik</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div>
+            <BookingForm
               productId={id}
-              productName={product.name}
-              productBarcode={product.barcode ?? null}
+              availability={availability}
+              stock={product.stock}
+              turnaround={turnaround}
+              catalog={catalog}
             />
-            <DeleteProductButton productId={id} />
-          </>
-        }
-        takvim={
-          <BookingForm
-            productId={id}
-            availability={availability}
-            stock={product.stock}
-            turnaround={turnaround}
-            catalog={catalog}
-          />
-        }
-        kiralamalar={
-          <BookingList
-            bookings={bookings ?? []}
-            productId={id}
-            stock={product.stock}
-            turnaround={turnaround}
-            catalog={catalog}
-            groups={groups}
-          />
-        }
-      />
+          </div>
+          <div>
+            <h3 className="field-label">Kiralamalar</h3>
+            <BookingList
+              bookings={bookings ?? []}
+              productId={id}
+              stock={product.stock}
+              turnaround={turnaround}
+              catalog={catalog}
+              groups={groups}
+            />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -57,19 +57,11 @@ export default async function CustomersPage({
         ) : (
           <>
             {customers.length > 0 && (
-              <div className="yalniz-mevcut grid grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 <Stat label="Müşteri" value={customers.length} />
                 <Stat label="Toplam kiralama" value={totalRentals} />
                 <Stat label="Şu an kirada" value={withActive} />
               </div>
-            )}
-
-            {/* GEÇİCİ: sade düzende üç kart yerine tek satır (bkz. kapak/duzen.ts). */}
-            {customers.length > 0 && (
-              <p className="yalniz-sade m-0 text-sm text-ink-muted">
-                <strong className="font-semibold text-ink">{totalRentals}</strong> kiralama ·{" "}
-                <strong className="font-semibold text-ink">{withActive}</strong> müşteride kirada ürün var
-              </p>
             )}
 
             <CustomerList

@@ -61,7 +61,7 @@ export default async function NotificationsPage() {
             </p>
           </div>
         ) : (
-          <ul className="kapak-bildirimler overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="overflow-hidden rounded-lg border border-border bg-card">
             {notifications.map((n, i) => (
               <NotificationRow
                 key={n.id}

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { markNotificationRead } from "@/app/admin/notifications/actions";
 import { IconClock, IconInbox } from "@/components/icons";
-import { useDuzen } from "@/components/admin/kapak/duzen";
 
 function relativeTime(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -39,38 +38,6 @@ export default function NotificationRow({
 }) {
   const [, startTransition] = useTransition();
   const talep = kind === "talep";
-  const duzen = useDuzen();
-
-  // GEÇİCİ karşılaştırma hâlleri (bkz. kapak/duzen.ts). Ürünün adı mesajın
-  // içinde zaten geçiyor; altında ikinci kez yazılmıyor. Okunmamışı kırmızı
-  // şerit ve renkli zemin değil, tek bir nokta işaret ediyor.
-  if (duzen !== "mevcut") {
-    const kompakt = duzen === "kompakt";
-    return (
-      <li className="fade-slide-up" style={{ animationDelay: `${delay}ms` }}>
-        <Link
-          href={href}
-          onClick={() => {
-            if (!isRead) startTransition(() => markNotificationRead(id));
-          }}
-          className={`flex items-center gap-3 rounded-2xl px-3 transition-colors hover:bg-surface ${kompakt ? "py-2.5" : "py-3.5"}`}
-        >
-          <span
-            aria-label={isRead ? undefined : "Okunmadı"}
-            className={`h-2 w-2 shrink-0 rounded-full ${isRead ? "bg-transparent" : "bg-accent"}`}
-          />
-          <p
-            className={`m-0 min-w-0 flex-1 text-sm ${kompakt ? "truncate" : "line-clamp-2"} ${
-              isRead ? "text-ink-muted" : "font-semibold text-ink"
-            }`}
-          >
-            {message}
-          </p>
-          <span className="shrink-0 whitespace-nowrap text-xs text-ink-muted">{relativeTime(createdAt)}</span>
-        </Link>
-      </li>
-    );
-  }
 
   return (
     <li

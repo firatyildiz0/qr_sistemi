@@ -3,59 +3,40 @@
 import { useEffect, useState } from "react";
 
 /**
- * GEÇİCİ — yalnızca tasarım seçimi için. Seçim yapılınca bu dosya, seçilmeyen
- * seçeneklerin CSS'i ve `data-dugme` / `data-etki` / `data-yukleme` /
- * `data-duzen` öznitelikleri kaldırılacak.
+ * GEÇİCİ — yalnızca tasarım seçimi için. Seçim yapılınca bu dosya ve seçilmeyen
+ * hâller kaldırılacak.
  *
- * Seçimler `<html>`'e öznitelik olarak yazılıyor; düğme ve yükleme farkları
- * CSS'te, ekran düzenleri `useDuzen` ile bileşenlerde. Adres parametresiyle de
- * verilebiliyor (`/admin?dugme=yumusak&duzen=sade`), bir bağlantıyla belli bir
- * birleşimi göstermek için.
+ * Seçimler `<html>`'e öznitelik olarak yazılıyor (`data-gecmis`,
+ * `data-hafta`); bileşenler `useSecim` ile okuyor. Adres parametresiyle de
+ * verilebiliyor (`/admin?gecmis=aylar&hafta=ajanda`), bir bağlantıyla belli
+ * bir birleşimi göstermek için.
  */
 
 const EKSENLER = [
   {
-    ad: "duzen",
-    baslik: "Ekran düzeni",
+    ad: "hafta",
+    baslik: "Önümüzdeki 7 gün",
     secenekler: [
-      { deger: "mevcut", ad: "Bugünkü" },
-      { deger: "sade", ad: "Sade" },
-      { deger: "kompakt", ad: "Kompakt" },
+      { deger: "sigan", ad: "A · Sığan şerit" },
+      { deger: "ajanda", ad: "B · Ajanda" },
+      { deger: "secili", ad: "C · Gün seçici" },
     ],
   },
   {
-    ad: "dugme",
-    baslik: "Düğme şekli",
+    ad: "gecmis",
+    baslik: "Rezervasyon geçmişi",
     secenekler: [
-      { deger: "hap", ad: "Hap" },
-      { deger: "yumusak", ad: "Yumuşak köşe" },
-      { deger: "koseli", ad: "Keskin köşe" },
-    ],
-  },
-  {
-    ad: "etki",
-    baslik: "Düğme etkisi",
-    secenekler: [
-      { deger: "parilti", ad: "Kalkma + parlama" },
-      { deger: "cokme", ad: "Basınca çökme" },
-      { deger: "sade", ad: "Yalnızca renk" },
-    ],
-  },
-  {
-    ad: "yukleme",
-    baslik: "Yükleme animasyonu",
-    secenekler: [
-      { deger: "nabiz", ad: "Nabız" },
-      { deger: "parilti", ad: "Parıltı" },
-      { deger: "cizgi", ad: "Üst çizgi" },
+      { deger: "tarih", ad: "A · Tarih rozeti" },
+      { deger: "aylar", ad: "B · Aylara göre" },
+      { deger: "sirada", ad: "C · Önce sıradakiler" },
     ],
   },
 ] as const;
 
 type Secim = Record<(typeof EKSENLER)[number]["ad"], string>;
 
-const ANAHTAR = "panel-kapak-secim-2";
-const VARSAYILAN: Secim = { duzen: "sade", dugme: "hap", etki: "parilti", yukleme: "nabiz" };
+const ANAHTAR = "panel-kapak-secim-3";
+const VARSAYILAN: Secim = { hafta: "sigan", gecmis: "tarih" };
 
 function uygula(secim: Secim) {
   const kok = document.documentElement;
@@ -159,8 +140,7 @@ export default function SecimPaneli() {
         ))}
       </div>
       <p className="m-0 mt-3 text-[11px] leading-snug text-paper/55">
-        Ekran düzeni şu ekranlarda değişiyor: Ana sayfa geçmişi, Rezervasyonlar, Ürünler, Ürün detayı, Bildirimler.
-        Yüklemeyi görmek için menüden başka bir bölüme geçin.
+        İkisi de panelin ana sayfasında.
       </p>
     </div>
   );

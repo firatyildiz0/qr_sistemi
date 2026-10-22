@@ -6,9 +6,8 @@
    `.btn`'in kendisi orada ve `!important` katmanlar arasında ters işliyor —
    katmansız bir `!important` katmandakini ezemiyor.
 
-   GEÇİCİ: `data-dugme`, `data-etki`, `data-yukleme` seçim panosunun
-   öznitelikleri. Seçim yapılınca kazanan kurallar özniteliksiz hâle gelecek,
-   ötekiler silinecek. */
+   GEÇİCİ: `data-gecmis` ve `data-hafta` seçim panosunun öznitelikleri.
+   Seçim yapılınca kazanan hâl tek hâl olacak, ötekiler silinecek. */
 
 .kapak-baslik {
   font-family: var(--font-kapak), var(--font-display), ui-sans-serif, system-ui, sans-serif;
@@ -99,44 +98,37 @@
 }
 
 /* ------------------------------------------------------------------
-   Düğme şekli ve etkisi
+   Düğmeler: keskin köşe, basınca çökme. Üstüne gelince kalkmıyor ve
+   parlamıyor; geri bildirim parmağın altında, basıldığı an.
+
+   Giriş alanları ve başlıktaki arama kutuları da aynı köşeyi alıyor — hap
+   biçimli bir kutunun yanında köşeli bir düğme iki ayrı dil gibi duruyordu.
    ------------------------------------------------------------------ */
 @layer components {
-  :root[data-dugme="yumusak"] .btn {
-    border-radius: 14px;
-  }
-  :root[data-dugme="koseli"] .btn {
+  .panel-scope .btn {
     border-radius: 6px;
   }
-
-  /* Basınca çökme: üstüne gelince kalkmıyor, parlamıyor; yalnızca basınca
-     parmağın altında küçülüyor. */
-  :root[data-etki="cokme"] .btn:hover,
-  :root[data-etki="sade"] .btn:hover {
+  .panel-scope .btn:hover {
     transform: none;
   }
-  :root[data-etki="cokme"] .btn-primary::after,
-  :root[data-etki="sade"] .btn-primary::after {
+  .panel-scope .btn-primary::after {
     display: none;
   }
-  :root[data-etki="cokme"] .btn:active {
+  .panel-scope .btn:active {
     transform: scale(0.93) !important;
     transition-duration: 90ms;
   }
-
-  /* Yalnızca renk: hiçbir şey kıpırdamıyor, durum renkle ve gölgeyle. */
-  :root[data-etki="sade"] .btn:active {
-    transform: none !important;
-    filter: brightness(0.92);
+  .panel-scope .input,
+  .panel-scope .page-header .rounded-md {
+    border-radius: 6px;
   }
 }
 
 /* ------------------------------------------------------------------
-   Yükleme. İskelet blokları `.iskelet` sınıfını taşıyor (Skeleton.tsx).
+   Yükleme: iskelet blokların (`.iskelet`, Skeleton.tsx) üstünden soldan
+   sağa bir ışık geçiyor.
    ------------------------------------------------------------------ */
-
-/* Parıltı: soluk blokların üstünden soldan sağa bir ışık geçiyor. */
-:root[data-yukleme="parilti"] .iskelet {
+.iskelet {
   animation: iskelet-parilti 1.3s ease-in-out infinite;
   background: linear-gradient(
     100deg,
@@ -155,60 +147,11 @@
   }
 }
 
-/* Üst çizgi: iskeletler hareketsiz duruyor, sayfanın en üstünde ince bir
-   ilerleme çizgisi akıyor. Çizgi yalnızca ekranda bir iskelet varken çiziliyor
-   — `:has` sayesinde yükleme ekranının kendisine dokunmak gerekmiyor. */
-:root[data-yukleme="cizgi"] .iskelet {
-  animation: none;
-  opacity: 0.55;
-}
-:root[data-yukleme="cizgi"] .sayfa-gecis:has(.iskelet)::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 70;
-  height: 3px;
-  width: 40%;
-  border-radius: 0 3px 3px 0;
-  background: var(--color-accent);
-  box-shadow: 0 0 12px var(--color-accent);
-  animation: yukleme-cizgi 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-@keyframes yukleme-cizgi {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(260vw);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .iskelet,
-  .sayfa-gecis::before {
-    animation: none !important;
+  .iskelet {
+    animation: none;
   }
 }
-:root[data-motion="reduced"] .iskelet,
-:root[data-motion="reduced"] .sayfa-gecis::before {
-  animation: none !important;
-}
-
-/* ------------------------------------------------------------------
-   Ekran düzeni: sunucuda çizilen parçalar için iki hâli de basıp birini
-   gizlemek (istemci bileşenleri `useDuzen` ile seçiyor).
-   ------------------------------------------------------------------ */
-:root[data-duzen="sade"] .yalniz-mevcut,
-:root[data-duzen="kompakt"] .yalniz-mevcut,
-:root:not([data-duzen="sade"]):not([data-duzen="kompakt"]) .yalniz-sade {
-  display: none;
-}
-
-/* Sade bildirim listesi: çerçeveli kutu yerine sayfanın üstünde duran satırlar. */
-:root[data-duzen="sade"] .kapak-bildirimler,
-:root[data-duzen="kompakt"] .kapak-bildirimler {
-  border: 0;
-  background: transparent;
-  overflow: visible;
+:root[data-motion="reduced"] .iskelet {
+  animation: none;
 }

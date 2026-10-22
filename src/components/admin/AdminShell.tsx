@@ -9,7 +9,7 @@ import QrScanFab from "@/components/scan/QrScanFab";
 import Logo from "@/components/Logo";
 import ProfilAvatari from "@/components/ProfilAvatari";
 import ProfilMenusu from "@/components/admin/ProfilMenusu";
-import { IconBell, IconChevronLeft, IconLogOut, IconShield } from "@/components/icons";
+import { IconBell, IconChevronLeft, IconInstagram, IconLogOut, IconShield } from "@/components/icons";
 import { toggleSidebar } from "@/lib/preferences";
 
 export type Identity = {
@@ -18,6 +18,11 @@ export type Identity = {
   name: string;
   greeting: string;
   isSuperuser: boolean;
+  /**
+   * Superuser olmadığı hâlde post editörüne erişimi olan hesap (0034,
+   * post_editoru_erisim). Superuser editöre yönetim panelinden giriyor.
+   */
+  postEditoru: boolean;
   /** Profil fotoğrafı; yoksa `avatarColor` zeminli baş harf. */
   avatarUrl: string | null;
   avatarColor: string | null;
@@ -112,6 +117,9 @@ export default function AdminShell({
           <Suspense fallback={null}>
             <YonetimLink promise={identityPromise} />
           </Suspense>
+          <Suspense fallback={null}>
+            <PostEditoruLink promise={identityPromise} />
+          </Suspense>
 
           <div className="sidebar-account flex items-center gap-3">
             <ProfilMenusu
@@ -185,6 +193,26 @@ function YonetimLink({ promise }: { promise: Promise<Identity> }) {
       <IconShield className="h-4 w-4 shrink-0" />
       <span className="sidebar-label truncate">Yönetim paneli</span>
     </Link>
+  );
+}
+
+/**
+ * Editör erişimi verilmiş satıcının (Nihat) post editörüne kapısı. Düz
+ * bağlantı: editör kendi tam ekran sayfası (route handler), Link'in ön
+ * yüklemesi orada bir şey bulamaz.
+ */
+function PostEditoruLink({ promise }: { promise: Promise<Identity> }) {
+  const { postEditoru } = use(promise);
+  if (!postEditoru) return null;
+
+  return (
+    <a
+      href="/yonetim/post-editoru"
+      className="mb-4 flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium text-ink-muted transition hover:bg-accent-soft hover:text-accent-hover"
+    >
+      <IconInstagram className="h-4 w-4 shrink-0" />
+      <span className="sidebar-label truncate">Post editörü</span>
+    </a>
   );
 }
 

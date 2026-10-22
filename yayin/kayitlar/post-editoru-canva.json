@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Post editörü Canva gibi çalışıyor; Nihat da kullanabiliyor",
+  "aciklama": "Editöre şekil, ikon, görsel, yazı tipi, döndürme, kilit, gruplama ve hizalama geldi; kare ve yatay formatlar, şablonlar, marka kiti, yorumlar ve sürüm geçmişi eklendi. JPG, PDF ve animasyonlu video indirilebiliyor; Instagram'da carousel ve Reels paylaşılabiliyor. Nihat'ın iki hesabı editörü satıcı panelindeki bağlantıdan açabiliyor.",
+  "dikkat": "AI ile metin üretimi için Vercel'deki ANTHROPIC_API_KEY yenilenmeli; AI görsel için Google AI Studio'da faturalandırma açılmalı; stok fotoğraf için Vercel'e PEXELS_API_KEY eklenmeli."
+}

@@ -9,6 +9,7 @@ import type { Identity } from "@/components/admin/AdminShell";
 import ProfilAvatari from "@/components/ProfilAvatari";
 import {
   IconChevronRight,
+  IconInstagram,
   IconLogOut,
   IconMenu,
   IconScan,
@@ -292,6 +293,9 @@ function MenuSheet({
         <Suspense fallback={null}>
           <YonetimRow promise={identityPromise} onNavigate={onClose} />
         </Suspense>
+        <Suspense fallback={null}>
+          <PostEditoruRow promise={identityPromise} />
+        </Suspense>
 
         <form action={signOutAction} className="mt-2 border-t border-border pt-3">
           <button
@@ -331,6 +335,25 @@ function YonetimRow({
       <span className="text-[15px] font-semibold">Yönetim paneli</span>
       <IconChevronRight className="ml-auto h-4 w-4 text-ink-muted" />
     </Link>
+  );
+}
+
+// Editör erişimi verilmiş satıcı için; editör kendi tam ekran sayfası olduğundan düz bağlantı.
+function PostEditoruRow({ promise }: { promise: Promise<Identity> }) {
+  const { postEditoru } = use(promise);
+  if (!postEditoru) return null;
+
+  return (
+    <a
+      href="/yonetim/post-editoru"
+      className="tab-press mt-2 flex items-center gap-3 rounded-2xl border-t border-border px-2 py-3.5 pt-4 text-ink"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface">
+        <IconInstagram className="h-5 w-5" />
+      </span>
+      <span className="text-[15px] font-semibold">Post editörü</span>
+      <IconChevronRight className="ml-auto h-4 w-4 text-ink-muted" />
+    </a>
   );
 }
 

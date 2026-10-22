@@ -6,7 +6,7 @@
    sırayı kendiliğinden koruyordu, yoklamada onay ile başkasının değişikliği ters sırada gelebiliyor. */
 (() => {
 const API = '/api/post-editoru/ortak', POLL_MS = 1100;
-const H = {}; let cid = null, seq = 0, rev = 0, alive = false, closed = true, sending = false, tries = 0, pollT = null, at = null;
+const H = {}; let cid = null, seq = 0, rev = 0, alive = false, closed = true, sending = false, tries = 0, pollT = null, at = null, yetkisiz = 0;
 const pending = [];   // { seq, ops, sent } — onay bekleyen (sent: false ise henüz gönderilmedi)
 const mine = [];      // { rev, ops } — onaylanmış kendi işlemlerimiz; yoklama o reve ulaşınca düşer
 let people = new Map();
@@ -23,7 +23,12 @@ async function call(method, { query, body } = {}) {
   Object.entries(query || {}).forEach(([k, v]) => { if (v != null) u.searchParams.set(k, v); });
   const r = await fetch(u, { method, cache: 'no-store', keepalive: method === 'POST' && JSON.stringify(body || {}).length < 6e4,
     headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined });
-  if (r.status === 401) { closed = true; location.href = '/login?next=' + encodeURIComponent('/yonetim/post-editoru'); throw new Error('Oturum kapandı'); }
+  // kimlik kontrolü Supabase'e anlık ulaşamayınca da 401 dönebiliyor: art arda ikinci 401'de girişe gönder
+  if (r.status === 401) {
+    if (++yetkisiz >= 2) { closed = true; location.href = '/login?next=' + encodeURIComponent('/yonetim/post-editoru'); }
+    throw Object.assign(new Error('Oturum doğrulanamadı'), { status: 503 });
+  }
+  yetkisiz = 0;
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(j.error || 'İstek başarısız.'), { status: r.status });
   return j;

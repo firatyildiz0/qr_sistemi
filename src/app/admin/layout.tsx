@@ -9,6 +9,7 @@ import AdminShell, { type Identity } from "@/components/admin/AdminShell";
 import UsernamePrompt from "@/components/admin/UsernamePrompt";
 import AccessGuard from "@/components/admin/AccessGuard";
 import PresenceBeacon from "@/components/PresenceBeacon";
+import { editorUyesi } from "@/lib/post-editoru/erisim";
 
 async function loadIdentity(): Promise<Identity> {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
@@ -28,6 +29,8 @@ async function loadIdentity(): Promise<Identity> {
     // Kimliğin içinde geliyor çünkü kabuk zaten onu bekliyor; ayrı bir profil
     // sorgusu açmaya gerek yok.
     isSuperuser: profile?.role === "superuser",
+    // Superuser editöre yönetim panelinden giriyor; bu yalnızca listedeki satıcılar için.
+    postEditoru: !!profile && profile.role !== "superuser" && (await editorUyesi(profile.id)),
   };
 }
 

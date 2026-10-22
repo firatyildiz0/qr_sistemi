@@ -47,19 +47,46 @@ export const CATALOG = {
     values: { sol: { name: "Metin solda" }, alt: { name: "Metin altta" }, orta: { name: "Ortalanmış" } },
   },
   // Kütüphane fotoğrafları tek tarzda olduğu için görsel stili önizlemede
-  // görünmüyor; yerel editörde Canva/ElevenLabs ile üretirken uygulanıyordu.
-  // Eski turların puanları bozulmasın diye eksen duruyor, ağırlığı yarım.
+  // görünmüyor; görsel Gemini ile üretilirken uygulanıyor. Ağırlığı yarım.
   visual: {
     label: "Görsel stili",
     values: {
-      showroom: { name: "Koyu showroom" },
-      studio: { name: "Aydınlık stüdyo" },
-      dogal: { name: "Doğal ortam" },
-      ustten: { name: "Üstten düzenleme" },
-      detay: { name: "Yakın detay" },
+      showroom: {
+        name: "Koyu showroom",
+        desc: "Dark moody rental showroom with deep burgundy ambient light and near-black shadows. Soft warm key light from the side, subtle film grain.",
+      },
+      studio: {
+        name: "Aydınlık stüdyo",
+        desc: "Bright minimal studio on a seamless warm cream backdrop, soft diffused daylight, gentle shadows, airy and clean high-key commercial look.",
+      },
+      dogal: {
+        name: "Doğal ortam",
+        desc: "The product in its real-world setting that fits the sector (boutique, shop counter, wedding venue, city street or outdoor trail), natural window or golden-hour light, warm lifestyle feel.",
+      },
+      ustten: {
+        name: "Üstten düzenleme",
+        desc: "Top-down flat lay on a solid colored surface (deep red or warm cream), product and a few accessories neatly arranged, crisp even light, graphic composition.",
+      },
+      detay: {
+        name: "Yakın detay",
+        desc: "Macro close-up of the product material (fabric texture, lens glass, frame, stitching), very shallow depth of field, rich texture, cinematic side light.",
+      },
     },
   },
 } satisfies Record<string, Eksen>;
+
+const PHOTO = `Editorial commercial photograph. A small white rectangular paper hang tag printed with a black QR code is attached to the product with a thin string.
+Realistic materials, 50mm full-frame. No people's faces, no text, no logos, no watermark.`;
+const COMPOSITION: Record<string, string> = {
+  sol: "The left third of the frame is calm, empty negative space (text goes there); the product sits in the right two-thirds.",
+  alt: "The lower 40% of the frame is calm, empty negative space (text goes there); the product sits in the upper part.",
+  orta: "The product is centered and fairly small in the frame with generous calm space around it (text is overlaid in the center).",
+};
+/** Gemini görsel isteminin sonuna eklenen stil metni. */
+export function imageStyle(visual: unknown, layout: unknown): string {
+  const v = (CATALOG.visual.values as Record<string, Deger>)[String(visual)] ?? CATALOG.visual.values.showroom;
+  return `${PHOTO}\n${v.desc}\n${COMPOSITION[String(layout)] ?? COMPOSITION.sol}`;
+}
 
 type Axis = keyof typeof CATALOG;
 export type Style = Record<Axis, string>;

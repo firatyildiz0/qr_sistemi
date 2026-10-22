@@ -1,10 +1,19 @@
 /* RentQR post editörü — Canva benzeri serbest yerleşim. Tüm durum tek nesnede; her değişiklik yeniden çizer. */
 (() => {
 const STORE = 'rentqr-post-editor-v1';
-const SIZE = { feed: [1080, 1350], story: [1080, 1920] };
-const PAD = { feed: { t: 78, b: 78 }, story: { t: 250, b: 330 } };
+const SIZE = { feed: [1080, 1350], story: [1080, 1920], kare: [1080, 1080], yatay: [1600, 900] };
+// kare ve yatay sonradan eklendi; eski postlarda bu formatların yerleşimi ilk açılışta ölçülür
+const FMTS = Object.keys(SIZE);
+const PAD = { feed: { t: 78, b: 78 }, story: { t: 250, b: 330 }, kare: { t: 70, b: 70 }, yatay: { t: 64, b: 64 } };
 const MARGIN = 76;
 const SWATCHES = ['#ffffff', '#f3eeed', '#d9c7c4', '#ffd9d5', '#ff3b30', '#d11414', '#a90303', '#4a1511', '#2a0d0b', '#140504', '#1f8a4c', '#c77d12'];
+// fonts.css'te barındırılan Google Fonts; Manrope post.css'te
+const FONTS = ['Manrope', 'Inter', 'Poppins', 'Montserrat', 'Raleway', 'Nunito', 'Space Grotesk', 'Oswald', 'Bebas Neue', 'Anton', 'Archivo Black',
+  'Playfair Display', 'DM Serif Display', 'Lora', 'Roboto Slab', 'Caveat'];
+const FONT_SET = new Set(FONTS);
+const FMT_NAME = { feed: 'Feed 4:5', story: 'Story 9:16', kare: 'Kare 1:1', yatay: 'Yatay 16:9' };
+// marka kitinin renkleri (marka.js) hazır renklerin başına gelir
+const swatches = () => [...new Set([...(window.Marka?.colors || []), ...SWATCHES])];
 
 // Fotoğraf kütüphanesi kategorilere göre gruplu (kutuphane.js; video sayfası ve sunucu da aynı listeyi kullanır).
 const LIB_CATS = Kutuphane.cats();
@@ -26,9 +35,11 @@ const TEMPLATE = {
   bubble: { on: false, meta: 'Müşteri · 14:02', text: "Bu kaftan 21'inde boş mu?", k: 1,
             pos: { feed: { x: 600, y: 860 }, story: { x: 600, y: 1180 } } },
   cta: { on: true, main: 'Hemen başlayın →', url: 'qrsistemi.vercel.app', bg: '#d11414', color: '#ffffff', k: 1, shadow: true },
-  texts: [],
+  texts: [], items: [],
+  // locks: taşınmayan öğeler; groups: öğe → grup kimliği (birine tıklayınca grup birlikte seçilir)
+  locks: {}, groups: {},
   order: ['brand', 'tag', 'headline', 'line', 'sub', 'list', 'strip', 'grid', 'cta', 'notif', 'bubble'],
-  layout: { feed: {}, story: {} },
+  layout: { feed: {}, story: {}, kare: {}, yatay: {} },
   flow: 'sol', light: false,  // ilk yerleşimin düzeni (sol | alt | orta); açık zeminli renk teması
 };
 // AI tarz turundaki renk temaları ve düzenler: kimlikler ve adlar tarz.js'teki katalogla aynı
@@ -98,24 +109,29 @@ const blankPost = () => Object.assign(make({ bg: { photo: 'img/p1.jpg' }, tag: {
 /* ---------- öğe türleri ---------- */
 // font: yazı boyutu + kutu genişliği; k: ölçek; w: yalnız genişlik
 const KIND = { brand: 'font', tag: 'font', headline: 'font', sub: 'font', line: 'w', list: 'k', strip: 'w', grid: 'w', notif: 'k', bubble: 'k', cta: 'k' };
-const kindOf = k => k.startsWith('t:') ? 'font' : KIND[k];
+const kindOf = k => k.startsWith('t:') ? 'font' : k.startsWith('o:') ? 'box' : KIND[k];
 const ELS = [
   ['bg', 'Arka plan', 'img'], ['brand', 'Logo', 'logo'], ['tag', 'Etiket', 'text'], ['headline', 'Başlık', 'text'],
   ['line', 'Çizgi', 'line'], ['sub', 'Açıklama', 'text'], ['list', 'Madde listesi', 'list'], ['strip', 'Süreç şeridi', 'list'],
   ['grid', 'Fotoğraf ızgarası', 'grid'], ['notif', 'Bildirim kartı', 'card'], ['bubble', 'Mesaj balonu', 'card'], ['cta', 'Buton', 'btn'],
 ];
 const NAMES = Object.fromEntries(ELS.map(([k, n]) => [k, n]));
-const nameOf = k => k.startsWith('t:') ? 'Metin' : NAMES[k];
+const OBJ_NAME = { shape: 'Şekil', image: 'Görsel', icon: 'İkon' };
+const nameOf = k => k.startsWith('t:') ? 'Metin' : k.startsWith('o:') ? OBJ_NAME[objOf(post(), k)?.type] || 'Öğe' : NAMES[k];
+const isFree = k => /^[to]:/.test(k);  // kullanıcının eklediği öğe: silinir (gizlenmez), çoğaltılır
 const OPTIONAL = ['list', 'strip', 'grid', 'notif', 'bubble'];
 const TEXTUAL = k => ['headline', 'sub'].includes(k) || k.startsWith('t:');
 const hideable = k => k !== 'bg' && k !== 'headline';
-const objOf = (p, k) => k.startsWith('t:') ? p.texts.find(t => t.id === k.slice(2)) : p[k];
-const isOn = (p, k) => k === 'bg' || k === 'headline' || k.startsWith('t:') ? !!objOf(p, k) : !!p[k]?.on;
-const present = (p, k) => k.startsWith('t:') ? !!objOf(p, k) : (!OPTIONAL.includes(k) || p[k].on);
-const textPath = (p, k) => k.startsWith('t:') ? `texts.${p.texts.findIndex(t => t.id === k.slice(2))}` : k;
+const objOf = (p, k) => k.startsWith('t:') ? p.texts.find(t => t.id === k.slice(2)) : k.startsWith('o:') ? (p.items || []).find(t => t.id === k.slice(2)) : p[k];
+const isOn = (p, k) => k === 'bg' || k === 'headline' || isFree(k) ? !!objOf(p, k) : !!p[k]?.on;
+const present = (p, k) => isFree(k) ? !!objOf(p, k) : (!OPTIONAL.includes(k) || p[k].on);
+const textPath = (p, k) => k.startsWith('t:') ? `texts.${p.texts.findIndex(t => t.id === k.slice(2))}`
+  : k.startsWith('o:') ? `items.${p.items.findIndex(t => t.id === k.slice(2))}` : k;
 
 /* ---------- durum ---------- */
 let state, sel = null, fmt = 'feed', zoom = null, scale = 1, tab = 'edit';
+// multi: birden çok öğe seçiliyken anahtarları (Shift ile tıklama ya da grup); tek seçimde boş
+let multi = [];
 // geçmiş kaydı: { s: anlık görüntü, q: alındığı anda uygulanmış uzak değişiklik sayısı } — geri alırken başkalarının sonraki değişiklikleri korunur
 const hist = { past: [], future: [] };
 const fixPost = p => { const m = merge(clone(TEMPLATE), p); if (p.order) m.order = p.order; return m; };
@@ -216,12 +232,17 @@ function toast(msg, action) {
 // flow: eski sütun düzeni (yalnızca ilk konumları ölçmek için); abs: serbest yerleşim
 function elHTML(p, k, f, mode) {
   const st = f === 'story', o = objOf(p, k), L = mode === 'abs' ? (p.layout[f][k] || {}) : null;
-  const box = extra => { if (!L) return extra || '';
+  // font ve satır aralığı akış düzeninde de geçerli (ilk konumlar onunla ölçülüyor)
+  const deco = (o?.font && FONT_SET.has(o.font) ? `font-family:'${o.font}',Manrope,sans-serif;` : '') + (o?.lh ? `line-height:${+o.lh};` : '');
+  const box = extra => { if (!L) return deco + (extra || '');
     const kk = kindOf(k);
     let s = `left:${L.x}px;top:${L.y}px;`;
     if (L.w != null) s += `width:${L.w}px;max-width:none;`;
+    if (kk === 'box' && L.h != null) s += `height:${L.h}px;`;
     if (kk === 'k') s += `transform:scale(${o.k || 1});transform-origin:0 0;`;
-    return s + (extra || ''); };
+    else if (o?.rot) s += `transform:rotate(${+o.rot}deg);`;
+    if (o?.opacity != null && o.opacity < 100) s += `opacity:${o.opacity / 100};`;
+    return s + deco + (extra || ''); };
   switch (k) {
     case 'brand': return `<div class="brand" data-el="brand" style="${box(`font-size:${o.size}px;color:${o.color}`)}">${o.logo ? '<img src="img/logo.png" alt="">' : ''}<span data-path="brand.text">${esc(o.text)}</span></div>`;
     case 'tag': return o.text ? `<div class="tag" data-el="tag" data-path="tag.text" style="${box(`font-size:${o.size}px;color:${o.color};${o.pill === false ? 'border:0;background:none;padding:0' : `border-color:${hexA(o.color, .3)};background:${hexA(o.color, .07)}`}`)}">${esc(o.text)}</div>` : '';
@@ -234,14 +255,52 @@ function elHTML(p, k, f, mode) {
     case 'grid': return o.items.length ? `<div class="grid" data-el="grid" style="${box()}">${o.items.map(i =>
       `<div style="background-image:url('${i.photo}');background-position:${i.pos || 'center'};aspect-ratio:${st ? 1.3 : 2.15}"><span>${esc(i.label)}</span></div>`).join('')}</div>` : '';
     case 'cta': return `<div class="cta" data-el="cta" style="${box(`background:${o.bg};color:${o.color};box-shadow:${o.shadow === false ? 'none' : `0 18px 40px -14px ${hexA(isLight(o.bg) ? '#000000' : o.bg, isLight(o.bg) ? .45 : .75)}`}`)}"><b data-path="cta.main">${esc(o.main)}</b>${o.url ? `<span data-path="cta.url">${esc(o.url)}</span>` : ''}</div>`;
-    case 'notif': { const s = L ? box() : `left:${o.pos[f].x}px;top:${o.pos[f].y}px`;
+    case 'notif': { const s = L ? box() : cardPos(o, f);
       return `<div class="card notif" data-el="notif" style="${s}"><div class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#d11414" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><div><small data-path="notif.small">${esc(o.small)}</small><b data-path="notif.title">${esc(o.title)}</b></div></div>`; }
-    case 'bubble': { const s = L ? box() : `left:${o.pos[f].x}px;top:${o.pos[f].y}px`;
+    case 'bubble': { const s = L ? box() : cardPos(o, f);
       return `<div class="card bubble" data-el="bubble" style="${s}"><small data-path="bubble.meta">${esc(o.meta)}</small><span data-path="bubble.text">${esc(o.text)}</span></div>`; }
-    default: if (k.startsWith('t:') && o) { const i = p.texts.indexOf(o);
+    default: if (k.startsWith('o:') && o && L) return objHTML(o, k, L, box);
+      if (k.startsWith('t:') && o) { const i = p.texts.indexOf(o);
       return `<div class="txt" data-el="${k}" data-path="texts.${i}.text" data-raw="1" style="${box(`font-size:${o.size}px;color:${o.color};font-weight:${o.weight};text-align:${o.align}`)}">${headHTML(o.text, o.accent || '#ff3b30')}</div>`; }
   }
   return '';
+}
+// bildirim kartı ve mesaj balonunun ilk konumu yalnızca feed ve story için tanımlı; yeni formatlarda feed'inkinden orantılı
+const cardPos = (o, f) => { const q = o.pos?.[f]; if (q) return `left:${q.x}px;top:${q.y}px`;
+  const b = o.pos?.feed || { x: 590, y: 985 }, [W, H] = SIZE[f]; return `left:${Math.round(b.x * W / 1080)}px;top:${Math.round(b.y * H / 1350)}px`; };
+// kullanıcının eklediği şekil, görsel ve ikon. Şekil kutunun gerçek piksel ölçüsünde çizilir: kenar kalınlığı uzamaz.
+const SHAPES = [['rect', 'Dikdörtgen'], ['ellipse', 'Daire'], ['triangle', 'Üçgen'], ['star', 'Yıldız'], ['line', 'Çizgi'], ['arrow', 'Ok']];
+function shapeSVG(o, w, h) {
+  const fill = o.fill === 'none' ? 'none' : o.fill || '#d11414', st = o.stroke && o.stroke !== 'none' ? o.stroke : 'none';
+  const sw = st === 'none' ? 0 : clamp(+o.sw || 0, 0, 80), q = sw / 2, a = `fill="${fill}" stroke="${st}" stroke-width="${sw}" stroke-linejoin="round"`;
+  let body;
+  switch (o.shape) {
+    case 'ellipse': body = `<ellipse cx="${w / 2}" cy="${h / 2}" rx="${Math.max(1, w / 2 - q)}" ry="${Math.max(1, h / 2 - q)}" ${a}/>`; break;
+    case 'triangle': body = `<polygon points="${w / 2},${q} ${w - q},${h - q} ${q},${h - q}" ${a}/>`; break;
+    case 'star': { const pts = []; for (let i = 0; i < 10; i++) { const r = i % 2 ? .42 : 1, t = -Math.PI / 2 + i * Math.PI / 5;
+        pts.push(`${(w / 2 + Math.cos(t) * (w / 2 - q) * r).toFixed(1)},${(h / 2 + Math.sin(t) * (h / 2 - q) * r).toFixed(1)}`); }
+      body = `<polygon points="${pts.join(' ')}" ${a}/>`; break; }
+    case 'line': case 'arrow': { const c = o.fill === 'none' ? (st === 'none' ? '#ffffff' : st) : fill, t = clamp(+o.sw || 8, 2, 80), y = h / 2;
+      const head = o.shape === 'arrow' ? Math.min(w / 3, t * 3.2) : 0;
+      body = `<line x1="${t / 2}" y1="${y}" x2="${head ? w - head : w - t / 2}" y2="${y}" stroke="${c}" stroke-width="${t}" stroke-linecap="${head ? 'butt' : 'round'}"/>`
+        + (head ? `<polygon points="${w},${y} ${w - head},${y - head * .62} ${w - head},${y + head * .62}" fill="${c}"/>` : ''); break; }
+    default: body = `<rect x="${q}" y="${q}" width="${Math.max(1, w - sw)}" height="${Math.max(1, h - sw)}" rx="${clamp(+o.radius || 0, 0, Math.min(w, h) / 2)}" ${a}/>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+}
+let iconMap = null;
+const ICONS = () => (iconMap ||= Object.fromEntries(Object.values(window.Ikonlar || {}).flat()));
+function objHTML(o, k, L, box) {
+  const w = Math.max(1, L.w || 100), h = Math.max(1, L.h || 100);
+  if (o.type === 'image') {
+    const img = `background-image:url('${esc(o.src)}');background-size:${o.fit === 'contain' ? 'contain' : 'cover'};background-position:${+(o.px ?? 50)}% ${+(o.py ?? 50)}%;${o.flip ? 'transform:scaleX(-1);' : ''}`;
+    return `<div class="obj oimg" data-el="${k}" style="${box(`border-radius:${+o.radius || 0}px;${o.shadow ? 'box-shadow:0 24px 60px -20px rgba(0,0,0,.65);' : ''}`)}"><i style="${img}"></i></div>`;
+  }
+  if (o.type === 'icon') {
+    const d = ICONS()[o.name] || '';
+    return `<div class="obj oicon" data-el="${k}" style="${box()}"><svg viewBox="0 0 24 24" width="${w}" height="${h}" fill="none" stroke="${o.color || '#ffffff'}" stroke-width="${clamp(+o.sw || 2, .5, 4)}" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">${d}</svg></div>`;
+  }
+  return `<div class="obj oshape" data-el="${k}" style="${box()}">${shapeSVG(o, w, h)}</div>`;
 }
 // fotoğraf karartması metnin durduğu yerden başlar: soldan (metin solda), alttan (metin altta), tümü (ortalanmış).
 // Açık zeminde koyu fotoğraf metnin arkasından daha çok sezildiği için geçiş daha geç başlar (lt) ve tüm fotoğrafa hafif bir perde iner.
@@ -289,8 +348,15 @@ function postHTML(p, f, mode = 'abs') {
 /* ---------- ilk konumları eski sütun düzeninden ölç ---------- */
 function ensureLayout(p, f) {
   const lay = p.layout[f];
-  const need = p.order.filter(k => isOn(p, k) && !lay[k] && !k.startsWith('t:'));
-  if (!need.length) return false;
+  let derived = false;
+  p.order.filter(k => isFree(k) && isOn(p, k) && !lay[k]).forEach(k => {
+    const from = FMTS.find(g => p.layout[g]?.[k]); if (!from) return;
+    const S = p.layout[from][k], [W0, H0] = SIZE[from], [W, H] = SIZE[f], kx = W / W0, ky = H / H0, kk = Math.min(kx, ky);
+    lay[k] = { x: Math.round(S.x * kx), y: Math.round(S.y * ky), ...(S.w != null ? { w: Math.round(S.w * (k.startsWith('t:') ? kx : kk)) } : {}),
+      ...(S.h != null ? { h: Math.round(S.h * kk) } : {}) };
+    derived = true; });
+  const need = p.order.filter(k => isOn(p, k) && !lay[k] && !isFree(k));
+  if (!need.length) return derived;
   const host = el('div'); host.style.cssText = 'position:fixed;left:-30000px;top:0;visibility:hidden';
   host.innerHTML = postHTML(p, f, 'flow'); document.body.append(host);
   const root = host.firstElementChild.getBoundingClientRect();
@@ -342,6 +408,8 @@ function placeBox(box, node) {
   box.classList.add('on'); return R;
 }
 function placeSel() {
+  if (multi.length > 1) return placeMulti();
+  $('#sel').classList.remove('multisel');
   const node = sel && $('#canvas').querySelector(sel$(sel));
   const s = $('#sel'), R = placeBox(s, node);
   if (R) {
@@ -349,7 +417,8 @@ function placeSel() {
     s.classList.toggle('low', R.top - $('#stage').getBoundingClientRect().top < 100);
     const L = post().layout[fmt][sel];
     s.classList.toggle('bgsel', sel === 'bg');
-    s.classList.toggle('haswidth', !!L && L.w != null && kindOf(sel) !== 'w' || sel === 'line' || sel === 'strip' || sel === 'grid');
+    s.classList.toggle('haswidth', !!L && L.w != null && kindOf(sel) !== 'w' || sel === 'line' || sel === 'strip' || sel === 'grid' || kindOf(sel) === 'box');
+    s.classList.toggle('hasheight', kindOf(sel) === 'box'); s.classList.toggle('locked', !!post().locks?.[sel]);
   }
   renderToolbar();
 }
@@ -406,7 +475,7 @@ function removePost(i) { if (state.posts.length < 2) return; state.posts.splice(
 
 /* ---------- öğe işlemleri ---------- */
 function toggle(k, on) { const p = post();
-  if (k.startsWith('t:')) { if (!on) return removeText(k); return; }
+  if (isFree(k)) { if (!on) return removeText(k); return; }
   p[k].on = on;
   if (on && STARTER[k] && !p[k].items.length) p[k].items = STARTER[k]();
   if (!on && sel === k) sel = null; commit(true); renderPanel();
@@ -415,14 +484,40 @@ function addText(src) {
   const p = post(), id = nid().slice(1), k = 't:' + id, [W, H] = SIZE[fmt];
   const t = src ? Object.assign(clone(objOf(p, src)), { id }) : { id, text: 'Metni düzenlemek için çift tıkla', size: 56, color: '#ffffff', weight: 800, align: 'left', accent: '#ff3b30' };
   p.texts.push(t); p.order.push(k);
-  ['feed', 'story'].forEach(f => { const s = src && p.layout[f][src];
+  FMTS.forEach(f => { const s = src && p.layout[f][src];
     p.layout[f][k] = s ? { x: s.x + 30, y: s.y + 30, w: s.w } : { x: 150, y: Math.round(SIZE[f][1] / 2 - 60), w: 780 }; });
   commit(true); select(k); toast(src ? 'Metin çoğaltıldı' : 'Metin eklendi');
 }
-function removeText(k) { const p = post(); p.texts = p.texts.filter(t => 't:' + t.id !== k); p.order = p.order.filter(x => x !== k);
-  ['feed', 'story'].forEach(f => delete p.layout[f][k]);
-  if (sel === k) sel = null; commit(true); renderPanel(); toast('Metin silindi', { label: 'Geri al', fn: undo }); }
-function removeSel() { if (!sel || !hideable(sel)) return; if (sel.startsWith('t:')) removeText(sel); else if (isOn(post(), sel)) toggle(sel, false); }
+function removeText(k, quiet) { const p = post();
+  if (k.startsWith('o:')) p.items = p.items.filter(t => 'o:' + t.id !== k); else p.texts = p.texts.filter(t => 't:' + t.id !== k);
+  p.order = p.order.filter(x => x !== k); FMTS.forEach(f => delete p.layout[f][k]); delete p.locks?.[k]; delete p.groups?.[k];
+  if (sel === k) sel = null; multi = multi.filter(x => x !== k);
+  if (quiet) return;
+  commit(true); renderPanel(); toast(`${k.startsWith('o:') ? 'Öğe' : 'Metin'} silindi`, { label: 'Geri al', fn: undo }); }
+// şekil, görsel, ikon: sayfanın ortasına, her formatta orantılı yerleşir
+const ITEM_DEFAULTS = { shape: { shape: 'rect', fill: '#d11414', stroke: 'none', sw: 8, radius: 28 }, image: { fit: 'cover', radius: 0 }, icon: { name: 'star', color: '#ffffff', sw: 2 } };
+const ITEM_SIZE = { shape: [360, 360], image: [600, 600], icon: [200, 200] };
+function addItem(type, props = {}, size) {
+  const p = post(), id = nid().slice(1), k = 'o:' + id;
+  (p.items ||= []).push(Object.assign({ id, type, rot: 0, opacity: 100 }, clone(ITEM_DEFAULTS[type] || {}), props));
+  p.order.push(k);
+  const [bw, bh] = size || ITEM_SIZE[type];
+  FMTS.forEach(f => { const [W, H] = SIZE[f], kk = Math.min(1, W * .8 / bw, H * .8 / bh), w = Math.round(bw * kk), h = Math.round(bh * kk);
+    p.layout[f][k] = { x: Math.round((W - w) / 2), y: Math.round((H - h) / 2), w, h }; });
+  commit(true); select(k); return k;
+}
+function duplicateFree(k) {
+  if (!k.startsWith('o:')) return addText(k);
+  const p = post(), o = objOf(p, k); if (!o) return;
+  const id = nid().slice(1), nk = 'o:' + id; p.items.push(Object.assign(clone(o), { id })); p.order.push(nk);
+  FMTS.forEach(f => { const s = p.layout[f][k]; if (s) p.layout[f][nk] = { ...s, x: s.x + 30, y: s.y + 30 }; });
+  commit(true); select(nk); toast(`${nameOf(nk)} çoğaltıldı`);
+}
+function removeSel() {
+  if (multi.length > 1) { const n = multi.length;
+    [...multi].forEach(k => { if (isFree(k)) removeText(k, true); else if (hideable(k) && isOn(post(), k)) post()[k].on = false; });
+    multi = []; sel = null; commit(true); renderPanel(); placeSel(); toast(`${n} öğe silindi`, { label: 'Geri al', fn: undo }); return; }
+  if (!sel || !hideable(sel)) return; if (isFree(sel)) removeText(sel); else if (isOn(post(), sel)) toggle(sel, false); }
 function reorder(k, dir) { const o = post().order, i = o.indexOf(k); if (i < 0) return;
   o.splice(i, 1); dir === 'front' ? o.push(k) : o.unshift(k); commit(true); toast(dir === 'front' ? 'Öne getirildi' : 'Arkaya gönderildi'); }
 function centerSel(axis) { const L = post().layout[fmt][sel]; const n = $('#canvas').querySelector(sel$(sel)); if (!L || !n) return;
@@ -437,9 +532,10 @@ const IC = {
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
   card: '<rect x="3" y="6" width="18" height="12" rx="3"/>',
   grid: '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>',
+  shape: '<rect x="4" y="4" width="16" height="16" rx="4"/>', star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/>',
   btn: '<rect x="3" y="8" width="18" height="8" rx="4"/>', logo: '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>',
 };
-const icon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[k.startsWith('t:') ? 'text' : ELS.find(e => e[0] === k)[2]]}</svg>`;
+const icon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[k.startsWith('t:') ? 'text' : k.startsWith('o:') ? { shape: 'shape', image: 'img', icon: 'star' }[objOf(post(), k)?.type] || 'shape' : ELS.find(e => e[0] === k)[2]]}</svg>`;
 const EYE = on => on
   ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>'
   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.8 8.5 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/></svg>';
@@ -449,15 +545,18 @@ function renderLayers() {
   // üstteki öğe listede üstte (Canva gibi): arka plan en altta
   const keys = [...p.order].reverse().filter(k => present(p, k)).concat('bg');
   keys.forEach(k => {
-    const on = isOn(p, k), n = k.startsWith('t:') ? `Metin: ${plain(objOf(p, k).text).slice(0, 22)}` : nameOf(k);
-    const li = el('li', { className: 'layer' + (on ? '' : ' off') }); li.setAttribute('aria-current', sel === k);
+    const on = isOn(p, k), o = objOf(p, k), n = k.startsWith('t:') ? `Metin: ${plain(o.text).slice(0, 22)}`
+      : k.startsWith('o:') ? `${nameOf(k)}${o.type === 'shape' ? `: ${(SHAPES.find(x => x[0] === o.shape) || [])[1] || ''}` : o.type === 'icon' ? `: ${o.name}` : ''}` : nameOf(k);
+    const li = el('li', { className: 'layer' + (on ? '' : ' off') + (p.groups?.[k] ? ' grouped' : '') }); li.setAttribute('aria-current', sel === k || multi.includes(k));
     const nm = el('button', { type: 'button', className: 'nm', innerHTML: `${icon(k)}<span></span>` }); nm.querySelector('span').textContent = n;
-    nm.onclick = () => select(k); li.append(nm);
-    if (k.startsWith('t:')) { const d = el('button', { type: 'button', className: 'eye', innerHTML: TRASH }); d.setAttribute('aria-label', `${n} sil`); d.title = 'Sil';
+    nm.onclick = e => e.shiftKey && k !== 'bg' ? toggleMulti(k) : select(k); li.append(nm);
+    if (isFree(k)) { const d = el('button', { type: 'button', className: 'eye', innerHTML: TRASH }); d.setAttribute('aria-label', `${n} sil`); d.title = 'Sil';
       d.onclick = () => removeText(k); li.append(d); }
     else if (hideable(k)) { const e = el('button', { type: 'button', className: 'eye', innerHTML: EYE(on) });
       e.setAttribute('aria-label', `${n} ${on ? 'gizle' : 'göster'}`); e.title = on ? 'Gizle' : 'Göster';
       e.onclick = () => toggle(k, !on); li.append(e); }
+    if (k !== 'bg') { const lk = !!p.locks?.[k], b = el('button', { type: 'button', className: 'eye lockb' + (lk ? ' on' : ''), innerHTML: tbSvg(lk ? 'lock' : 'unlock') });
+      b.setAttribute('aria-label', `${n} ${lk ? 'kilidini aç' : 'kilitle'}`); b.title = lk ? 'Kilidi aç' : 'Kilitle'; b.onclick = () => toggleLock(k); li.append(b); }
     L.append(li);
   });
   const tb = el('button', { type: 'button', innerHTML: `${icon('t:x')}<span>Metin</span>` }); tb.onclick = () => addText();
@@ -528,7 +627,7 @@ function colorF(label, path) {
   c.oninput = () => { apply(c.value); commit(); };
   t.onchange = () => { const v = t.value.trim().toLowerCase().replace(/^([0-9a-f]{6})$/, '#$1');
     if (/^#[0-9a-f]{6}$/.test(v)) { apply(v); commit(true); } else { t.value = get(post(), path); toast('Geçerli bir renk kodu gir, örneğin #d11414'); } };
-  SWATCHES.forEach(v => { const b = el('button', { type: 'button' }); b.dataset.v = v; b.style.background = v; b.title = v;
+  swatches().forEach(v => { const b = el('button', { type: 'button' }); b.dataset.v = v; b.style.background = v; b.title = v;
     b.setAttribute('aria-label', v); b.setAttribute('aria-pressed', get(post(), path) === v);
     b.onclick = () => { apply(v); commit(true); }; sw.append(b); });
   box.append(c, t); const f = el('div', { className: 'f' }); f.append(el('span', { textContent: label }), box, sw); return f;
@@ -583,6 +682,54 @@ function shrink(file) {
 
 const STYLE_KEYS = { brand: ['size', 'color', 'logo'], tag: ['size', 'color', 'pill'], headline: ['size', 'color', 'accent', 'align'], line: ['color'],
   sub: ['size', 'color', 'strong', 'align'], list: ['dot', 'color', 'k'], cta: ['bg', 'color', 'k', 'shadow'], bg: ['shade', 'shadeDir', 'edge', 'shadeColor', 'g1', 'g2', 'base'] };
+const PD = (path, d) => ({ get: () => get(post(), path) ?? d, set: v => set(post(), path, v) });
+function boolF(label, getv, toggle) { const i = el('input', { type: 'checkbox', checked: !!getv() }); i.onchange = () => toggle(i.checked);
+  const l = el('label', { className: 'check' }); l.append(i, label); return l; }
+// yazı tipi: seçenekler kendi fontuyla görünür; yüklenince yeniden çizilir
+function fontF(label, path) {
+  const s = el('select', { className: 'fontsel' }); s.setAttribute('aria-label', label);
+  const cur = get(post(), path) || 'Manrope';
+  FONTS.forEach(f => { const o = new Option(f, f, false, f === cur); o.style.fontFamily = `'${f}'`; s.add(o); });
+  s.style.fontFamily = `'${cur}'`;
+  s.onchange = async () => { const f = s.value; s.style.fontFamily = `'${f}'`;
+    await Promise.all([400, 700, 800].map(w => document.fonts.load(`${w} 40px '${f}'`).catch(() => {})));
+    set(post(), path, f === 'Manrope' ? undefined : f); commit(true); };
+  return field(label, s);
+}
+function objProps(k, o, tp, add) {
+  const O = () => objOf(post(), k);
+  if (o.type === 'shape') {
+    const seg = el('div', { className: 'seg wrap' }); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Şekil');
+    const thin = v => v === 'line' || v === 'arrow';
+    SHAPES.forEach(([v, n]) => { const b = el('button', { type: 'button', textContent: n }); b.setAttribute('aria-pressed', o.shape === v);
+      b.onclick = () => { const it = O(), was = it.shape;
+        // çizgi/ok ince bir kutu, diğerleri kare: tür değişince kutunun yüksekliği de değişir
+        if (thin(v) !== thin(was)) FMTS.forEach(f => { const l = post().layout[f][k]; if (l) l.h = thin(v) ? Math.max(24, (+it.sw || 8) * 4) : l.w; });
+        it.shape = v; commit(true); renderProps(); placeSel(); };
+      seg.append(b); });
+    add(el('div', { className: 'f' }, el('span', { textContent: 'Şekil' }), seg));
+    if (thin(o.shape)) add(group('Çizgi', colorF('Renk', `${tp}.fill`), rangeF('Kalınlık', PD(`${tp}.sw`, 8), 2, 60, 1, ' px')));
+    else {
+      add(group('Dolgu', boolF('İçi boş', () => O().fill === 'none', on => { O().fill = on ? 'none' : '#d11414'; commit(true); renderProps(); }),
+        ...(o.fill !== 'none' ? [colorF('Dolgu rengi', `${tp}.fill`)] : [])));
+      add(group('Kenar', boolF('Kenar çizgisi', () => O().stroke && O().stroke !== 'none', on => { O().stroke = on ? '#ffffff' : 'none'; commit(true); renderProps(); }),
+        ...(o.stroke && o.stroke !== 'none' ? [colorF('Kenar rengi', `${tp}.stroke`), rangeF('Kenar kalınlığı', PD(`${tp}.sw`, 8), 1, 60, 1, ' px')] : [])));
+      if (o.shape === 'rect') add(rangeF('Köşe yuvarlaklığı', PD(`${tp}.radius`, 0), 0, 400, 1, ' px'));
+    }
+  } else if (o.type === 'image') {
+    window.__editorHooks?.imageTools?.(k, add);
+    add(libF(o.src, src => { O().src = src; commit(true); renderProps(); }));
+    add(group('Görünüm', segF('Kutuya yerleşim', `${tp}.fit`, [['cover', 'Doldur'], ['contain', 'Sığdır']]),
+      rangeF('Yatay odak', PD(`${tp}.px`, 50), 0, 100, 1, '%'), rangeF('Dikey odak', PD(`${tp}.py`, 50), 0, 100, 1, '%'),
+      rangeF('Köşe yuvarlaklığı', PD(`${tp}.radius`, 0), 0, 600, 1, ' px'), checkF('Aynala', `${tp}.flip`), checkF('Gölge', `${tp}.shadow`)));
+  } else if (o.type === 'icon') {
+    const s = el('select'); s.setAttribute('aria-label', 'İkon');
+    Object.entries(window.Ikonlar || {}).forEach(([cat, list]) => { const g = el('optgroup', { label: cat });
+      list.forEach(([n]) => g.append(new Option(n, n, false, n === o.name))); s.append(g); });
+    s.onchange = () => { O().name = s.value; commit(true); };
+    add(field('İkon', s, 'Daha fazlası için Ekle sekmesindeki ikonlara bak.'), colorF('Renk', `${tp}.color`), rangeF('Çizgi kalınlığı', PD(`${tp}.sw`, 2), .5, 4, .25));
+  }
+}
 function applyAll(k) { const src = post();
   state.posts.forEach(p => { if (p === src) return; STYLE_KEYS[k].forEach(key => p[k][key] = src[k][key]); if (k === 'bg') p.frame = clone(src.frame); });
   commit(true); renderList(); toast(`${nameOf(k)} stili tüm postlara uygulandı`, { label: 'Geri al', fn: undo }); }
@@ -594,6 +741,7 @@ const DESC = {
 };
 function renderProps() {
   const Pn = $('#props'); Pn.innerHTML = '';
+  if (multi.length > 1) return renderMultiProps(Pn);
   const p = post(), k = sel || 'bg', o = objOf(p, k);
   Pn.append(el('h3', { textContent: sel ? nameOf(k) : 'Sayfa' }));
   Pn.append(el('p', { className: 'desc', textContent: sel ? (DESC[k] || 'Sahnede sürükleyerek taşı, köşe tutamağıyla boyutlandır. Metinleri çift tıklayıp yerinde düzenleyebilirsin.') : 'Bir öğeyi düzenlemek için sahnede ona tıkla. Burada arka planı ve çerçeveyi ayarlayabilirsin.' }));
@@ -602,7 +750,8 @@ function renderProps() {
   const aiBtn = (key, label) => { const b = el('button', { type: 'button', className: 'btn aibtn', innerHTML: `<span class="spark" aria-hidden="true">✦</span>${esc(label)}` });
     b.onclick = () => openRegen(key); return b; };
   if (canRegen(p, k)) add(aiBtn(k, k === 'bg' ? 'Görseli AI ile yeniden üret' : 'AI ile yeniden üret'));
-  switch (k.startsWith('t:') ? 'text' : k) {
+  switch (k.startsWith('t:') ? 'text' : k.startsWith('o:') ? 'obj' : k) {
+    case 'obj': objProps(k, o, tp, add); break;
     case 'bg':
       add(segF('Arka plan türü', 'bg.mode', [['photo', 'Fotoğraf'], ['solid', 'Düz renk']]));
       if (p.bg.mode === 'photo') {
@@ -618,22 +767,22 @@ function renderProps() {
       add(group('Çerçeve', checkF('Çerçeveyi göster', 'frame.on', renderProps),
         ...(p.frame.on ? [colorF('Çerçeve rengi', 'frame.color'), rangeF('Görünürlük', 'frame.opacity', 0, 100, 1, '%')] : [])));
       break;
-    case 'brand': add(textF('Metin', 'brand.text'), checkF('Logoyu göster', 'brand.logo'), rangeF('Boyut', 'brand.size', 14, 120, 1, ' px'), colorF('Renk', 'brand.color')); break;
-    case 'tag': add(textF('Metin', 'tag.text'), checkF('Çerçeveli', 'tag.pill'), rangeF('Boyut', 'tag.size', 12, 60, 1, ' px'), colorF('Renk', 'tag.color')); break;
+    case 'brand': add(textF('Metin', 'brand.text'), fontF('Yazı tipi', 'brand.font'), checkF('Logoyu göster', 'brand.logo'), rangeF('Boyut', 'brand.size', 14, 120, 1, ' px'), colorF('Renk', 'brand.color')); break;
+    case 'tag': add(textF('Metin', 'tag.text'), fontF('Yazı tipi', 'tag.font'), checkF('Çerçeveli', 'tag.pill'), rangeF('Boyut', 'tag.size', 12, 60, 1, ' px'), colorF('Renk', 'tag.color')); break;
     case 'headline':
       add(textF('Metin', 'headline.text', { area: true, rows: 3 }),
-          group('Görünüm', rangeF('Boyut', 'headline.size', 32, 200, 1, ' px'), rangeF('Kutu genişliği', LB(k, 'w'), 200, 1000, 10, ' px'),
+          group('Görünüm', fontF('Yazı tipi', 'headline.font'), rangeF('Boyut', 'headline.size', 32, 200, 1, ' px'), rangeF('Satır aralığı', PD('headline.lh', 1.02), .7, 2, .02), rangeF('Kutu genişliği', LB(k, 'w'), 200, 1000, 10, ' px'),
           segF('Hizalama', 'headline.align', [['left', 'Sola'], ['center', 'Ortaya'], ['right', 'Sağa']]),
           colorF('Renk', 'headline.color'), colorF('Vurgu rengi', 'headline.accent'))); break;
     case 'line': add(rangeF('Uzunluk', LB(k, 'w'), 20, 1000, 2, ' px'), colorF('Renk', 'line.color')); break;
     case 'sub':
       add(textF('Metin', 'sub.text', { area: true, rows: 4 }),
-          group('Görünüm', rangeF('Boyut', 'sub.size', 14, 80, 1, ' px'), rangeF('Kutu genişliği', LB(k, 'w'), 200, 1000, 10, ' px'),
+          group('Görünüm', fontF('Yazı tipi', 'sub.font'), rangeF('Boyut', 'sub.size', 14, 80, 1, ' px'), rangeF('Satır aralığı', PD('sub.lh', 1.42), .8, 2.4, .02), rangeF('Kutu genişliği', LB(k, 'w'), 200, 1000, 10, ' px'),
           segF('Hizalama', 'sub.align', [['left', 'Sola'], ['center', 'Ortaya'], ['right', 'Sağa']]),
           colorF('Renk', 'sub.color'), colorF('Kalın yazı rengi', 'sub.strong'))); break;
     case 'text':
       add(textF('Metin', `${tp}.text`, { area: true, rows: 3, tip: '*Yıldız* içindeki kısım vurgu renginde görünür.' }),
-          group('Görünüm', rangeF('Boyut', `${tp}.size`, 12, 220, 1, ' px'), rangeF('Kutu genişliği', LB(k, 'w'), 80, 1000, 10, ' px'),
+          group('Görünüm', fontF('Yazı tipi', `${tp}.font`), rangeF('Boyut', `${tp}.size`, 12, 220, 1, ' px'), rangeF('Satır aralığı', PD(`${tp}.lh`, 1.08), .7, 2.4, .02), rangeF('Kutu genişliği', LB(k, 'w'), 80, 1000, 10, ' px'),
           segF('Kalınlık', `${tp}.weight`, [[500, 'Normal'], [700, 'Kalın'], [800, 'Çok kalın']]),
           segF('Hizalama', `${tp}.align`, [['left', 'Sola'], ['center', 'Ortaya'], ['right', 'Sağa']]),
           colorF('Renk', `${tp}.color`), colorF('Vurgu rengi', `${tp}.accent`))); break;
@@ -667,17 +816,22 @@ function renderProps() {
     case 'notif': add(textF('Üst satır', 'notif.small'), textF('Metin', 'notif.title'), rangeF('Ölçek', 'notif.k', .5, 2, .05, ' x')); break;
     case 'bubble': add(textF('Üst satır', 'bubble.meta'), textF('Mesaj', 'bubble.text'), rangeF('Ölçek', 'bubble.k', .5, 2, .05, ' x')); break;
     case 'cta':
-      add(textF('Buton metni', 'cta.main'), textF('Adres', 'cta.url', { tip: 'Boş bırakırsan yalnızca buton metni görünür.' }),
+      add(textF('Buton metni', 'cta.main'), fontF('Yazı tipi', 'cta.font'), textF('Adres', 'cta.url', { tip: 'Boş bırakırsan yalnızca buton metni görünür.' }),
           rangeF('Ölçek', 'cta.k', .5, 2, .05, ' x'), checkF('Gölge', 'cta.shadow'), colorF('Buton rengi', 'cta.bg'), colorF('Yazı rengi', 'cta.color')); break;
   }
+  if (sel && sel !== 'bg' && o && kindOf(k) !== 'k') add(group('Döndürme ve saydamlık',
+    rangeF('Döndür', { get: () => objOf(post(), k).rot || 0, set: v => { objOf(post(), k).rot = v; } }, -180, 180, 1, '°'),
+    rangeF('Saydamlık', { get: () => objOf(post(), k).opacity ?? 100, set: v => { objOf(post(), k).opacity = v; } }, 0, 100, 1, '%')));
   if (sel && sel !== 'bg' && p.layout[fmt][k]) {
     const cx = el('button', { type: 'button', className: 'btn', textContent: 'Yatay ortala' }); cx.onclick = () => centerSel('x');
     const cy = el('button', { type: 'button', className: 'btn', textContent: 'Dikey ortala' }); cy.onclick = () => centerSel('y');
-    add(group(`Konum (${fmt === 'feed' ? 'feed' : 'story'})`, row(numF('X (px)', LB(k, 'x')), numF('Y (px)', LB(k, 'y'))), row(cx, cy)));
+    add(group(`Konum (${FMT_NAME[fmt]})`, row(numF('X (px)', LB(k, 'x')), numF('Y (px)', LB(k, 'y'))),
+      ...(kindOf(k) === 'box' ? [row(numF('Genişlik (px)', LB(k, 'w')), numF('Yükseklik (px)', LB(k, 'h')))] : []), row(cx, cy),
+      boolF('Kilitle (sahnede taşınmasın)', () => !!post().locks?.[k], () => toggleLock(k))));
   }
   if (sel && hideable(k)) {
-    const b = el('button', { type: 'button', className: 'btn addbtn', textContent: k.startsWith('t:') ? 'Metni sil' : isOn(p, k) ? `${nameOf(k)} öğesini gizle` : `${nameOf(k)} öğesini göster` });
-    b.onclick = () => k.startsWith('t:') ? removeText(k) : toggle(k, !isOn(p, k)); add(b);
+    const b = el('button', { type: 'button', className: 'btn addbtn', textContent: isFree(k) ? `${nameOf(k)} öğesini sil` : isOn(p, k) ? `${nameOf(k)} öğesini gizle` : `${nameOf(k)} öğesini göster` });
+    b.onclick = () => isFree(k) ? removeText(k) : toggle(k, !isOn(p, k)); add(b);
   }
   if (STYLE_KEYS[k]) { const b = el('button', { type: 'button', className: 'btn addbtn', textContent: sel ? 'Bu stili tüm postlara uygula' : 'Arka plan stilini tüm postlara uygula' });
     b.onclick = () => applyAll(k); add(el('div', { className: 'apply' }, b)); }
@@ -689,12 +843,24 @@ const TB_ICON = {
   left: '<path d="M4 6h16M4 12h10M4 18h13"/>', center: '<path d="M4 6h16M7 12h10M5.5 18h13"/>', right: '<path d="M4 6h16M10 12h10M7 18h13"/>',
   front: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>', back: '<rect x="4" y="4" width="12" height="12" rx="2"/><path d="M20 8v11a1 1 0 0 1-1 1H8"/>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+  aleft: '<path d="M4 4v16"/><rect x="8" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="7" height="4" rx="1"/>',
+  ahc: '<path d="M12 3v18"/><rect x="5" y="6" width="14" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/>',
+  aright: '<path d="M20 4v16"/><rect x="4" y="6" width="12" height="4" rx="1"/><rect x="9" y="14" width="7" height="4" rx="1"/>',
+  atop: '<path d="M4 4h16"/><rect x="6" y="8" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="7" rx="1"/>',
+  avc: '<path d="M3 12h18"/><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/>',
+  abottom: '<path d="M4 20h16"/><rect x="6" y="4" width="4" height="12" rx="1"/><rect x="14" y="9" width="4" height="7" rx="1"/>',
+  dx: '<path d="M4 4v16M20 4v16"/><rect x="9" y="8" width="6" height="8" rx="1"/>', dy: '<path d="M4 4h16M4 20h16"/><rect x="8" y="9" width="8" height="6" rx="1"/>',
+  group: '<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/><rect x="7" y="7" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/>',
+  ungroup: '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', bold: '<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/>',
 };
+const tbSvg = ic => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TB_ICON[ic]}</svg>`;
 const tbBtn = (ic, label, fn, pressed) => { const b = el('button', { type: 'button', className: 'tb', innerHTML: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TB_ICON[ic]}</svg>` });
   b.setAttribute('aria-label', label); b.title = label; if (pressed != null) b.setAttribute('aria-pressed', pressed); b.onclick = fn; return b; };
 function renderToolbar() {
   const T = $('#toolbar'); T.innerHTML = '';
+  if (multi.length > 1) return renderMultiToolbar(T);
   const p = post(), k = sel;
   if (!sel || (sel === 'bg' && !canRegen(p, 'bg'))) { T.hidden = true; return; }
   T.hidden = false;
@@ -708,7 +874,7 @@ function renderToolbar() {
   const o = objOf(p, k), kk = kindOf(k), tp = textPath(p, k);
   // boyut
   const sizeOf = () => kk === 'font' ? o.size : kk === 'k' ? Math.round((o.k || 1) * 100) : p.layout[fmt][k].w;
-  const setSize = v => { if (kk === 'font') o.size = clamp(Math.round(v), 10, 240); else if (kk === 'k') o.k = clamp(v / 100, .3, 3); else p.layout[fmt][k].w = clamp(Math.round(v), 20, 1080); };
+  const setSize = v => { if (kk === 'font') o.size = clamp(Math.round(v), 10, 240); else if (kk === 'k') o.k = clamp(v / 100, .3, 3); else { const L = p.layout[fmt][k], nw = clamp(Math.round(v), 20, SIZE[fmt][0] * 2); if (kk === 'box' && L.w && L.h) L.h = Math.max(4, Math.round(L.h * nw / L.w)); L.w = nw; } };
   const step = kk === 'font' ? 2 : kk === 'k' ? 5 : 20;
   const num = el('input', { type: 'number', className: 'tbnum', value: sizeOf() });
   num.setAttribute('aria-label', kk === 'font' ? 'Yazı boyutu' : kk === 'k' ? 'Ölçek yüzdesi' : 'Genişlik');
@@ -716,7 +882,8 @@ function renderToolbar() {
   T.append(tbBtn('minus', 'Küçült', () => { setSize(sizeOf() - step); commit(true); renderProps(); }), num,
            tbBtn('plus', 'Büyüt', () => { setSize(sizeOf() + step); commit(true); renderProps(); }));
   // renk
-  const colorPath = { cta: 'cta.bg', line: 'line.color', list: 'list.dot' }[k] || (kk === 'font' ? `${tp}.color` : null);
+  const colorPath = { cta: 'cta.bg', line: 'line.color', list: 'list.dot' }[k] || (kk === 'font' ? `${tp}.color`
+    : kk === 'box' ? (o.type === 'icon' ? `${tp}.color` : o.type === 'shape' && o.fill !== 'none' ? `${tp}.fill` : null) : null);
   if (colorPath) { const c = el('input', { type: 'color', className: 'tbcolor', value: get(p, colorPath) }); c.setAttribute('aria-label', 'Renk'); c.title = 'Renk';
     c.oninput = () => { set(post(), colorPath, c.value); commit(); }; c.onchange = () => renderProps(); T.append(el('span', { className: 'sep' }), c); }
   // kalınlık ve hizalama
@@ -726,27 +893,101 @@ function renderToolbar() {
       T.append(tbBtn(a, n, () => { o.align = a; commit(true); renderProps(); }, o.align === a))); }
   T.append(el('span', { className: 'sep' }),
     tbBtn('front', 'Öne getir', () => reorder(k, 'front')), tbBtn('back', 'Arkaya gönder', () => reorder(k, 'back')));
-  if (kk === 'font' && k !== 'brand') T.append(tbBtn('copy', 'Metni çoğalt', () => addText(k)));
-  if (hideable(k)) T.append(tbBtn('trash', k.startsWith('t:') ? 'Sil' : 'Gizle', removeSel));
+  if ((kk === 'font' && k !== 'brand') || kk === 'box') T.append(tbBtn('copy', 'Çoğalt (Ctrl+D)', () => duplicateFree(k)));
+  T.append(tbBtn(p.locks?.[k] ? 'lock' : 'unlock', p.locks?.[k] ? 'Kilidi aç' : 'Kilitle', () => toggleLock(k), !!p.locks?.[k]));
+  if (hideable(k)) T.append(tbBtn('trash', isFree(k) ? 'Sil' : 'Gizle', removeSel));
 }
 
 /* ---------- panel ve seçim ---------- */
 function setTab(t) { tab = t;
-  $('#tabEdit').setAttribute('aria-selected', t === 'edit'); $('#tabLayers').setAttribute('aria-selected', t === 'layers');
-  $('#tabEdit').tabIndex = t === 'edit' ? 0 : -1; $('#tabLayers').tabIndex = t === 'layers' ? 0 : -1;
-  $('#props').hidden = t !== 'edit'; $('#layersPane').hidden = t !== 'layers'; }
+  document.querySelectorAll('.side [role=tab]').forEach(b => { const on = b.dataset.tab === t;
+    b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1; $('#' + b.getAttribute('aria-controls')).hidden = !on; });
+  document.dispatchEvent(new CustomEvent('editor:tab', { detail: t })); }
 function renderPanel() { renderLayers(); renderProps(); renderToolbar(); sayHere(); }
 function select(k, focus) {
-  sel = k; renderPanel(); placeSel(); setTab('edit');
+  sel = k; multi = []; renderPanel(); placeSel(); setTab('edit');
   if (focus) { const f = $('#props textarea, #props input[type=text]'); if (f) { f.focus(); f.select?.(); } }
 }
-function deselect() { sel = null; renderPanel(); placeSel(); }
+function deselect() { sel = null; multi = []; renderPanel(); placeSel(); }
+
+/* ---------- çoklu seçim, gruplama, hizalama, kilit ---------- */
+const groupKeys = (p, g) => p.order.filter(x => p.groups?.[x] === g && present(p, x) && isOn(p, x));
+function setMulti(keys, primary) { multi = keys.length > 1 ? [...keys] : []; sel = primary || keys[0] || null; renderPanel(); placeSel(); setTab('edit'); }
+function toggleMulti(k) {
+  const p = post(), cur = multi.length ? [...multi] : sel && sel !== 'bg' ? [sel] : [];
+  const g = p.groups?.[k], add = g ? groupKeys(p, g) : [k];
+  const next = add.every(x => cur.includes(x)) ? cur.filter(x => !add.includes(x)) : [...cur, ...add.filter(x => !cur.includes(x))];
+  if (next.length > 1) setMulti(next, k); else if (next.length === 1) select(next[0]); else deselect();
+}
+// öğelerin sahnedeki kutuları, postun kendi pikselleriyle (döndürülmüşse çevreleyen kutu)
+function boxesOf(keys) { const cr = canvas.getBoundingClientRect();
+  return keys.map(k => { const n = canvas.querySelector(sel$(k)); if (!n) return null; const r = n.getBoundingClientRect();
+    return { k, x: (r.left - cr.left) / scale, y: (r.top - cr.top) / scale, w: r.width / scale, h: r.height / scale }; }).filter(Boolean); }
+// tek öğe sayfaya, birden çok öğe seçimin sınırlarına göre hizalanır
+function alignMulti(how) {
+  const p = post(), keys = (multi.length > 1 ? multi : [sel]).filter(k => k && k !== 'bg' && !p.locks?.[k] && p.layout[fmt][k]);
+  const bs = boxesOf(keys); if (!bs.length) return;
+  const [W, H] = SIZE[fmt], U = bs.length === 1 ? { x: 0, y: 0, r: W, b: H }
+    : { x: Math.min(...bs.map(b => b.x)), y: Math.min(...bs.map(b => b.y)), r: Math.max(...bs.map(b => b.x + b.w)), b: Math.max(...bs.map(b => b.y + b.h)) };
+  bs.forEach(b => { const L = p.layout[fmt][b.k]; let dx = 0, dy = 0;
+    if (how === 'left') dx = U.x - b.x; if (how === 'right') dx = U.r - (b.x + b.w); if (how === 'hcenter') dx = (U.x + U.r) / 2 - (b.x + b.w / 2);
+    if (how === 'top') dy = U.y - b.y; if (how === 'bottom') dy = U.b - (b.y + b.h); if (how === 'vcenter') dy = (U.y + U.b) / 2 - (b.y + b.h / 2);
+    L.x = Math.round(L.x + dx); L.y = Math.round(L.y + dy); });
+  commit(true); renderProps(); placeSel();
+}
+function distribute(axis) {
+  const p = post(), bs = boxesOf(multi.filter(k => !p.locks?.[k] && p.layout[fmt][k])); if (bs.length < 3) return;
+  const X = axis === 'x', s = [...bs].sort((a, b) => X ? a.x - b.x : a.y - b.y), first = s[0], last = s[s.length - 1];
+  const total = s.reduce((t, b) => t + (X ? b.w : b.h), 0), span = X ? last.x + last.w - first.x : last.y + last.h - first.y, gap = (span - total) / (s.length - 1);
+  let cur = X ? first.x : first.y;
+  s.forEach(b => { const L = p.layout[fmt][b.k], d = cur - (X ? b.x : b.y); if (X) L.x = Math.round(L.x + d); else L.y = Math.round(L.y + d); cur += (X ? b.w : b.h) + gap; });
+  commit(true); placeSel();
+}
+function groupSel() { if (multi.length < 2) return; const p = post(), g = 'g' + nid().slice(1); p.groups ||= {}; multi.forEach(k => { p.groups[k] = g; });
+  commit(true); renderPanel(); placeSel(); toast(`${multi.length} öğe gruplandı`); }
+function ungroupSel() { const p = post(), keys = multi.length > 1 ? multi : sel ? [sel] : []; let n = 0;
+  keys.forEach(k => { if (p.groups?.[k]) { delete p.groups[k]; n++; } }); if (!n) return; commit(true); renderPanel(); placeSel(); toast('Grup çözüldü'); }
+function toggleLock(k) { const p = post(); p.locks ||= {}; if (p.locks[k]) delete p.locks[k]; else p.locks[k] = true;
+  commit(true); renderPanel(); placeSel(); toast(p.locks[k] ? `${nameOf(k)} kilitlendi` : `${nameOf(k)} kilidi açıldı`); }
+function placeMulti() {
+  const s = $('#sel'), br = $('#board').getBoundingClientRect();
+  const rs = multi.map(k => $('#canvas').querySelector(sel$(k))).filter(Boolean).map(n => n.getBoundingClientRect());
+  if (!rs.length) { s.classList.remove('on'); return renderToolbar(); }
+  const l = Math.min(...rs.map(r => r.left)), t = Math.min(...rs.map(r => r.top)), r = Math.max(...rs.map(r => r.right)), b = Math.max(...rs.map(r => r.bottom));
+  Object.assign(s.style, { left: l - br.left + 'px', top: t - br.top + 'px', width: r - l + 'px', height: b - t + 'px' });
+  s.classList.add('on', 'multisel'); s.classList.remove('haswidth', 'hasheight', 'bgsel', 'locked');
+  const g = post().groups?.[multi[0]];
+  s.querySelector('b').textContent = g && multi.every(k => post().groups?.[k] === g) ? `Grup · ${multi.length} öğe` : `${multi.length} öğe`;
+  renderToolbar();
+}
+const ALIGN = [['left', 'Sola hizala', 'aleft'], ['hcenter', 'Yatayda ortala', 'ahc'], ['right', 'Sağa hizala', 'aright'],
+  ['top', 'Üste hizala', 'atop'], ['vcenter', 'Dikeyde ortala', 'avc'], ['bottom', 'Alta hizala', 'abottom']];
+const isGrouped = () => { const g = post().groups?.[multi[0]]; return !!g && multi.every(k => post().groups?.[k] === g); };
+function renderMultiToolbar(T) {
+  T.hidden = false;
+  T.append(el('strong', { textContent: `${multi.length} öğe` }), el('span', { className: 'sep' }));
+  ALIGN.forEach(([h, n, ic]) => T.append(tbBtn(ic, n, () => alignMulti(h))));
+  if (multi.length > 2) T.append(el('span', { className: 'sep' }), tbBtn('dx', 'Yatayda eşit dağıt', () => distribute('x')), tbBtn('dy', 'Dikeyde eşit dağıt', () => distribute('y')));
+  T.append(el('span', { className: 'sep' }), isGrouped() ? tbBtn('ungroup', 'Grubu çöz (Ctrl+Shift+G)', ungroupSel) : tbBtn('group', 'Grupla (Ctrl+G)', groupSel),
+    tbBtn('trash', 'Seçilenleri sil', removeSel));
+}
+function renderMultiProps(Pn) {
+  Pn.append(el('h3', { textContent: isGrouped() ? 'Grup' : `${multi.length} öğe seçili` }),
+    el('p', { className: 'desc', textContent: 'Birlikte sürükleyip taşıyabilirsin. Shift ile tıklayarak seçime öğe ekleyip çıkarabilirsin.' }));
+  const al = el('div', { className: 'alignrow' }); ALIGN.forEach(([h, n, ic]) => al.append(tbBtn(ic, n, () => alignMulti(h))));
+  Pn.append(group('Hizala', al));
+  if (multi.length > 2) Pn.append(group('Eşit aralıkla dağıt', el('div', { className: 'alignrow' }, tbBtn('dx', 'Yatayda eşit dağıt', () => distribute('x')), tbBtn('dy', 'Dikeyde eşit dağıt', () => distribute('y')))));
+  const gb = el('button', { type: 'button', className: 'btn addbtn', textContent: isGrouped() ? 'Grubu çöz' : 'Grupla' }); gb.onclick = isGrouped() ? ungroupSel : groupSel;
+  const db = el('button', { type: 'button', className: 'btn addbtn', textContent: 'Seçilenleri sil' }); db.onclick = removeSel;
+  Pn.append(gb, db);
+}
 
 /* ---------- çizim akışı ---------- */
 function render() { renderCanvas(); renderLayers(); refreshThumb(); renderToolbar(); }
 function renderAll() {
   document.querySelectorAll('.bar .seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.fmt === fmt));
   renderCanvas(); renderList(); renderPanel();
+  document.dispatchEvent(new CustomEvent('editor:render'));
 }
 
 /* ---------- sahne etkileşimi: taşıma, boyutlandırma, hizalama kılavuzları ---------- */
@@ -754,9 +995,9 @@ const canvas = $('#canvas');
 let drag = null, editing = null;
 const SNAP = 8;
 function snapTargets(k) {
-  const [W, H] = SIZE[fmt], pad = PAD[fmt], cr = canvas.getBoundingClientRect();
+  const [W, H] = SIZE[fmt], pad = PAD[fmt], cr = canvas.getBoundingClientRect(), skip = new Set([].concat(k));
   const xs = [MARGIN, W / 2, W - MARGIN], ys = [pad.t, H / 2, H - pad.b];
-  canvas.querySelectorAll('[data-el]').forEach(n => { if (n.dataset.el === k || n.dataset.el === 'bg') return;
+  canvas.querySelectorAll('[data-el]').forEach(n => { if (skip.has(n.dataset.el) || n.dataset.el === 'bg') return;
     const r = n.getBoundingClientRect(); const x = (r.left - cr.left) / scale, y = (r.top - cr.top) / scale, w = r.width / scale, h = r.height / scale;
     xs.push(x, x + w / 2, x + w); ys.push(y, y + h / 2, y + h); });
   return { xs, ys };
@@ -775,18 +1016,28 @@ function showGuides(gx, gy) {
 canvas.addEventListener('pointerdown', e => {
   if (editing || e.button !== 0) return;
   const node = e.target.closest('[data-el]'); if (!node) return;
-  const k = node.dataset.el; if (k !== sel) select(k);
-  const p = post();
-  if (k === 'bg') { if (p.bg.mode === 'photo') drag = { k, mode: 'pan', sx: e.clientX, sy: e.clientY, ox: p.bg.x, oy: p.bg.y }; }
-  else { const L = p.layout[fmt][k], r = node.getBoundingClientRect();
+  const k = node.dataset.el, p = post();
+  if (e.shiftKey && k !== 'bg') { toggleMulti(k); return; }
+  // gruptaki bir öğeye tıklamak bütün grubu seçer; çoklu seçimin içine tıklamak seçimi bozmaz
+  const g = k !== 'bg' && p.groups?.[k];
+  if (g) { const ms = groupKeys(p, g); if (!(multi.length > 1 && ms.every(x => multi.includes(x)))) setMulti(ms, k); }
+  else if (!(multi.length > 1 && multi.includes(k)) && (k !== sel || multi.length)) select(k);
+  if (k === 'bg') { if (p.bg.mode === 'photo' && !p.locks?.bg) drag = { k, mode: 'pan', sx: e.clientX, sy: e.clientY, ox: p.bg.x, oy: p.bg.y }; }
+  else if (multi.length > 1) {
+    const keys = multi.filter(x => !p.locks?.[x] && p.layout[fmt][x]), bs = boxesOf(keys);
+    if (bs.length) { const ux = Math.min(...bs.map(b => b.x)), uy = Math.min(...bs.map(b => b.y));
+      drag = { k, mode: 'multi', sx: e.clientX, sy: e.clientY, keys, orig: keys.map(x => ({ ...p.layout[fmt][x] })), ux, uy,
+        w: Math.max(...bs.map(b => b.x + b.w)) - ux, h: Math.max(...bs.map(b => b.y + b.h)) - uy, targets: snapTargets(multi) }; }
+  }
+  else if (!p.locks?.[k]) { const L = p.layout[fmt][k], r = node.getBoundingClientRect();
     drag = { k, mode: 'move', sx: e.clientX, sy: e.clientY, ox: L.x, oy: L.y, w: r.width / scale, h: r.height / scale, targets: snapTargets(k) }; }
   if (drag) drag.pid = e.pointerId;
 });
 function startResize(e, h) {
   e.preventDefault(); e.stopPropagation();
-  const p = post(), k = sel, o = objOf(p, k), L = p.layout[fmt][k], n = canvas.querySelector(sel$(k)); if (!L || !n) return;
+  const p = post(), k = sel, o = objOf(p, k), L = p.layout[fmt][k], n = canvas.querySelector(sel$(k)); if (!L || !n || p.locks?.[k]) return;
   const r = n.getBoundingClientRect();
-  drag = { k, mode: 'resize', h, sx: e.clientX, sy: e.clientY, ox: L.x, ow: L.w ?? r.width / scale, rw: r.width / scale,
+  drag = { k, mode: 'resize', h, sx: e.clientX, sy: e.clientY, ox: L.x, ow: L.w ?? r.width / scale, rw: r.width / scale, oh: L.h,
     size: o.size, kk: o.k || 1, pid: e.pointerId, moved: false };
   $('#sel').setPointerCapture?.(e.pointerId);
 }
@@ -806,16 +1057,23 @@ function onMove(e) {
       if (sx) { x += sx.d; gx = sx.t; } if (sy) { y += sy.d; gy = sy.t; } }
     const L = p.layout[fmt][drag.k]; L.x = Math.round(clamp(x, -drag.w + 40, W - 40)); L.y = Math.round(clamp(y, -drag.h + 40, H - 40));
     showGuides(gx, gy);
+  } else if (drag.mode === 'multi') {
+    let mx = dx, my = dy, gx = null, gy = null;
+    if (!e.altKey) { const sx = snap(drag.ux + dx, drag.w, drag.targets.xs), sy = snap(drag.uy + dy, drag.h, drag.targets.ys);
+      if (sx) { mx += sx.d; gx = sx.t; } if (sy) { my += sy.d; gy = sy.t; } }
+    drag.keys.forEach((x, i) => { const L = p.layout[fmt][x]; if (!L) return; L.x = Math.round(drag.orig[i].x + mx); L.y = Math.round(drag.orig[i].y + my); });
+    showGuides(gx, gy);
   } else {
     const o = objOf(p, drag.k), L = p.layout[fmt][drag.k], kk = kindOf(drag.k);
     if (drag.h === 'e') L.w = Math.round(Math.max(40, drag.ow + dx));
     else if (drag.h === 'w') { const w = Math.max(40, drag.ow - dx); L.x = Math.round(drag.ox + (drag.ow - w)); L.w = Math.round(w); }
+    else if (drag.h === 's') L.h = Math.round(Math.max(4, (drag.oh ?? 100) + dy));
     else { const f = Math.max(.2, (drag.rw + dx) / drag.rw);
       if (kk === 'font') { o.size = clamp(Math.round(drag.size * f), 10, 260); if (L.w != null) L.w = Math.round(drag.ow * f); }
       else if (kk === 'k') o.k = clamp(Math.round(drag.kk * f * 100) / 100, .3, 3);
-      else L.w = Math.round(Math.max(20, drag.ow * f)); }
+      else { L.w = Math.round(Math.max(20, drag.ow * f)); if (kk === 'box' && drag.oh) L.h = Math.round(Math.max(4, drag.oh * f)); } }
   }
-  renderCanvas(); renderToolbar();
+  renderCanvas(); if (drag.mode === 'multi') placeSel(); renderToolbar();
 }
 function endDrag() { if (!drag) return; const moved = drag.moved; drag = null; canvas.classList.remove('panning'); $('#guides').innerHTML = '';
   if (moved) { commit(true); renderProps(); }
@@ -893,12 +1151,12 @@ const aiJSON = async (url, opts) => {
 async function aiStart() {
   aiError('');
   ai.req = { sector: $('#aiSector').value, topic: $('#aiTopic').value.trim(),
-    existing: state.posts.map(p => p.headline?.text).filter(Boolean),
+    existing: state.posts.map(p => p.headline?.text).filter(Boolean), images: $('#aiImages').checked,
     library: LIB_CATS.flatMap(([cat, items]) => items.map(({ src, name }) => ({ src, name, cat }))) };
   let j;
   try { j = await aiJSON('/api/post-editoru/ai/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ai.req) }); }
   catch (e) { aiView('aiSetup'); return aiError(e.message.replace('İstek başarısız oldu.', 'Üretim başlatılamadı.')); }
-  ai.job = j.id; ai.options = null; $('#aiStage').textContent = '3 farklı tarz yazılıyor'; $('#aiTime').textContent = '0 sn';
+  ai.job = j.id; ai.options = null; $('#aiStage').textContent = ai.req.images ? '3 farklı tarz yazılıyor, sonra görseller üretilecek' : '3 farklı tarz yazılıyor'; $('#aiTime').textContent = '0 sn';
   aiView('aiRun'); aiPoll();
 }
 async function aiPoll() {
@@ -945,7 +1203,8 @@ function aiRenderOptions() {
     card.innerHTML = `<div class="aiprev" aria-hidden="true"><div>${postHTML(p, 'feed')}</div></div>
       <h3 id="aiOpt${n}">Seçenek ${n}${o.role === 'kesif' ? '<span class="role">Keşif</span>' : '<span class="role fit">Zevkine yakın</span>'}</h3>
       ${o.why ? `<p class="why">${esc(o.why)}</p>` : ''}
-      <ul class="chips" aria-label="Seçenek ${n} tarzı"><li>${esc(o.labels.voice)}</li><li>${esc(o.labels.palette)}</li><li>${esc(o.labels.layout)}</li></ul>`;
+      <ul class="chips" aria-label="Seçenek ${n} tarzı"><li>${esc(o.labels.voice)}</li><li>${esc(o.labels.palette)}</li><li>${esc(o.labels.layout)}</li>
+        <li class="vis" title="Görsel Gemini ile üretildiyse ya da üretilirse bu stil uygulanır">Görsel: ${esc(o.labels.visual)}</li></ul>`;
     const rate = el('div', { className: 'rate' }); rate.setAttribute('role', 'group'); rate.setAttribute('aria-label', `Seçenek ${n} için oyun`);
     [[1, 'up', 'Beğendim'], [-1, 'down', 'Beğenmedim']].forEach(([val, ic, label]) => {
       const b = el('button', { type: 'button', className: 'vote ' + ic, innerHTML: `${thumbSvg(ic)}<span>${label}</span>` });
@@ -974,7 +1233,8 @@ function aiChoose(i) {
   pushPost(p);
   ai.lastCaption = p.caption; $('#aiCaption').value = p.caption; capReport($('#aiCapChk'), p.caption);
   $('#aiDoneMsg').textContent = 'Post listeye eklendi; tercihin kaydedildi.';
-  $('#aiStyleMsg').textContent = 'Fotoğraf kütüphaneden seçildi. Beğenmezsen "Başka fotoğraf seç"e bas; Claude konuya uyan başka bir fotoğraf seçer.';
+  $('#aiStyleMsg').textContent = p.bg.photo.startsWith('img/') ? `Görsel şu an kütüphaneden. Bu tarzın görsel stili: ${o.labels.visual}. Gemini ile bu stilde üretmek için "Görseli bu tarzda üret"e bas.`
+    : `Görsel Gemini ile bu tarzın stilinde (${o.labels.visual}) üretildi. Beğenmezsen "Görseli bu tarzda üret" ile yenisini iste.`;
   aiView('aiDone'); $('#aiImg').focus();
 }
 async function aiNone() {
@@ -1025,7 +1285,7 @@ $('#aiCancel').onclick = async () => {
 };
 $('#aiNone').onclick = aiNone;
 $('#aiCopy').onclick = () => copyCaption(ai.lastCaption, $('#aiCaption'));
-// beğenilmeyen fotoğrafı değiştirmek için arka plan görseli penceresine geç (Claude kütüphaneden başka bir fotoğraf seçer)
+// seçilen tarzın görsel stilini Gemini ile uygulamak için arka plan görseli penceresine geç
 $('#aiImg').onclick = () => {
   const i = state.posts.findIndex(p => p.id === ai.last?.id); if (i < 0) return;
   $('#aiDlg').close(); state.current = i; sel = 'bg'; renderAll(); placeSel(); openRegen('bg');
@@ -1039,11 +1299,28 @@ async function aiLibLoad() {
     const at = LIB_CATS.findIndex(([c]) => c === 'AI üretimleri');
     if (at >= 0) LIB_CATS.splice(at, 1);
     if (items.length) LIB_CATS.unshift(['AI üretimleri', items]);
-    LIB.splice(0, LIB.length, ...LIB_CATS.flatMap(([, i]) => i));
+    mergeAiLib();
     if (!sel) renderProps();
   } catch (_) {}
 }
 aiLibLoad();
+// Gemini ile üretilen görseller "AI üretimleri" grubunun başına (ekle.js de kullanıyor); tarayıcıda hatırlanır
+const AI_KEY = STORE + '-ai';
+function addAiImage(src, name) {
+  let list = []; try { list = JSON.parse(localStorage.getItem(AI_KEY)) || []; } catch (_) {}
+  list = [{ src, name }, ...list.filter(i => i.src !== src)].slice(0, 60);
+  try { localStorage.setItem(AI_KEY, JSON.stringify(list)); } catch (_) {}
+  mergeAiLib();
+}
+function mergeAiLib() {
+  let list = []; try { list = JSON.parse(localStorage.getItem(AI_KEY)) || []; } catch (_) {}
+  const at = LIB_CATS.findIndex(([c]) => c === 'AI üretimleri'), old = at >= 0 ? LIB_CATS[at][1] : [];
+  const items = [...list, ...old.filter(o => !list.some(i => i.src === o.src))];
+  if (at >= 0) LIB_CATS.splice(at, 1);
+  if (items.length) LIB_CATS.unshift(['AI üretimleri', items]);
+  LIB.splice(0, LIB.length, ...LIB_CATS.flatMap(([, i]) => i));
+}
+mergeAiLib();
 
 /* ---------- AI ile yeniden üret: metin öğesine 3 seçenek, arka plana yeni görsel (sunucu.js → ai.js regen) ---------- */
 const REGEN = ['bg', 'tag', 'headline', 'sub', 'cta', 'list', 'notif', 'bubble', 'strip', 'caption'];
@@ -1144,10 +1421,9 @@ async function regenText() {
 // görsel stili seçimi (tarz.js kataloğu); varsayılan postun AI tarzı, yoksa koyu showroom
 async function rgVisuals(p) {
   const s = $('#rgVisual'), w = $('#rgVisWrap');
-  w.hidden = true; if (!p) return;
   if (!ai.prefs) await aiPrefsLoad();
   const vals = ai.prefs?.axes?.find(a => a.axis === 'visual')?.values;
-  w.hidden = !vals; if (!vals) return;
+  w.hidden = !vals || $('[name=rgImage]:checked')?.value !== 'gemini'; if (!vals) return;
   const cur = p.style?.visual || 'showroom';
   s.innerHTML = ''; [...vals].sort((a, b) => a.name.localeCompare(b.name, 'tr')).forEach(v => s.add(new Option(v.name, v.id, false, v.id === cur)));
 }
@@ -1189,7 +1465,7 @@ async function rgPoll(job) {
   }
   if (!p) return toast('Post silindiği için yeni görsel uygulanmadı');
   regenSet(p, 'bg', s.result); if (job.visual) p.style = { ...p.style, visual: job.visual }; commit(true); renderAll();
-  if (s.result.photo.startsWith('img/ai/')) aiLibLoad();
+  if (!s.result.photo.startsWith('img/')) { addAiImage(s.result.photo, s.result.photo_name || 'AI görseli'); }
   if (showing) $('#rgDlg').close();
   toast('Yeni arka plan görseli uygulandı', { label: 'Geri al', fn: undo });
 }
@@ -1220,12 +1496,15 @@ $('#rgCancel').onclick = () => {
   if (rg.k === 'bg' && rg.img && !$('#rgRun').hidden) { rgCancelJob(rg.img); rgShow('rgSrc'); rgFooter('Vazgeç', 'Görseli üret'); toast('Üretim durduruldu'); return; }
   $('#rgDlg').close();
 };
+document.querySelectorAll('[name=rgImage]').forEach(r => r.addEventListener('change', () => { $('#rgVisWrap').hidden = r.value !== 'gemini' || !$('#rgVisual').options.length; }));
 $('#rgForm').onsubmit = e => { e.preventDefault();
   if (rg.k === 'bg') { if (!rg.img) regenImage($('[name=rgImage]:checked').value); }
   else regenText(); };
 
-$('#tabEdit').onclick = () => setTab('edit'); $('#tabLayers').onclick = () => setTab('layers');
-$('.tabs').addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const t = tab === 'edit' ? 'layers' : 'edit'; setTab(t); $(t === 'edit' ? '#tabEdit' : '#tabLayers').focus(); } });
+document.querySelectorAll('.side [role=tab]').forEach(b => { b.onclick = () => setTab(b.dataset.tab); });
+$('.tabs').addEventListener('keydown', e => { if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  const tabs = [...document.querySelectorAll('.side [role=tab]')], i = tabs.findIndex(b => b.dataset.tab === tab);
+  const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; setTab(n.dataset.tab); n.focus(); });
 $('#zIn').onclick = () => setZoom(scale * 1.2); $('#zOut').onclick = () => setZoom(scale / 1.2); $('#zFit').onclick = () => setZoom(null);
 $('#keys').onclick = e => { e.stopPropagation(); const k = $('#keyPop'); k.hidden = !k.hidden; $('#keys').setAttribute('aria-expanded', !k.hidden); };
 $('#stage').addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); setZoom(scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); }, { passive: false });
@@ -1265,6 +1544,22 @@ async function exportPNG(i, f) {
   const a = el('a', { href: URL.createObjectURL(blob), download: `rentqr-${String(i + 1).padStart(2, '0')}-${f}${hq ? '-2160' : ''}.png` });
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
+// html-to-image sayfadaki bütün @font-face kurallarını gömüyor (64 font, her çizimde ~3 MB); yalnızca postta kullanılanlar verilir.
+// Font dosyaları bir kez data: adresine çevrilip saklanır.
+let faceRules = null; const fontData = new Map();
+async function fontCSSFor(html) {
+  faceRules ||= (async () => { const out = [];
+    for (const f of ['post.css', 'fonts.css']) { const base = new URL(f, document.baseURI), css = await (await fetch(base)).text();
+      for (const m of css.matchAll(/@font-face\s*{[^}]*}/g)) { const r = m[0], fam = /font-family:\s*([^;]+)/.exec(r)?.[1].replace(/["']/g, '').trim(), url = /url\(([^)]+)\)/.exec(r)?.[1];
+        if (fam && url) out.push({ fam, url: new URL(url.replace(/['"]/g, ''), base).href, rule: r }); } }
+    return out; })();
+  const rules = await faceRules, used = new Set(['Manrope', ...[...html.matchAll(/font-family:'([^']+)'/g)].map(m => m[1])]);
+  const parts = await Promise.all(rules.filter(r => used.has(r.fam)).map(async r => {
+    if (!fontData.has(r.url)) fontData.set(r.url, fetch(r.url).then(x => x.blob()).then(b => new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(b); })));
+    return r.rule.replace(/url\([^)]+\)/, `url(${await fontData.get(r.url)})`); }));
+  await Promise.all([...used].filter(f => FONT_SET.has(f)).flatMap(f => [400, 700, 800].map(w => document.fonts.load(`${w} 40px '${f}'`).catch(() => {}))));
+  return parts.join('\n');
+}
 // PNG indirme ve Instagram paylaşımı (ig.js) aynı çizimi kullanır
 async function drawPost(p, f, hq) {
   const [W, H] = SIZE[f];
@@ -1274,9 +1569,10 @@ async function drawPost(p, f, hq) {
   try {
     const node = host.firstElementChild;
     await document.fonts.ready;
+    const fontEmbedCSS = await fontCSSFor(host.innerHTML);
     const urls = [...host.innerHTML.matchAll(/url\('([^']+)'\)/g)].map(m => m[1]);
     await Promise.all(urls.map(u => new Promise(r => { const im = new Image(); im.onload = im.onerror = r; im.src = u; })));
-    const big = await htmlToImage.toCanvas(node, { width: W, height: H, pixelRatio: 2, canvasWidth: W, canvasHeight: H });
+    const big = await htmlToImage.toCanvas(node, { width: W, height: H, pixelRatio: 2, canvasWidth: W, canvasHeight: H, fontEmbedCSS });
     let out = big;
     if (!hq) { out = el('canvas', { width: W, height: H }); const x = out.getContext('2d');
       x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(big, 0, 0, W, H); }
@@ -1448,7 +1744,7 @@ function startLive() {
     });
     Ortak.connect(new URLSearchParams(location.search).get('oda'));
     // sunucu ortak çalışmayı desteklemiyorsa (eski sürüm) bu tarayıcıdaki kayıtla devam et
-    setTimeout(() => { if (first && !live.on) { ready(false); } }, 6000);
+    setTimeout(() => { if (first && !live.on) { ready(false); } }, 20000);
   });
 }
 
@@ -1458,18 +1754,21 @@ document.addEventListener('keydown', e => {
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   else if (mod && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); redo(); }
-  else if (mod && e.key.toLowerCase() === 'd' && !typing && sel && kindOf(sel) === 'font' && sel !== 'brand') { e.preventDefault(); addText(sel); }
+  else if (mod && e.key.toLowerCase() === 'd' && !typing && sel && sel !== 'bg' && sel !== 'brand' && ['font', 'box'].includes(kindOf(sel))) { e.preventDefault(); duplicateFree(sel); }
+  else if (mod && e.key.toLowerCase() === 'g' && !typing) { e.preventDefault(); e.shiftKey ? ungroupSel() : groupSel(); }
   else if (e.key === 'Escape' && !typing && !e.target.closest?.('.menu, dialog')) { closeMenus(); if (sel) deselect(); }
-  else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing && sel && hideable(sel)) { e.preventDefault(); removeSel(); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing && (multi.length > 1 || (sel && hideable(sel)))) { e.preventDefault(); removeSel(); }
   else if (!typing && sel && sel !== 'bg' && e.key.startsWith('Arrow')) {
-    const L = post().layout[fmt][sel]; if (!L) return;
+    const p = post(), Ls = (multi.length > 1 ? multi : [sel]).filter(k => !p.locks?.[k]).map(k => p.layout[fmt][k]).filter(Boolean); if (!Ls.length) return;
     e.preventDefault(); const d = e.shiftKey ? 10 : 1;
-    if (e.key === 'ArrowLeft') L.x -= d; if (e.key === 'ArrowRight') L.x += d;
-    if (e.key === 'ArrowUp') L.y -= d; if (e.key === 'ArrowDown') L.y += d; commit();
+    Ls.forEach(L => { if (e.key === 'ArrowLeft') L.x -= d; if (e.key === 'ArrowRight') L.x += d;
+      if (e.key === 'ArrowUp') L.y -= d; if (e.key === 'ArrowDown') L.y += d; });
+    commit(); if (multi.length > 1) placeSel();
   }
 });
 
 new ResizeObserver(() => layout()).observe($('#stage'));
+document.fonts.addEventListener('loadingdone', () => { if (!drag && !editing) placeSel(); });
 setTab('edit'); syncUndo();
 // ilk konumlar yazı ölçülerine bağlı: ölçmeden önce Manrope'un tüm kalınlıkları yüklenmeli
 // ortak çalışmada post listesi sunucudan gelir; ilk çizim onu bekler
@@ -1479,7 +1778,11 @@ Promise.all([Promise.all([500, 600, 700, 800].map(w => document.fonts.load(`${w}
 });
 window.__editor = { get state() { return state; } };  // testler için salt okunur erişim
 // Instagram'da paylaş (ig.js) için: geçerli post, çizim, açıklama ve bildirim
-window.__editorApi = { post, drawPost, toast, capReport,
+window.__editorApi = { post, drawPost, toast, capReport, addItem, select, commit, renderAll, renderProps, closeMenus, undo, libGroups, uploadPhoto, shrink,
+  postHTML, ensureLayout, fixPost, clone, nid, esc, el, pushPost, swatches, FONTS, SIZE, FMTS, FMT_NAME, LIB_CATS, DEFAULTS, blankPost, addAiImage, objOf, addText, renderPanel, fontCSSFor,
+  get state() { return state; }, get fmt() { return fmt; }, get sel() { return sel; }, get live() { return live; },
+  set fmt(f) { if (SIZE[f] && f !== fmt) { fmt = f; zoom = null; renderAll(); } },
+  replacePosts(posts) { state.posts = posts.map(fixPost); state.current = Math.min(state.current, state.posts.length - 1); sel = null; multi = []; commit(true); renderAll(); },
   setCaption(id, text) { const p = state.posts.find(x => x.id === id); if (!p || p.caption === text) return;
     p.caption = text; commit(true); if (p === post() && !sel) renderProps(); } };
 })();

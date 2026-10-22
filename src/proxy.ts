@@ -31,7 +31,7 @@ function makeNonce(): string {
  * kullanıyor, Turbopack sıcak yenilemeyi websocket üzerinden yapıyor ve dev
  * sunucusu stilleri satır içi basıyor. Üçü de üretimde geçerli değil.
  */
-function contentSecurityPolicy(nonce: string, payment: boolean): string {
+function contentSecurityPolicy(nonce: string, payment: boolean, editor: boolean): string {
   const isDev = process.env.NODE_ENV === "development";
   // Tarayıcı Supabase'e doğrudan gidiyor: oturum yenileme ve ürün görseli
   // yükleme (ImageUploader) istemci tarafında çalışıyor.
@@ -41,6 +41,11 @@ function contentSecurityPolicy(nonce: string, payment: boolean): string {
   // kendi paketini ve iframe'ini kendi alan adlarından yüklüyor, bunlar
   // `strict-dynamic` kapsamına girmiyor.
   const iyzico = payment ? IYZICO_CSP_SOURCES : "";
+
+  // Post editöründeki esneme: stok fotoğraf aramasının küçük resimleri
+  // Pexels'ten geliyor (seçilen fotoğraf kendi kovamıza kopyalanıyor) ve
+  // üretilen Reels videosu blob: adresinden önizleniyor.
+  const pexels = editor ? "https://images.pexels.com" : "";
 
   return [
     `default-src 'self'`,
@@ -52,7 +57,8 @@ function contentSecurityPolicy(nonce: string, payment: boolean): string {
     `style-src 'self' ${payment || isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`} ${iyzico}`,
     `style-src-attr 'unsafe-inline'`,
     // blob:/data: kamera ile QR okuma ve üretilen QR görseli için.
-    `img-src 'self' blob: data: ${supabase} ${iyzico}`,
+    `img-src 'self' blob: data: ${supabase} ${iyzico} ${pexels}`,
+    ...(editor ? [`media-src 'self' blob: ${supabase}`] : []),
     `font-src 'self' ${iyzico}`,
     `connect-src 'self' ${supabase}${isDev ? " ws: wss:" : ""} ${iyzico}`,
     // Ödeme formu bir iframe içinde açılıyor; onun dışında hiçbir yerde
@@ -92,7 +98,8 @@ export async function proxy(request: NextRequest) {
   // esnemenin başka bir sayfaya sızmasını imkânsız kılıyor.
   const csp = contentSecurityPolicy(
     nonce,
-    request.nextUrl.pathname.startsWith("/abonelik")
+    request.nextUrl.pathname.startsWith("/abonelik"),
+    request.nextUrl.pathname === "/yonetim/post-editoru"
   );
 
   // Nonce hem isteğe hem yanıta yazılıyor: Next render sırasında istek

@@ -2,15 +2,17 @@ import Anthropic from "@anthropic-ai/sdk";
 import { after } from "next/server";
 import { fixCaption as fixCaptionBase } from "./caption";
 import { db, type EditorKullanicisi } from "./erisim";
+import { geminiYapilandirildi, gorselUret, type Oran } from "./gemini";
 import * as Tarz from "./tarz";
+import { bufferKaydet, kaynakOku } from "./yukle";
 
 /**
  * "AI ile post üret" ve postun tek bir öğesini "AI ile yeniden üret".
  *
  * Yerel editörde bunu `claude -p` oturumu yapıyordu; burada Claude API. İstemler
  * aynı — kullanıcının yıllarca ayıkladığı "yapay zekâ gibi yazma" kuralları
- * onlarda. Fark görselde: Canva/ElevenLabs bağlayıcıları API'de yok, görsel
- * yalnızca fotoğraf kütüphanesinden seçiliyor.
+ * onlarda. Fark görselde: Canva/ElevenLabs bağlayıcıları API'de yok; görsel
+ * ya kütüphaneden seçiliyor ya da Gemini ile üretiliyor (gemini.ts).
  *
  * Üretim bir dakikayı bulabiliyor. İstek işi kaydedip hemen dönüyor, üretim
  * yanıt gittikten sonra (`after`) sürüyor; editör durumu yokluyor. Pencere
@@ -82,7 +84,7 @@ const LAYOUT_HINT: Record<string, string> = {
   orta: "metin ortada, fotoğraf koyu bir örtünün altında kalır",
 };
 
-type PostIstegi = { sector: string; topic: string; existing: string[]; library: Foto[]; plan: Tarz.PlanItem[] };
+type PostIstegi = { sector: string; topic: string; existing: string[]; library: Foto[]; plan: Tarz.PlanItem[]; images: boolean };
 
 async function buildPrompt(req: PostIstegi) {
   const sector = SECTORS[req.sector] || SECTORS.genel;
@@ -131,9 +133,10 @@ ${HUMAN}
 
 ${librarySteps(req.library)}
 Her seçenek için ayrı seç; mümkünse üç seçenekte farklı fotoğraflar olsun. focus_x: fotoğrafın yatay odağı (0-100).
-
+${req.images ? `Ayrıca her seçeneğin görseli bir görsel üretim modeliyle yeniden çizilecek: image_prompt alanına İngilizce, 2-3 cümlelik bir sahne tarifi yaz
+(sektöre uygun tek bir kiralık ürün, seçeneğin konusuna uygun an; ışık ve kompozisyon ayrıca eklenecek). Üretim olmazsa kütüphane fotoğrafı kullanılır.\n` : ""}
 ÇIKTI — son mesajın yalnızca şu JSON olsun (kod bloğu yok), options sırası TARZ PLANI sırasıyla aynı:
-{"options":[{"tag":"","headline":"","sub":"","extra":"none","list":[],"cta":"Hemen başlayın →","caption":"","why":"","photo":"","focus_x":72},
+{"options":[{"tag":"","headline":"","sub":"","extra":"none","list":[],"cta":"Hemen başlayın →","caption":"","why":"","photo":"","focus_x":72${req.images ? ',"image_prompt":""' : ""}},
  …3 tane],"error":""}`;
 }
 
@@ -162,6 +165,8 @@ const STRIP_COLORS = ["#140504", "#d11414", "#1f8a4c", "#c77d12"];
 
 type RegenIstegi = {
   el: string;
+  source?: unknown;
+  style?: { visual?: unknown; layout?: unknown };
   post: Record<string, unknown>;
   current: unknown;
   avoid: unknown[];
@@ -179,6 +184,16 @@ Hedef kitle: postun etiketinden ve içeriğinden anla. ${TONE}
 POSTUN ŞU ANKİ İÇERİĞİ — konu budur; yenisi bu konudan kopmasın ve diğer öğelerle uyumlu olsun:
 ${JSON.stringify(req.post, null, 1)}
 `;
+  if (req.el === "bg" && req.source === "gemini")
+    return `${head}
+Arka plan görselini yenile: postun konusuna uygun, şu anki görselden${req.current ? ` ("${String(req.current)}")` : ""} belirgin biçimde farklı bir sahne
+(farklı ürün, açı, kompozisyon ya da ortam). Görseli bir görsel üretim modeli çizecek; senin işin sahneyi tarif etmek.
+- image_prompt: İngilizce, 2-4 cümle; sektöre uygun tek bir kiralık ürün sahnesi. Işık ve kompozisyon kuralları ayrıca eklenecek, sen yalnızca sahneyi anlat.
+- photo_name: kısa Türkçe ad (en fazla 30 karakter).
+- focus_x: ürünün yatay konumu (0-100).
+
+ÇIKTI — son mesajın yalnızca şu JSON olsun (kod bloğu yok):
+{"image_prompt":"","photo_name":"","focus_x":72,"error":""}`;
   if (req.el === "bg")
     return `${head}
 Arka plan görselini yenile: postun konusuna uygun, şu anki görselden${req.current ? ` ("${String(req.current)}")` : ""} belirgin biçimde farklı bir sahne
@@ -326,10 +341,17 @@ async function claude(prompt: string): Promise<Record<string, unknown>> {
 /* ---------- işler ---------- */
 type IsDurumu = "running" | "done" | "error" | "cancelled";
 
-async function isAc(me: EditorKullanicisi, tur: string, asama: string, calis: () => Promise<unknown>) {
+async function isAc(
+  me: EditorKullanicisi,
+  tur: string,
+  asama: string,
+  calis: (asamaYaz: (a: string) => Promise<unknown>) => Promise<unknown>
+) {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const { error } = await db().from("post_editoru_isler").insert({ id, tur, asama, kullanici: me.id });
   if (error) throw new Error(`İş başlatılamadı: ${error.message}`);
+  // editörün ilerleme satırında görünen aşama ("Görseller üretiliyor")
+  const asamaYaz = async (a: string) => db().from("post_editoru_isler").update({ asama: a }).eq("id", id).eq("durum", "running");
 
   after(async () => {
     // yalnızca hâlâ "sürüyor" ise yaz: kullanıcı bu arada durdurduysa sonuç atılır
@@ -340,7 +362,7 @@ async function isAc(me: EditorKullanicisi, tur: string, asama: string, calis: ()
         .eq("id", id)
         .eq("durum", "running");
     try {
-      await bitir({ durum: "done", sonuc: await calis(), asama: "Hazır" });
+      await bitir({ durum: "done", sonuc: await calis(asamaYaz), asama: "Hazır" });
     } catch (e) {
       await bitir({ durum: "error", hata: String((e as Error)?.message || e).slice(0, 400), asama: "Hata" });
     }
@@ -391,9 +413,11 @@ export async function postUret(me: EditorKullanicisi, body: Record<string, unkno
     existing: (Array.isArray(body.existing) ? body.existing : []).filter((h): h is string => typeof h === "string"),
     library,
     plan: await Tarz.plan(),
+    images: body.images === true,
   };
+  if (req.images && !geminiYapilandirildi()) throw new Error("Görsel üretimi için GEMINI_API_KEY tanımlı değil. Kutuyu kaldırıp kütüphaneden devam edebilirsin.");
   const prompt = await buildPrompt(req);
-  return isAc(me, "post", "3 farklı tarz yazılıyor", async () => {
+  return isAc(me, "post", "3 farklı tarz yazılıyor", async (asamaYaz) => {
     const out = await claude(prompt);
     if (out.error) throw new Error(String(out.error));
     // bildirim kartı, mesaj balonu ve şerit şablon gibi durduğu için AI turunda kullanılmaz
@@ -423,22 +447,79 @@ export async function postUret(me: EditorKullanicisi, body: Record<string, unkno
           strip: cleanOption("strip", o.strip) || [],
           photo: library.some((p) => p.src === o.photo) ? o.photo : library[i % library.length].src,
           focus_x: focusX(o.focus_x),
+          image_prompt: str(o.image_prompt, 800),
         };
       })
-      .filter(Boolean);
+      .filter((o): o is NonNullable<typeof o> => o !== null);
     if (!options.length) throw new Error("Claude kullanılabilir bir seçenek üretmedi. Tekrar dene.");
-    return { options };
+
+    if (req.images) {
+      // üç görsel paralel; biri olmazsa o seçenek kütüphane fotoğrafıyla kalır
+      await asamaYaz("Görseller Gemini ile üretiliyor");
+      const sonuc = await Promise.allSettled(
+        options.map(async (o) => {
+          if (!o.image_prompt) return null;
+          const g = await gorselUret(`${o.image_prompt}\n${Tarz.imageStyle(o.style.visual, o.style.layout)}`, { oran: "4:5" });
+          return bufferKaydet(g.buf, g.mime);
+        })
+      );
+      sonuc.forEach((r, i) => {
+        if (r.status === "fulfilled" && r.value) {
+          options[i].photo = r.value;
+          options[i].focus_x = 50;
+        } else if (r.status === "rejected") console.error("[post-editoru] seçenek görseli üretilemedi", r.reason);
+      });
+    }
+    return { options: options.map((o) => ({ ...o, image_prompt: undefined })) };
   });
 }
 
-/** Postun tek öğesi için seçenekler; arka planda kütüphaneden başka bir fotoğraf. */
+/* ---------- Gemini: serbest görsel, görseli düzenleme, arka plan kaldırma ---------- */
+const ORANLAR: Oran[] = ["1:1", "3:4", "4:5", "9:16", "16:9", "4:3"];
+
+/** Kullanıcının yazdığı tariften görsel (Ekle → Görsel → AI ile üret). */
+export async function gorselIsi(me: EditorKullanicisi, body: Record<string, unknown>) {
+  if (!geminiYapilandirildi()) throw new Error("Görsel üretimi için GEMINI_API_KEY tanımlı değil.");
+  const istem = String(body.prompt || "").trim().slice(0, 1500);
+  if (istem.length < 3) throw new Error("Ne görmek istediğini birkaç kelimeyle yaz.");
+  const oran = ORANLAR.includes(body.oran as Oran) ? (body.oran as Oran) : "1:1";
+  const stil = typeof body.stil === "string" && body.stil ? `\n${Tarz.imageStyle(body.stil, "orta")}` : "";
+  return isAc(me, "gorsel", "Görsel üretiliyor", async () => {
+    const g = await gorselUret(istem + stil, { oran });
+    return { src: await bufferKaydet(g.buf, g.mime), name: istem.slice(0, 40) };
+  });
+}
+
+/**
+ * Var olan görseli tarife göre düzenler. `kip: "arkaplan"` ürünü düz yeşil
+ * zemine alır; saydam PNG'ye çevirme (yeşili silme) tarayıcıda yapılıyor,
+ * çünkü model saydam görsel üretmiyor.
+ */
+export async function duzenlemeIsi(me: EditorKullanicisi, body: Record<string, unknown>, origin: string) {
+  if (!geminiYapilandirildi()) throw new Error("Görsel düzenleme için GEMINI_API_KEY tanımlı değil.");
+  const arkaplan = body.kip === "arkaplan";
+  const istem = arkaplan
+    ? "Keep the main subject exactly as it is (same shape, colors, details, position and size). Replace the entire background with a perfectly flat, uniform pure green (#00FF00) background. No shadows, no reflections, no gradients, no green tint on the subject."
+    : String(body.prompt || "").trim().slice(0, 1500);
+  if (!arkaplan && istem.length < 3) throw new Error("Görselde neyin değişeceğini yaz.");
+  const kaynak = await kaynakOku(body.src, origin);
+  return isAc(me, arkaplan ? "arkaplan" : "duzenle", arkaplan ? "Arka plan ayrılıyor" : "Görsel düzenleniyor", async () => {
+    const g = await gorselUret(istem, { girdiler: [kaynak] });
+    return { src: await bufferKaydet(g.buf, g.mime) };
+  });
+}
+
+/** Postun tek öğesi için seçenekler; arka planda kütüphaneden başka bir fotoğraf ya da Gemini ile yeni görsel. */
 export async function yenidenUret(me: EditorKullanicisi, body: Record<string, unknown>) {
   const el = String(body.el || "");
   if (!LABEL[el]) throw new Error("Geçersiz öğe");
-  if (el === "bg" && body.source !== "library") throw new Error("Görsel yalnızca kütüphaneden seçilebiliyor.");
+  if (el === "bg" && body.source !== "library" && body.source !== "gemini") throw new Error("Geçersiz görsel kaynağı");
+  if (el === "bg" && body.source === "gemini" && !geminiYapilandirildi()) throw new Error("Görsel üretimi için GEMINI_API_KEY tanımlı değil. Kütüphaneden seçebilirsin.");
   if (!isRec(body.post)) throw new Error("Post içeriği eksik");
   const req: RegenIstegi = {
     el,
+    source: body.source,
+    style: isRec(body.style) ? body.style : undefined,
     post: body.post,
     current: body.current,
     avoid: (Array.isArray(body.avoid) ? body.avoid : []).filter(Boolean).slice(0, 20),
@@ -448,9 +529,17 @@ export async function yenidenUret(me: EditorKullanicisi, body: Record<string, un
   if (el === "bg" && !req.library.length) throw new Error("Fotoğraf kütüphanesi eksik");
   const prompt = buildRegenPrompt(req);
 
-  return isAc(me, "regen", el === "bg" ? "Fotoğraf seçiliyor" : "Seçenekler yazılıyor", async () => {
+  const gemini = el === "bg" && req.source === "gemini";
+  return isAc(me, "regen", gemini ? "Görsel tarif ediliyor" : el === "bg" ? "Fotoğraf seçiliyor" : "Seçenekler yazılıyor", async (asamaYaz) => {
     const out = await claude(prompt);
     if (out.error) throw new Error(String(out.error));
+    if (gemini) {
+      const tarif = str(out.image_prompt, 1500);
+      if (!tarif) throw new Error("Claude görsel tarifi yazmadı. Tekrar dene.");
+      await asamaYaz("Görsel Gemini ile üretiliyor");
+      const g = await gorselUret(`${tarif}\n${Tarz.imageStyle(req.style?.visual, req.style?.layout)}`, { oran: "4:5" });
+      return { photo: await bufferKaydet(g.buf, g.mime), photo_name: str(out.photo_name, 40) || "AI görseli", focus_x: focusX(out.focus_x) };
+    }
     if (el === "bg") {
       if (!req.library.some((p) => p.src === out.photo)) throw new Error("Claude kütüphaneden geçerli bir fotoğraf seçmedi.");
       return { photo: out.photo, focus_x: focusX(out.focus_x) };

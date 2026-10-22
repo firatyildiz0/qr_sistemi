@@ -179,6 +179,120 @@ export async function status() {
 // aynı sunucu örneğinde aynı post iki kez gönderilmesin (çift tıklama)
 const busy = new Set<string>();
 
+const kovaAdresi = () => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/post-editoru/`;
+
+// Konteyner hazır olana kadar bekler. Görsel genelde hemen, video 30-120 sn sürer.
+async function hazirOlana(token: string, id: string, saniye: number) {
+  const bas = Date.now();
+  while (Date.now() - bas < saniye * 1000) {
+    const s = await graph(token, "GET", "/" + id, { fields: "status_code" });
+    if (s.status_code === "FINISHED") return;
+    if (s.status_code === "ERROR" || s.status_code === "EXPIRED")
+      throw new IgError("Instagram medyayı işleyemedi. Biçim ve boyutu kontrol et (görsel JPEG, video MP4/H.264).");
+    await new Promise((r) => setTimeout(r, 2500));
+  }
+  throw new IgError("Instagram medyayı zamanında işleyemedi. Birkaç dakika sonra tekrar dene.");
+}
+
+async function yayinla(token: string, accId: string, creationId: string, username: string): Promise<Kayit> {
+  const pub = await graph(token, "POST", `/${accId}/media_publish`, { creation_id: creationId });
+  const info = await graph(token, "GET", "/" + pub.id, { fields: "permalink,timestamp" }).catch(() => ({}));
+  return { mediaId: pub.id, permalink: info.permalink || "", at: info.timestamp || new Date().toISOString(), username };
+}
+
+async function oncedenPaylasildi(token: string, anahtarlar: string[]) {
+  const r = await kayitlar();
+  for (const a of anahtarlar) {
+    const rec = r[a];
+    if (!rec) continue;
+    const durum = await alive(token, rec.mediaId);
+    if (durum !== false)
+      throw new IgError(
+        durum ? "Bu postlardan biri zaten paylaşıldı. Yeniden paylaşmak için önce Instagram'dan sil." : "Paylaşım durumu denetlenemedi; biraz sonra tekrar dene.",
+        { status: 409, record: rec }
+      );
+    delete r[a];
+  }
+  await kayitlariYaz(r);
+}
+
+/**
+ * Carousel: 2-10 post tek gönderide. Görseller önce kovaya yükleniyor
+ * (tarayıcı /yukle ile), Instagram onları oradan indiriyor.
+ */
+export async function carousel(body: { postIds?: unknown; images?: unknown; caption?: unknown }): Promise<Kayit> {
+  const ids = Array.isArray(body.postIds) ? body.postIds.map(String) : [];
+  const imgs = Array.isArray(body.images) ? body.images.map(String) : [];
+  if (ids.length < 2 || ids.length > 10 || ids.length !== imgs.length) throw new IgError("Carousel 2-10 post olmalı.", { status: 400 });
+  if (!ids.every((i) => /^[a-z0-9]+$/i.test(i)) || !imgs.every((u) => u.startsWith(kovaAdresi())))
+    throw new IgError("Geçersiz carousel.", { status: 400 });
+  const h = await hesap();
+  const need = missing(h);
+  if (need.length) throw new IgError(`Instagram bağlantısı kurulmamış: ${need.join(", ")} eksik.`, { status: 503 });
+  const kilit = "c:" + ids.join(",");
+  if (busy.has(kilit)) throw new IgError("Bu carousel şu anda paylaşılıyor.", { status: 409 });
+  busy.add(kilit);
+  try {
+    const token = h.accessToken!;
+    await oncedenPaylasildi(token, ids);
+    const acc = await account(h);
+    const cocuklar: string[] = [];
+    for (const image_url of imgs) {
+      const c = await graph(token, "POST", `/${acc.id}/media`, { image_url, is_carousel_item: "true" });
+      cocuklar.push(c.id);
+    }
+    for (const c of cocuklar) await hazirOlana(token, c, 60);
+    const box = await graph(token, "POST", `/${acc.id}/media`, {
+      media_type: "CAROUSEL",
+      children: cocuklar.join(","),
+      caption: String(body.caption || "").slice(0, 2200),
+    });
+    await hazirOlana(token, box.id, 60);
+    const rec = await yayinla(token, acc.id, box.id, acc.username);
+    const r = await kayitlar();
+    ids.forEach((i) => {
+      r[i] = rec;
+    });
+    await kayitlariYaz(r);
+    return rec;
+  } finally {
+    busy.delete(kilit);
+  }
+}
+
+/** Reels: editörün ürettiği MP4 (kovaya tarayıcıdan yüklendi). Kayıt `<post>:reels` anahtarında; feed paylaşımını engellemez. */
+export async function reels(body: { postId?: unknown; videoUrl?: unknown; caption?: unknown }): Promise<Kayit> {
+  const postId = typeof body.postId === "string" ? body.postId : "";
+  const video_url = typeof body.videoUrl === "string" ? body.videoUrl : "";
+  if (!/^[a-z0-9]+$/i.test(postId) || !video_url.startsWith(kovaAdresi()) || !video_url.endsWith(".mp4"))
+    throw new IgError("Geçersiz video.", { status: 400 });
+  const h = await hesap();
+  const need = missing(h);
+  if (need.length) throw new IgError(`Instagram bağlantısı kurulmamış: ${need.join(", ")} eksik.`, { status: 503 });
+  const anahtar = `${postId}:reels`;
+  if (busy.has(anahtar)) throw new IgError("Bu Reels şu anda paylaşılıyor.", { status: 409 });
+  busy.add(anahtar);
+  try {
+    const token = h.accessToken!;
+    await oncedenPaylasildi(token, [anahtar]);
+    const acc = await account(h);
+    const box = await graph(token, "POST", `/${acc.id}/media`, {
+      media_type: "REELS",
+      video_url,
+      caption: String(body.caption || "").slice(0, 2200),
+      share_to_feed: "true",
+    });
+    await hazirOlana(token, box.id, 220);
+    const rec = await yayinla(token, acc.id, box.id, acc.username);
+    const r = await kayitlar();
+    r[anahtar] = rec;
+    await kayitlariYaz(r);
+    return rec;
+  } finally {
+    busy.delete(anahtar);
+  }
+}
+
 export async function publish(body: { postId?: unknown; image?: unknown; caption?: unknown }): Promise<Kayit> {
   const postId = typeof body.postId === "string" ? body.postId : "";
   if (!/^[a-z0-9]+$/i.test(postId)) throw new IgError("Geçersiz post.", { status: 400 });

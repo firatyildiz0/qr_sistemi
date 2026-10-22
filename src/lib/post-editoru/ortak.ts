@@ -24,7 +24,8 @@ export class OrtakHata extends Error {
   }
 }
 
-type Konum = { post: string; fmt: "feed" | "story"; x: number | null; y: number | null; sel: string | null };
+const FORMATLAR = ["feed", "story", "kare", "yatay"] as const;
+type Konum = { post: string; fmt: (typeof FORMATLAR)[number]; x: number | null; y: number | null; sel: string | null };
 type Kisi = { cid: string; name: string; color: string; at: Konum | null };
 
 const okCid = (cid: unknown): cid is string => typeof cid === "string" && /^[a-f0-9]{8,32}$/.test(cid);
@@ -35,7 +36,7 @@ function konumOf(raw: string | null): Konum | null {
     const m = JSON.parse(raw);
     return {
       post: String(m.post || "").slice(0, 40),
-      fmt: m.fmt === "story" ? "story" : "feed",
+      fmt: FORMATLAR.includes(m.fmt) ? m.fmt : "feed",
       x: Number.isFinite(m.x) ? m.x : null,
       y: Number.isFinite(m.y) ? m.y : null,
       sel: m.sel ? String(m.sel).slice(0, 40) : null,
@@ -46,9 +47,14 @@ function konumOf(raw: string | null): Konum | null {
 }
 
 async function durumOku(): Promise<{ rev: number; data: Durum | null }> {
-  const { data, error } = await db().from("post_editoru_durum").select("rev, data").eq("id", 1).single();
-  if (error) throw new Error(`Post listesi okunamadı: ${error.message}`);
-  return { rev: Number(data.rev), data: durumOf(data.data) };
+  // Supabase'e ilk bağlantı ara sıra mesajsız bir ağ hatasıyla düşüyor; bir kez daha dene
+  for (let deneme = 0; ; deneme++) {
+    const { data, error } = await db().from("post_editoru_durum").select("rev, data").eq("id", 1).single();
+    if (!error) return { rev: Number(data.rev), data: durumOf(data.data) };
+    console.error("[post-editoru] liste okunamadı", deneme, error);
+    if (deneme >= 1) throw new Error(`Post listesi okunamadı: ${error.message || error.code || "bağlantı hatası"}`);
+    await new Promise((r) => setTimeout(r, 400));
+  }
 }
 
 async function kisiler(me: EditorKullanicisi, cid: string, konum: Konum | null): Promise<Kisi[]> {
@@ -107,6 +113,28 @@ export async function yokla(
   return { rev: rows[rows.length - 1].rev, log: rows, people };
 }
 
+/** Sürüm geçmişi: kayıt sırasında en fazla bu sıklıkta anlık görüntü alınır. */
+const SURUM_ARALIGI_MS = 10 * 60_000;
+let sonSurum = 0;
+
+async function surumAl(rev: number, data: Durum, kim: string) {
+  // aynı sunucu örneği yakın zamanda aldıysa veritabanına hiç sorma
+  if (Date.now() - sonSurum < SURUM_ARALIGI_MS) return;
+  const { data: son } = await db()
+    .from("post_editoru_surumler")
+    .select("created_at")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const t = son ? new Date(son.created_at).getTime() : 0;
+  if (Date.now() - t < SURUM_ARALIGI_MS) {
+    sonSurum = t;
+    return;
+  }
+  sonSurum = Date.now();
+  await db().from("post_editoru_surumler").insert({ rev, data, kim });
+}
+
 /**
  * İşlemleri listeye uygular. Başkası aynı anda yazdıysa güncel listeyi okuyup
  * yeniden dener: işlemler sırayla uygulandığı için herkes aynı sonuca varır.
@@ -136,7 +164,10 @@ export async function kaydet(me: EditorKullanicisi, body: { cid?: unknown; seq?:
       p_kim: me.name,
     });
     if (error) throw new Error(`Değişiklik kaydedilemedi: ${error.message}`);
-    if (yeni != null) return { rev: Number(yeni), ops: applied };
+    if (yeni != null) {
+      await surumAl(Number(yeni), data, me.name);
+      return { rev: Number(yeni), ops: applied };
+    }
   }
   throw new OrtakHata("Aynı anda çok fazla değişiklik var; birazdan tekrar dene.", 503);
 }

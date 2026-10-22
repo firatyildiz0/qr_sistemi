@@ -26,6 +26,19 @@ export const ABONELIK = {
   /** Görüntülenen fiyat; tahsilat tutarı ödeme ekranında ayrıca gösterilir. */
   fiyat: "1.999 TL",
   donem: "aylık",
+  /**
+   * Pakete neyin dahil olduğu: `/paketler` ve ödeme ekranı aynı listeyi
+   * gösteriyor. Her madde anasayfada anlatılan, panelde çalışan bir özellik;
+   * yeni madde eklemeden önce özelliğin canlıda olduğunu doğrula.
+   */
+  kapsam: [
+    "Sınırsız ürün ve QR etiketi",
+    "Müşterinin etiketi okutup rezervasyon talebi bırakması",
+    "Kiralama takibi ve iade hatırlatmaları",
+    "Görselle ve barkodla ürün bulma",
+    "Son 30 günün rezervasyon ve doluluk raporu",
+    "Telefonda uygulama gibi kullanım",
+  ],
 } as const;
 
 export const YASAL_SAYFALAR = [

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getProfile, homePathFor, type ProfileRole } from "@/lib/profile";
 import { getSubscription } from "@/lib/subscription";
+import { iyzicoConfig } from "@/lib/iyzico";
 
 /**
  * Panelin kapısı: onaylanmamış hesabı giriş ekranına, yanlış paneldeki
@@ -25,7 +26,7 @@ export default async function AccessGuard({ expect }: { expect: ProfileRole }) {
   }
 
   // Abonelik yalnızca satıcı panelinin şartı: `/yonetim` paneli ücretli değil
-  // (bkz. `can_write`, 0031).
+  // (bkz. `can_write`, 0032).
   //
   // Bu yalnızca yönlendirme. Aboneliği bitmiş biri buradan geçse bile
   // veritabanındaki yazma politikaları onu durduruyor — ekran kilitli, veri de
@@ -34,9 +35,14 @@ export default async function AccessGuard({ expect }: { expect: ProfileRole }) {
   // Superuser muaf — `can_write()` ile aynı kural. Yoksa yönetici kendi satıcı
   // panelini açmaya çalıştığında ödeme ekranına düşer, o da onu `/yonetim`'e
   // geri yollardı.
-  if (expect === "seller" && profile.role !== "superuser") {
+  //
+  // iyzico anahtarları tanımlı değilken kapı kapalı değil, açık: ödeme
+  // alınamayan bir sistemde satıcıyı ödeme ekranına kilitlemek paneli herkese
+  // kapatmak olurdu. iyzico abonelik modülünü açmadan önce paket sayfasının
+  // canlıda olmasını istiyor; bu sıra ancak böyle güvenli.
+  if (expect === "seller" && profile.role !== "superuser" && iyzicoConfig()) {
     const subscription = await getSubscription();
-    // Satır hiç yoksa da erişim yok: 0031 çalıştırılmamış ya da abonelik
+    // Satır hiç yoksa da erişim yok: 0032 çalıştırılmamış ya da abonelik
     // henüz açılmamış demek. Fail-closed.
     if (!subscription?.active) redirect("/abonelik");
   }

@@ -63,8 +63,8 @@ export default function AuthPanel({
         <h2 className="mt-2 mb-1 text-xl font-semibold text-ink">{copy.title}</h2>
         <p className="mb-6 text-sm text-ink-muted">{copy.description}</p>
 
-        {/* Kayıt onay beklediği için `next`in karşılığı yok: üye olan kişi
-            hiçbir sayfaya gitmiyor, onay mesajını görüyor. */}
+        {/* Kayıtta `next`in karşılığı yok: yeni hesabın gideceği tek yer
+            ödeme ekranı. */}
         {mode === "login" ? <LoginForm next={next} /> : <SignupForm />}
       </div>
     </div>

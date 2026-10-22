@@ -299,3 +299,15 @@ create policy "rental_settings_update_owner" on rental_settings
 --   values ('...', 'trialing', now() + interval '14 days')
 --   on conflict (owner_id) do update
 --     set status = excluded.status, trial_ends_at = excluded.trial_ends_at;
+
+-- ---------------------------------------------------------------------------
+-- Elle onay kalkıyor
+-- ---------------------------------------------------------------------------
+-- Yazma izni artık ödemeye bağlı (`can_write()`), elle onay ikinci bir kapı
+-- olmaktan çıktı. Kayıt olan satıcı onay beklemeden ödeme ekranına geçiyor;
+-- ödemeden panelde hiçbir şey yazamıyor. `rejected` yerinde duruyor:
+-- superuser bir hesabı yine kapatabiliyor.
+alter table profiles alter column status set default 'approved';
+
+-- Onay kuyruğunda bekleyenler de aynı yoldan geçsin: ödeme ekranına girebilsinler.
+update profiles set status = 'approved' where status = 'pending';

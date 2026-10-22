@@ -27,6 +27,9 @@ export default function SiteFooter({
           <span className="text-lg font-extrabold tracking-tight text-ink">{SATICI.urun}</span>
           <nav aria-label="Kurumsal" className="flex flex-wrap justify-center gap-1">
             {ekLinkler}
+            <Link href="/paketler" className={linkSinifi}>
+              Paketler
+            </Link>
             {YASAL_SAYFALAR.map((sayfa) => (
               <Link key={sayfa.href} href={sayfa.href} className={linkSinifi}>
                 {sayfa.ad}

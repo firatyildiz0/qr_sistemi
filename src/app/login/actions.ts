@@ -12,15 +12,12 @@ import {
 } from "@/lib/security";
 import { passwordError } from "@/lib/password";
 
-// `awaitingApproval`, arayüzün "onay bekleniyor" penceresini açması için: aynı
-// durum hem kayıttan hemen sonra hem de onaysız hesapla giriş denendiğinde
-// doğuyor, ikisinde de aynı pencere çıkıyor (bkz. PendingApprovalDialog).
+// `awaitingApproval`, arayüzün "onay bekleniyor" penceresini açması için:
+// onaysız hesapla giriş denendiğinde doğuyor (bkz. PendingApprovalDialog).
+// Kayıt artık onaylı doğduğu için yalnızca superuser'ın elle geri aldığı
+// hesaplarda görünür.
 export type LoginState = { error: string | null; awaitingApproval: boolean };
-export type SignupState = {
-  error: string | null;
-  notice: string | null;
-  awaitingApproval: boolean;
-};
+export type SignupState = { error: string | null; notice: string | null };
 
 
 /**
@@ -160,18 +157,18 @@ export async function signUp(
   const password = String(formData.get("password") ?? "");
 
   if (!email || !username || !password) {
-    return { error: "E-posta, kullanıcı adı ve şifre gereklidir.", notice: null, awaitingApproval: false };
+    return { error: "E-posta, kullanıcı adı ve şifre gereklidir.", notice: null };
   }
 
   if (!isValidUsername(username)) {
-    return { error: `Kullanıcı adı geçersiz. ${USERNAME_RULE}`, notice: null, awaitingApproval: false };
+    return { error: `Kullanıcı adı geçersiz. ${USERNAME_RULE}`, notice: null };
   }
 
   // Formdaki canlı liste aynı kuralları kullanıyor (lib/password.ts), ama o
   // yalnızca tarayıcıda çalışıyor — elle atılan bir istek buraya takılır.
   const weak = passwordError(password);
   if (weak) {
-    return { error: weak, notice: null, awaitingApproval: false };
+    return { error: weak, notice: null };
   }
 
   // Biçim kontrollerinden sonra, veritabanına ve Supabase'e gitmeden önce:
@@ -180,7 +177,7 @@ export async function signUp(
   // biri olabilir (bkz. lib/security.ts).
   const limit = await checkSignupRateLimit();
   if (!limit.allowed) {
-    return { error: limit.message, notice: null, awaitingApproval: false };
+    return { error: limit.message, notice: null };
   }
 
   // Kullanıcı adı `profiles` üzerindeki unique kısıtla korunuyor; buradaki
@@ -194,7 +191,7 @@ export async function signUp(
     .maybeSingle();
 
   if (taken) {
-    return { error: "Bu kullanıcı adı kullanılıyor.", notice: null, awaitingApproval: false };
+    return { error: "Bu kullanıcı adı kullanılıyor.", notice: null };
   }
 
   const supabase = await createClient();
@@ -208,47 +205,47 @@ export async function signUp(
 
   if (error) {
     if (error.message.toLowerCase().includes("already registered")) {
-      return { error: "Bu e-posta ile bir hesap zaten var.", notice: null, awaitingApproval: false };
+      return { error: "Bu e-posta ile bir hesap zaten var.", notice: null };
     }
     // Trigger'daki unique ihlali Supabase'e "Database error saving new user"
     // olarak döner — bu noktada geriye tek olası çakışma kullanıcı adıdır.
     if (error.message.toLowerCase().includes("database error")) {
-      return { error: "Bu kullanıcı adı kullanılıyor.", notice: null, awaitingApproval: false };
+      return { error: "Bu kullanıcı adı kullanılıyor.", notice: null };
     }
     return {
       error: "Kayıt oluşturulamadı. Bilgileri kontrol edip tekrar deneyin.",
       notice: null,
-      awaitingApproval: false,
-    };
+      };
   }
 
   // E-posta doğrulaması açıkken Supabase, kayıtlı bir adresi ele vermemek için
   // kimliksiz (identities: []) sahte bir kullanıcı döndürür.
   if (data.user && data.user.identities?.length === 0) {
-    return { error: "Bu e-posta ile bir hesap zaten var.", notice: null, awaitingApproval: false };
+    return { error: "Bu e-posta ile bir hesap zaten var.", notice: null };
   }
 
-  // Kayıtlar onay beklediği için tek başına bir tehdit değil, ama arka arkaya
-  // açılan onlarca hesap otomatik bir betiğin işareti — panelde görünsün.
+  // Yeni hesap ödemeden hiçbir şey yazamıyor (bkz. `can_write`, 0032), yani
+  // tek başına bir tehdit değil; ama arka arkaya açılan onlarca hesap otomatik
+  // bir betiğin işareti — panelde görünsün.
   await recordSecurityEvent({
     kind: "signup",
     severity: "info",
     identifier: username,
   });
 
-  // Kayıt `pending` doğuyor (bkz. profiles.status). Supabase e-posta doğrulaması
-  // kapalıyken kayıtla birlikte oturum da açtığı için onu hemen kapatıyoruz:
-  // onay gelmeden panele girilmesin. Yazma yolları RLS'te de kapalı, bu sadece
-  // arayüzün doğru davranması için.
+  // Kayıt onaylı doğuyor; satıcı onay beklemeden ödeme ekranına geçiyor.
+  // Supabase e-posta doğrulaması kapalıyken kayıtla birlikte oturum da açılıyor.
   if (data.session) {
-    await supabase.auth.signOut();
+    redirect("/abonelik");
   }
 
+  // Doğrulama açık: oturum, e-postadaki bağlantıya tıklanıp giriş yapılınca
+  // açılacak. Girişten sonra panelin kapısı aboneliği olmayanı zaten ödeme
+  // ekranına yolluyor.
   return {
     error: null,
     notice:
-      "Kaydınız alındı. Yönetici hesabınızı onayladıktan sonra kullanıcı adınız ve şifrenizle giriş yapabilirsiniz.",
-    awaitingApproval: true,
+      "Hesabınız açıldı. E-postanıza gelen bağlantıyla adresinizi doğrulayın, sonra giriş yapın; ödeme ekranı açılacak.",
   };
 }
 

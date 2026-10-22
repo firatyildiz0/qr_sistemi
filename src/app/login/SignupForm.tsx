@@ -1,18 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { signUp, type SignupState } from "./actions";
 import { USERNAME_RULE } from "@/lib/username";
 import PasswordField from "@/components/PasswordField";
-import PendingApprovalDialog from "@/components/PendingApprovalDialog";
 
-const initialState: SignupState = { error: null, notice: null, awaitingApproval: false };
+const initialState: SignupState = { error: null, notice: null };
 
 export default function SignupForm() {
   const [state, formAction, pending] = useActionState(signUp, initialState);
-
-  // Bkz. LoginForm: kapatma tek bir cevaba bağlanıyor.
-  const [dismissed, setDismissed] = useState<SignupState | null>(null);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -58,12 +54,6 @@ export default function SignupForm() {
       <button type="submit" disabled={pending} className="btn btn-primary w-full">
         {pending ? "Hesap oluşturuluyor…" : "Üye ol"}
       </button>
-
-      <PendingApprovalDialog
-        open={state.awaitingApproval && dismissed !== state}
-        origin="signup"
-        onClose={() => setDismissed(state)}
-      />
     </form>
   );
 }

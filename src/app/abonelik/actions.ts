@@ -156,7 +156,7 @@ export async function startCheckout(
   if (!result.ok) return { error: result.error };
 
   // Service role: satıcının kendi abonelik satırına yazma politikası yok
-  // (bilinçli — bkz. 0031). Token'ı yazan taraf sunucu.
+  // (bilinçli — bkz. 0032). Token'ı yazan taraf sunucu.
   //
   // `upsert`: satır ilk ödemede açılıyor, yani ilk kez abone olan satıcının
   // henüz satırı yok. Var olan satırın durumuna dokunulmuyor — yalnızca token

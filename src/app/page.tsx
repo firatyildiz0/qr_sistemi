@@ -211,10 +211,10 @@ export default async function Home() {
                   <span className="vitrin-baslik text-[56px] font-extrabold leading-none">{ABONELIK.fiyat}</span>
                   <span className="text-on-deep/70">/ ay</span>
                 </p>
-                {/* Düğme "Hesap açın" diyor; söylediğini yapsın diye kayıt
-                    ekranına gidiyor. Onaylı hesap ise doğrudan paneline. */}
-                <Link href={onayli ? ctaHref : "/signup"} className="btn btn-primary h-13 px-8 text-base">
-                  {onayli ? "Panele git" : "Hesap açın"}
+                {/* Ziyaretçi paket sayfasına, oradan kayıt ve ödemeye gidiyor.
+                    Onaylı hesap ise doğrudan paneline. */}
+                <Link href={onayli ? ctaHref : "/paketler"} className="btn btn-primary h-13 px-8 text-base">
+                  {onayli ? "Panele git" : "Satın al"}
                 </Link>
               </div>
             </div>

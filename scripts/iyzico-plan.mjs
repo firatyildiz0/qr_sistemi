@@ -131,7 +131,7 @@ async function main() {
       // her ay yenileniyor.
       planPaymentType: "RECURRING",
       // `trialPeriodDays` bilinçli olarak yok: deneme süresi verilmiyor, ilk
-      // ay kart doğrulanır doğrulanmaz tahsil ediliyor (bkz. 0031).
+      // ay kart doğrulanır doğrulanmaz tahsil ediliyor (bkz. 0032).
     }
   );
 

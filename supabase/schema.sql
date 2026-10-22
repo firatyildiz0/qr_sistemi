@@ -20,9 +20,9 @@ create table if not exists profiles (
   -- Satıcı mı, paneli yöneten superuser mı. İlk superuser elle belirlenir:
   --   update profiles set role = 'superuser' where username = '...';
   role text not null default 'seller' check (role in ('seller', 'superuser')),
-  -- Yeni kayıtlar onay bekler; superuser onaylayana kadar ne giriş yapılabilir
-  -- ne de veri yazılabilir (aşağıdaki is_approved() politikaları).
-  status text not null default 'pending'
+  -- Yeni kayıtlar onaylı doğar: yazma izni ödemeye bağlı (`can_write()`,
+  -- 0032). `rejected` superuser'ın bir hesabı kapatması için duruyor.
+  status text not null default 'approved'
     check (status in ('pending', 'approved', 'rejected')),
   created_at timestamptz not null default now(),
   constraint profiles_username_format check (username ~ '^[a-z0-9_]{3,20}$')
@@ -61,7 +61,7 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- Abonelik (premium üyelik) — bkz. 0031
+-- Abonelik (premium üyelik) — bkz. 0032
 -- ---------------------------------------------------------------------------
 -- Onay ("bu hesap gerçek mi") ve abonelik ("ödemesi yapıldı mı") ayrı tutuluyor,
 -- çünkü ayrı sebeplerle kapanıyorlar: reddedilen hesap geri dönmez, ödemesi
@@ -150,7 +150,7 @@ as $$
 $$;
 
 -- Deneme yok: abonelik satırı ilk ödemede açılıyor, satırı olmayan satıcının
--- erişimi yok. Elle muaf tutma / deneme verme örnekleri 0031'de.
+-- erişimi yok. Elle muaf tutma / deneme verme örnekleri 0032'de.
 
 create or replace function touch_subscription()
 returns trigger

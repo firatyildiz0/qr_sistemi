@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
  * Abonelik durumu — panelin kapısı buna bakıyor.
  *
  * Erişim ölçütü veritabanındaki `has_subscription()` ile birebir aynı
- * (bkz. 0031). Aynı kural iki yerde duruyor çünkü iki farklı işi yapıyorlar:
+ * (bkz. 0032). Aynı kural iki yerde duruyor çünkü iki farklı işi yapıyorlar:
  * buradaki kullanıcıyı doğru ekrana yönlendiriyor ve ona kaç günü kaldığını
  * söylüyor, oradaki ise veriyi koruyor. Arayüz atlatılsa bile yazma yine
  * RLS'te duruyor; bu dosyayı kimse zorlayamaz, yalnızca yanlış ekran görür.
@@ -126,7 +126,7 @@ function describe(sub: Subscription): SubscriptionView {
  * ekranı ve kenar çubuğundaki uyarı şeridi aynı isteği paylaşıyor.
  *
  * Satır yoksa `null`: hiç ödeme yapmamış hesap (satır ilk ödemede açılıyor)
- * ya da 0031 çalıştırılmamış bir veritabanı. İkisinde de erişim yok.
+ * ya da 0032 çalıştırılmamış bir veritabanı. İkisinde de erişim yok.
  */
 export const getSubscription = cache(async (): Promise<SubscriptionView | null> => {
   const user = await getCurrentUser();

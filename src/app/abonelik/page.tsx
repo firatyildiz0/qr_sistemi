@@ -11,6 +11,7 @@ import {
   type SubscriptionView,
 } from "@/lib/subscription";
 import { iyzicoConfig } from "@/lib/iyzico";
+import { ABONELIK, SATICI } from "@/lib/yasal";
 import { signOut } from "@/app/login/actions";
 import SubscribeForm from "./SubscribeForm";
 import CancelButton from "./CancelButton";
@@ -22,14 +23,6 @@ import {
 } from "@/components/icons";
 
 export const metadata = { title: "Abonelik" };
-
-const FEATURES = [
-  "Sınırsız ürün ve QR etiketi",
-  "Rezervasyon takvimi ve stok takibi",
-  "Müşteri kayıtları ve teslimat planı",
-  "Teslim ve iade hatırlatmaları",
-  "İstatistik ekranı",
-];
 
 const TRY = new Intl.NumberFormat("tr-TR", {
   style: "currency",
@@ -78,7 +71,7 @@ export default async function SubscriptionPage({
               RentQR Premium
             </p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
-              {subscription?.active ? "Aboneliğiniz" : "Paneli açmak için abone olun"}
+              {subscription?.active ? "Aboneliğiniz" : "RentQR’a abone olun"}
             </h1>
           </div>
 
@@ -194,7 +187,7 @@ function PlanCard({ subscription }: { subscription: SubscriptionView | null }) {
       </p>
 
       <ul className="mt-5 space-y-2.5">
-        {FEATURES.map((feature) => (
+        {ABONELIK.kapsam.map((feature) => (
           <li key={feature} className="flex items-start gap-2 text-sm text-ink">
             <IconCheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
             {feature}
@@ -250,20 +243,27 @@ function ActiveState({ subscription }: { subscription: SubscriptionView }) {
   );
 }
 
-/** iyzico anahtarları tanımlı değilken gösterilen kurulum notu. */
+/**
+ * iyzico anahtarları tanımlı değilken gösterilen not. Ekran herkese açık
+ * paket sayfasından gelinebiliyor; ziyaretçiye kurulum ayrıntısı değil,
+ * ne yapabileceği söyleniyor.
+ */
 function SetupNotice() {
   return (
     <div className="text-sm text-ink">
-      <h2 className="text-lg font-semibold">Ödeme altyapısı henüz bağlanmadı</h2>
+      <h2 className="text-lg font-semibold">Online ödeme çok yakında</h2>
       <p className="mt-2 text-ink-muted">
-        Abonelik alınabilmesi için iyzico anahtarlarının tanımlanması gerekiyor.
-        Kurulum tamamlanana kadar erişim için bizimle iletişime geçin.
+        Kartla ödeme altyapımız son kontrollerden geçiyor. Bu sırada panelinizi
+        kullanmaya devam edebilirsiniz; aboneliği hemen başlatmak isterseniz{" "}
+        <a href={`mailto:${SATICI.eposta}`} className="link-underline font-medium text-accent">
+          {SATICI.eposta}
+        </a>{" "}
+        adresine ya da {SATICI.telefon} numarasına ulaşın.
       </p>
-      <p className="mt-3 text-xs text-ink-muted">
-        Yapılandırılacak değişkenler: <code>IYZICO_API_KEY</code>,{" "}
-        <code>IYZICO_SECRET_KEY</code>, <code>IYZICO_MERCHANT_ID</code>,{" "}
-        <code>IYZICO_PRICING_PLAN_REF</code>.
-      </p>
+      <Link href="/admin" className="btn btn-primary mt-5">
+        Panele git
+        <IconArrowRight className="h-4 w-4" aria-hidden />
+      </Link>
     </div>
   );
 }

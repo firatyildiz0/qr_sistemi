@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import VoyoLogo from "./VoyoLogo";
+import TemaDugmesi from "./TemaDugmesi";
 
 const BOLUM_LINKLERI = [
   { href: "#nasil", ad: "Nasıl çalışır" },
@@ -16,7 +17,8 @@ const BOLUM_LINKLERI = [
  * zemin ve alt çizgi alıyor ki altından geçen içerikle karışmasın.
  *
  * Telefonda bağlantılar ve birincil düğme gizli: orada sayfanın altındaki
- * eylem çubuğu aynı düğmeyi taşıyor, bölümler de zaten alt alta.
+ * eylem çubuğu aynı düğmeyi taşıyor, bölümler de zaten alt alta. Tema düğmesi
+ * her ekranda duruyor.
  */
 export default function VitrinMenu({
   girisGoster,
@@ -57,6 +59,8 @@ export default function VitrinMenu({
           ))}
         </div>
         <div className="flex items-center gap-5 text-[15px] font-bold">
+          {/* Telefonda menüde görünen tek şey: diğerleri altta. */}
+          <TemaDugmesi className="-mr-2 md:mr-0" />
           {girisGoster && (
             <Link href="/login" className="hidden text-ink transition-colors hover:text-accent md:block">
               Giriş yap

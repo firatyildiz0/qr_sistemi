@@ -1,0 +1,6 @@
+{
+  "tip": "hata",
+  "baslik": "QR rezervasyon formu hata verince müşterinin yazdıkları siliniyordu",
+  "aciklama": "Müşteri ürünün etiketini okutup talep formunu doldurduğunda, örneğin telefonu yanlış yazınca, ad, telefon, il, ilçe, adres ve onay kutusu boşalıyordu; il ve teslim şekli ekranda farklı, arka planda farklı görünüyordu. Artık uyarı çıktığında her şey yerinde kalıyor, müşteri yalnızca hatalı alanı düzeltiyor.",
+  "dikkat": null
+}

@@ -12,6 +12,22 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
       {NAV_ITEMS.map((item) => {
         const active = isActive(item, pathname);
         const badge = item.unread ? unreadCount : 0;
+        if (item.yakinda) {
+          return (
+            <div
+              key={item.href}
+              title={`${item.label} yakında`}
+              aria-disabled="true"
+              className="sidebar-item relative flex cursor-default items-center gap-3 rounded-full px-4 py-3 text-ink-muted opacity-70"
+            >
+              <item.icon className="h-5 w-5 shrink-0" />
+              <span className="sidebar-label text-sm font-semibold">{item.label}</span>
+              <span className="sidebar-badge ml-auto rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-ink-muted">
+                Yakında
+              </span>
+            </div>
+          );
+        }
         return (
           <Link
             key={item.href}
@@ -19,12 +35,13 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
             // `title` is what names the item once the rail is collapsed and the
             // label is hidden.
             title={item.label}
+            aria-current={active ? "page" : undefined}
             // Seçili öğe vurgu renkli, yumuşak gölgeli bir hap: rayın üstünde
             // duran tek yükseltilmiş yüzey o olduğu için göz nerede olduğunu
             // renkten önce yükseklikten buluyor.
             className={`sidebar-item relative flex items-center gap-3 rounded-full px-4 py-3 transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.97] ${
               active
-                ? "bg-accent text-white shadow-[0_10px_20px_-12px_var(--color-accent)]"
+                ? "bg-accent text-white"
                 : "text-ink-muted hover:bg-accent-soft hover:text-accent-hover"
             }`}
           >

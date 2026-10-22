@@ -6,17 +6,20 @@ import { formatPriceInput, parsePriceInput } from "@/lib/format";
 /**
  * Bir lira alanı: ekranda binlik ayıraçlı yazılır, sunucuya düz sayı olarak
  * gider. Boş bırakılabilir — o zaman gizli alan da boş gider ve değer null olur.
+ * `required` verilirse tarayıcı boş gönderime izin vermez.
  */
 export default function PriceField({
   name,
   label,
   defaultValue,
   hint,
+  required,
 }: {
   name: string;
   label: string;
   defaultValue: number | null | undefined;
   hint?: string;
+  required?: boolean;
 }) {
   const [price, setPrice] = useState(() =>
     defaultValue != null ? formatPriceInput(String(defaultValue).replace(".", ",")) : ""
@@ -37,6 +40,7 @@ export default function PriceField({
           inputMode="decimal"
           autoComplete="off"
           placeholder="0"
+          required={required}
           value={price}
           onChange={(e) => setPrice(formatPriceInput(e.target.value))}
           className="input pr-8"

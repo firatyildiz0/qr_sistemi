@@ -147,6 +147,10 @@ export async function createProduct(
     return { error: "Stok adedi 0 veya daha büyük bir sayı olmalıdır." };
   }
 
+  if (dailyPrice === null) {
+    return { error: "Günlük kiralama fiyatı gereklidir." };
+  }
+
   if (dailyPrice === undefined) {
     return { error: "Günlük kiralama fiyatı 0 veya daha büyük bir sayı olmalıdır." };
   }
@@ -209,6 +213,10 @@ export async function updateProduct(
 
   if (stock === null) {
     return { error: "Stok adedi 0 veya daha büyük bir sayı olmalıdır." };
+  }
+
+  if (dailyPrice === null) {
+    return { error: "Günlük kiralama fiyatı gereklidir." };
   }
 
   if (dailyPrice === undefined) {

@@ -1,0 +1,146 @@
+/* Panelin "Kapak" görünümü (bkz. app/admin/template.tsx, app/admin/page.tsx).
+
+   Kurallar çoğunlukla katmansız yazıldı: Tailwind'in araç sınıfları
+   `@layer utilities` içinde, yani buradaki bir kural seçici gücüne bakılmadan
+   onları eziyor. Düğme kuralları ise `@layer components` içinde, çünkü
+   `.btn`'in kendisi orada ve `!important` katmanlar arasında ters işliyor —
+   katmansız bir `!important` katmandakini ezemiyor. */
+
+.kapak-baslik {
+  font-family: var(--font-kapak), var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.035em;
+}
+
+.kapak-kelime {
+  display: inline-block;
+  white-space: pre;
+}
+
+/* ------------------------------------------------------------------
+   Hareket. Hiçbir kural hareket kapalıyken (Ayarlar ya da işletim sistemi)
+   uygulanmıyor; gizli başlangıç hâlleri de keyframe'lerin `from` adımında,
+   yani hareket yoksa içerik doğrudan son hâlinde.
+
+   `backwards` bilerek `both` değil: animasyon bittikten sonra elemanda
+   `transform` kalırsa içindeki `position: fixed` katmanlar (tarayıcı,
+   onay pencereleri) ekrana değil o elemana göre konumlanırdı.
+   ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="reduced"]) .sayfa-gecis {
+    animation: kapak-yuksel 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  :root:not([data-motion="reduced"]) .kapak-kelime {
+    animation: kapak-kelime 700ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(80ms + var(--i, 0) * 70ms);
+  }
+  :root:not([data-motion="reduced"]) .kapak-giris {
+    animation: kapak-yuksel 640ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(120ms + var(--i, 0) * 90ms);
+  }
+  :root:not([data-motion="reduced"]) .kapak-satir {
+    animation: kapak-yuksel 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(650ms + var(--i, 0) * 60ms);
+  }
+  :root:not([data-motion="reduced"]) .belir:not([data-gorundu]) {
+    opacity: 0;
+  }
+  :root:not([data-motion="reduced"]) .belir[data-gorundu] {
+    animation: kapak-belir 760ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: var(--belir-gecikme, 0ms);
+  }
+  :root:not([data-motion="reduced"]) .kapak-kart {
+    transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 420ms ease;
+  }
+  :root:not([data-motion="reduced"]) .kapak-kart:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 28px 50px -34px color-mix(in oklab, var(--color-ink) 60%, transparent);
+  }
+  /* Kenar çubuğunda seçili öğe, sayfa değişince yerine yaylanarak oturuyor. */
+  :root:not([data-motion="reduced"]) .sidebar-item[aria-current] {
+    animation: kapak-hap 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+@keyframes kapak-yuksel {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes kapak-belir {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+@keyframes kapak-kelime {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+    filter: blur(6px);
+  }
+}
+@keyframes kapak-hap {
+  from {
+    transform: scale(0.94);
+  }
+}
+
+/* ------------------------------------------------------------------
+   Düğmeler: keskin köşe, basınca çökme. Üstüne gelince kalkmıyor ve
+   parlamıyor; geri bildirim parmağın altında, basıldığı an.
+
+   Giriş alanları ve başlıktaki arama kutuları da aynı köşeyi alıyor — hap
+   biçimli bir kutunun yanında köşeli bir düğme iki ayrı dil gibi duruyordu.
+   ------------------------------------------------------------------ */
+@layer components {
+  .panel-scope .btn {
+    border-radius: 6px;
+  }
+  .panel-scope .btn:hover {
+    transform: none;
+  }
+  .panel-scope .btn-primary::after {
+    display: none;
+  }
+  .panel-scope .btn:active {
+    transform: scale(0.93) !important;
+    transition-duration: 90ms;
+  }
+  .panel-scope .input,
+  .panel-scope .page-header .rounded-md {
+    border-radius: 6px;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Yükleme: iskelet blokların (`.iskelet`, Skeleton.tsx) üstünden soldan
+   sağa bir ışık geçiyor.
+   ------------------------------------------------------------------ */
+.iskelet {
+  animation: iskelet-parilti 1.3s ease-in-out infinite;
+  background: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--color-border) 70%, transparent) 30%,
+    color-mix(in oklab, var(--color-border) 25%, transparent) 50%,
+    color-mix(in oklab, var(--color-border) 70%, transparent) 70%
+  );
+  background-size: 300% 100%;
+}
+@keyframes iskelet-parilti {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iskelet {
+    animation: none;
+  }
+}
+:root[data-motion="reduced"] .iskelet {
+  animation: none;
+}

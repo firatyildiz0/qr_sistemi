@@ -189,7 +189,7 @@ function YonetimLink({ promise }: { promise: Promise<Identity> }) {
 }
 
 const avatarClass =
-  "flex items-center justify-center rounded-full bg-accent font-semibold text-white shadow-[0_6px_14px_-8px_var(--color-accent)]";
+  "flex items-center justify-center rounded-full bg-accent font-semibold text-white";
 
 function AvatarShell({ className }: { className: string }) {
   return <span className={`${avatarClass} ${className}`} aria-hidden="true" />;

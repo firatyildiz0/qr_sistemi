@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Ürün formunda barkod alanı kalktı, günlük fiyat zorunlu oldu",
+  "aciklama": "Ürün eklerken ve düzenlerken barkod numarası artık sorulmuyor; yeni ürünlere numara kendiliğinden veriliyor, mevcut ürünlerin numarası korunuyor. 'Ad' alanı 'Ürün adı' oldu. Günlük kiralama fiyatı girilmeden ürün kaydedilemiyor.",
+  "dikkat": null
+}

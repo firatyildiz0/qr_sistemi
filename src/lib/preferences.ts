@@ -24,8 +24,18 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
  * them apart from someone who picked it on purpose. Bumping this resets the
  * accent — and only the accent — the next time the cookie is read; theme,
  * density, radius, motion and rail state are all deliberate, so they survive.
+ *
+ * Sürüm 3 aynı sorunu temada çözüyor: varsayılan "Sistem"den "Açık"a geçti,
+ * ama raylı paneli daraltan herkesin çerezine o günün varsayılanı "system"
+ * yazılmıştı. Sürüm 3'ten eski bir çerezdeki "system" bilerek seçilmiş bir
+ * tercih sayılmıyor ve açık temaya dönüyor; açık ya da koyu seçmiş olanlar
+ * etkilenmiyor.
  */
-const PREFERENCES_VERSION = 2;
+const PREFERENCES_VERSION = 3;
+/** Vurgu rengi bu sürümden beri güvenilir (bkz. yukarı). */
+const ACCENT_SINCE_VERSION = 2;
+/** Tema bu sürümden beri güvenilir. */
+const THEME_SINCE_VERSION = 3;
 
 export const THEMES = ["system", "light", "dark"] as const;
 export const ACCENTS = ["marka", "sedef", "ember", "forest", "ocean", "violet", "rose"] as const;
@@ -49,8 +59,12 @@ export type Preferences = {
   sidebar: Sidebar;
 };
 
+/**
+ * Site herkese açık renkte açılıyor; telefon ya da bilgisayar karanlık modda
+ * olsa bile. Koyu tema anasayfadaki düğmeden ya da Ayarlar'dan seçiliyor.
+ */
 export const DEFAULT_PREFERENCES: Preferences = {
-  theme: "system",
+  theme: "light",
   accent: "marka",
   density: "normal",
   radius: "normal",
@@ -79,12 +93,14 @@ export function parsePreferences(raw: string | undefined): Preferences {
   if (typeof parsed !== "object" || parsed === null) return DEFAULT_PREFERENCES;
 
   const value = parsed as Record<string, unknown>;
-  const current = value.v === PREFERENCES_VERSION;
+  const surum = typeof value.v === "number" ? value.v : 0;
+  const theme = pick(THEMES, value.theme, DEFAULT_PREFERENCES.theme);
   return {
-    theme: pick(THEMES, value.theme, DEFAULT_PREFERENCES.theme),
-    accent: current
-      ? pick(ACCENTS, value.accent, DEFAULT_PREFERENCES.accent)
-      : DEFAULT_PREFERENCES.accent,
+    theme: surum < THEME_SINCE_VERSION && theme === "system" ? DEFAULT_PREFERENCES.theme : theme,
+    accent:
+      surum >= ACCENT_SINCE_VERSION
+        ? pick(ACCENTS, value.accent, DEFAULT_PREFERENCES.accent)
+        : DEFAULT_PREFERENCES.accent,
     density: pick(DENSITIES, value.density, DEFAULT_PREFERENCES.density),
     radius: pick(RADII, value.radius, DEFAULT_PREFERENCES.radius),
     reduceMotion: value.reduceMotion === true,
@@ -127,6 +143,18 @@ export function applyPreferences(preferences: Preferences, prefersDark: boolean)
 }
 
 /**
+ * Açık ile koyu arasında geçiş: anasayfanın menüsündeki düğme. "Sistem"
+ * seçili olsa bile ekranda ne görünüyorsa onun tersine geçiyor, seçim de
+ * kalıcı oluyor.
+ */
+export function toggleTheme(): "light" | "dark" {
+  const theme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  savePreferences({ ...readPreferences(), theme });
+  document.documentElement.setAttribute("data-theme", theme);
+  return theme;
+}
+
+/**
  * Flips the desktop rail and persists it. Written straight to `<html>` rather
  * than through React state: the collapse is pure CSS, so there is nothing to
  * re-render, and the pre-hydration script restores it with no flash on reload.
@@ -149,13 +177,14 @@ export function toggleSidebar(): Sidebar {
  * rewritten the cookie without a reload.
  */
 export const PREFERENCES_SCRIPT = `(function(){try{
-var K=${JSON.stringify(PREFERENCES_COOKIE)},D=${JSON.stringify(DEFAULT_PREFERENCES)},V=${PREFERENCES_VERSION};
+var K=${JSON.stringify(PREFERENCES_COOKIE)},D=${JSON.stringify(DEFAULT_PREFERENCES)},VA=${ACCENT_SINCE_VERSION},VT=${THEME_SINCE_VERSION};
 var q=window.matchMedia("(prefers-color-scheme: dark)");
 function read(){var m=document.cookie.match(new RegExp("(?:^|; )"+K+"=([^;]*)"));if(!m)return D;
 try{var p=JSON.parse(decodeURIComponent(m[1]));return p&&typeof p==="object"?p:D}catch(e){return D}}
-function apply(){var p=read(),r=document.documentElement,t=p.theme;
+function apply(){var p=read(),r=document.documentElement,v=typeof p.v==="number"?p.v:0,t=p.theme;
+if(v<VT&&t==="system")t=D.theme;
 r.setAttribute("data-theme",t==="dark"||t==="light"?t:(q.matches?"dark":"light"));
-r.setAttribute("data-accent",p.v===V&&p.accent?p.accent:D.accent);
+r.setAttribute("data-accent",v>=VA&&p.accent?p.accent:D.accent);
 r.setAttribute("data-density",p.density||D.density);
 r.setAttribute("data-radius",p.radius||D.radius);
 r.setAttribute("data-motion",p.reduceMotion?"reduced":"full");

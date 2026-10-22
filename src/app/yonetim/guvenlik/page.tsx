@@ -38,6 +38,7 @@ const KIND_LABEL: Record<SecurityEventKind, string> = {
   login_ok: "Giriş yapıldı",
   signup: "Yeni kayıt",
   qr_talep: "QR rezervasyon talebi",
+  fikir: "Öneri formu",
   rate_limited: "Hız sınırı devreye girdi",
   unauthorized: "Yetkisiz erişim denemesi",
   cron_unauthorized: "Cron ucuna geçersiz istek",

@@ -53,7 +53,7 @@ export default function HizmetYelpazesi({
       tur: "fikir",
       rozet: "Öneri",
       metin: "İşinizde hâlâ defterle ya da telefonla yürüyen bir iş varsa anlatın.",
-      bag: { href: "/hakkimizda#iletisim", ad: "Bize yazın" },
+      bag: { href: "/fikir", ad: "Bize yazın" },
     },
   ];
 

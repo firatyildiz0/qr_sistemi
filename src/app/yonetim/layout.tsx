@@ -8,6 +8,7 @@ import {
   IconChart,
   IconGauge,
   IconGrid,
+  IconInbox,
   IconLogOut,
   IconShield,
   IconUsers,
@@ -40,7 +41,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
         </form>
       </header>
 
-      {/* Beş sayfalık bir panel; aktif sekmeyi işaretlemek için istemci
+      {/* Altı sayfalık bir panel; aktif sekmeyi işaretlemek için istemci
           bileşenine geçmeye değmiyor, bağlantılar yeterli. Dar ekranda sekmeler
           sığmıyor: sarmak yerine yana kaydırılıyorlar, sıra tek satırda kalsın. */}
       <nav className="border-b border-border bg-surface px-4 sm:px-8">
@@ -51,6 +52,13 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
           >
             <IconUsers className="h-4 w-4" />
             Kullanıcılar
+          </Link>
+          <Link
+            href="/yonetim/fikirler"
+            className="flex items-center gap-2 px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <IconInbox className="h-4 w-4" />
+            Fikirler
           </Link>
           <Link
             href="/yonetim/istatistik"

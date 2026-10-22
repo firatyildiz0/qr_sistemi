@@ -19,6 +19,8 @@ export type SecurityEventKind =
   | "signup"
   /** Müşteri bir ürünün QR sayfasından rezervasyon talebi bıraktı. */
   | "qr_talep"
+  /** Ziyaretçi anasayfadaki "Fikriniz mi var?" formundan öneri gönderdi. */
+  | "fikir"
   | "rate_limited"
   | "unauthorized"
   | "cron_unauthorized"
@@ -112,6 +114,8 @@ const LIMITS = {
   signupPerIp: { max: 5, windowMinutes: 60 },
   /** Aynı IP: bir saatte 5 QR rezervasyon talebi (aşağıdaki gerekçe). */
   qrTalepPerIp: { max: 5, windowMinutes: 60 },
+  /** Aynı IP: bir saatte 3 öneri. Gerçek biri bir saatte üçten fazla yazmaz. */
+  fikirPerIp: { max: 3, windowMinutes: 60 },
 };
 
 export type RateLimitResult = { allowed: true } | { allowed: false; message: string };
@@ -242,6 +246,34 @@ export async function checkQrTalepRateLimit(): Promise<RateLimitResult> {
     return { allowed: false, message: QR_TALEP_BLOCKED_MESSAGE };
   } catch (error) {
     console.error("[security] QR talep hız sınırı okunamadı:", error);
+    return { allowed: true };
+  }
+}
+
+const FIKIR_BLOCKED_MESSAGE =
+  "Bu bağlantıdan kısa sürede çok fazla mesaj gönderildi. Bir saat sonra tekrar deneyin.";
+
+/**
+ * "Fikriniz mi var?" formunun eşiği. Form oturum istemiyor; sınır olmasa bir
+ * bot öneri tablosunu dakikalar içinde doldurabilirdi.
+ */
+export async function checkFikirRateLimit(): Promise<RateLimitResult> {
+  try {
+    const { ip } = await requestContext();
+    if (!ip) return { allowed: true };
+
+    const recent = await countRecent("ip", ip, "fikir", LIMITS.fikirPerIp.windowMinutes);
+    if (recent < LIMITS.fikirPerIp.max) return { allowed: true };
+
+    await recordSecurityEvent({
+      kind: "rate_limited",
+      severity: "warning",
+      detail: { fikirlerForIp: recent, reason: "fikir_ip" },
+    });
+
+    return { allowed: false, message: FIKIR_BLOCKED_MESSAGE };
+  } catch (error) {
+    console.error("[security] öneri hız sınırı okunamadı:", error);
     return { allowed: true };
   }
 }

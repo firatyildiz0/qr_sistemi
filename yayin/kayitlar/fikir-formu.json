@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Anasayfadaki \"Fikriniz mi var?\" kartından öneri gönderilebiliyor",
+  "aciklama": "\"Bize yazın\" bağlantısı artık yeni bir form sayfası açıyor. Ziyaretçinin gönderdiği fikir, iletişim bilgisiyle birlikte yönetim panelindeki yeni Fikirler sekmesine düşüyor; oradan okundu işaretlenip arşivlenebiliyor.",
+  "dikkat": "Canlıya almadan önce Supabase SQL editöründe 0033_fikirler.sql migration'ını çalıştırın; çalıştırılmazsa form gönderimi hata verir ve Fikirler sekmesi boş görünür."
+}

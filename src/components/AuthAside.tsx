@@ -17,7 +17,7 @@ import Logo from "@/components/Logo";
  */
 
 /** Etiketteki kodun gerçekten götürdüğü yer. */
-const QR_TARGET = "https://qrsistemi.vercel.app/";
+const QR_TARGET = "https://voyolabs.com/";
 
 /** Ürün sayfasındaki müsaitlik şeridinin gösterdiği günler. */
 const DAYS = Array.from({ length: 10 }, (_, i) => i + 1);

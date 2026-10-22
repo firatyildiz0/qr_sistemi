@@ -10,7 +10,7 @@ import {
   statusLabel,
   type SubscriptionView,
 } from "@/lib/subscription";
-import { iyzicoConfig } from "@/lib/iyzico";
+import { iyzicoConfig, planFor } from "@/lib/iyzico";
 import { ABONELIK, SATICI } from "@/lib/yasal";
 import { signOut } from "@/app/login/actions";
 import SubscribeForm from "./SubscribeForm";
@@ -59,7 +59,12 @@ export default async function SubscriptionPage({
 
   // Aboneliği çalışan biri buraya kendi isteğiyle gelmiş olabilir — ekranı
   // görsün, ama ödeme formu yerine durumunu görsün.
-  const configured = iyzicoConfig() !== null;
+  const config = iyzicoConfig();
+  const configured = config !== null;
+  // Test hesabı farklı bir plandan, farklı tutar öder (bkz. `planFor`);
+  // ekrandaki tutar karttan çekilecek olanla aynı olsun.
+  const plan = config ? planFor(config, profile.username) : null;
+  const price = plan?.priceTry ?? MONTHLY_PRICE_TRY;
   const nonce = headerList.get("x-nonce") ?? undefined;
 
   return (
@@ -84,10 +89,16 @@ export default async function SubscriptionPage({
         </header>
 
         <Outcome outcome={durum} />
+        {plan?.test && (
+          <p className="mb-6 rounded-[--radius-md] border border-border bg-partial-soft px-4 py-3 text-sm text-ink">
+            <strong>Test hesabı.</strong> Bu hesap deneme planıyla öder: kartınızdan aylık{" "}
+            {TRY.format(price)} çekilir. Diğer satıcılar {TRY.format(MONTHLY_PRICE_TRY)} öder.
+          </p>
+        )}
         <StatusBanner subscription={subscription} />
 
         <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-          <PlanCard subscription={subscription} />
+          <PlanCard subscription={subscription} planPrice={price} />
 
           <section className="rounded-[--radius-lg] border border-border bg-paper p-5 sm:p-6">
             {subscription?.active && subscription.status !== "trialing" ? (
@@ -98,7 +109,7 @@ export default async function SubscriptionPage({
               <>
                 <h2 className="text-lg font-semibold text-ink">Fatura bilgileri</h2>
                 <p className="mb-5 mt-1 text-sm text-ink-muted">
-                  Aylık {TRY.format(MONTHLY_PRICE_TRY)} tutarında tahsilat yapılır.
+                  Aylık {TRY.format(price)} tutarında tahsilat yapılır.
                   Dilediğiniz zaman iptal edebilirsiniz.
                 </p>
                 <SubscribeForm nonce={nonce} />
@@ -166,10 +177,16 @@ function StatusBanner({ subscription }: { subscription: SubscriptionView | null 
 }
 
 /** Fiyat ve kapsam. */
-function PlanCard({ subscription }: { subscription: SubscriptionView | null }) {
+function PlanCard({
+  subscription,
+  planPrice,
+}: {
+  subscription: SubscriptionView | null;
+  planPrice: number;
+}) {
   // Mevcut abone farklı bir tutar ödüyor olabilir (fiyat sonradan değişmişse);
   // kendi ödediğini görsün.
-  const price = subscription?.priceTry ?? MONTHLY_PRICE_TRY;
+  const price = subscription?.priceTry ?? planPrice;
 
   return (
     <section className="rounded-[--radius-lg] border border-border bg-paper p-5 sm:p-6">

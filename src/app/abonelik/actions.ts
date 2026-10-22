@@ -8,6 +8,7 @@ import {
   cancelSubscription,
   initializeSubscriptionCheckout,
   iyzicoConfig,
+  planFor,
   type IyzicoCustomer,
 } from "@/lib/iyzico";
 import { isProvince } from "@/lib/turkiye";
@@ -147,10 +148,13 @@ export async function startCheckout(
     return { error: "Site adresi yapılandırılmadı, ödeme başlatılamıyor." };
   }
 
+  const plan = planFor(config, profile.username);
+
   const result = await initializeSubscriptionCheckout(config, {
     callbackUrl: `${siteUrl.replace(/\/+$/, "")}/abonelik/tamamlandi`,
     customer: customer.values,
     conversationId: user.id,
+    pricingPlanRef: plan.ref,
   });
 
   if (!result.ok) return { error: result.error };
@@ -166,7 +170,8 @@ export async function startCheckout(
     {
       owner_id: user.id,
       pending_checkout_token: result.data.token,
-      iyzico_plan_ref: config.pricingPlanRef,
+      // Dönüşte kayda yazılacak tutar buradan bulunuyor (bkz. `priceForPlan`).
+      iyzico_plan_ref: plan.ref,
     },
     { onConflict: "owner_id" }
   );

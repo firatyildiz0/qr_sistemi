@@ -11,7 +11,8 @@
  *   node scripts/iyzico-plan.mjs
  *   npm run iyzico:plan
  *
- * Bir kez çalıştırılır. İkinci çalıştırma *yeni* bir plan oluşturur — iyzico
+ * Bir kez çalıştırılır. İkinci çalıştırma *yeni* bir plan oluşturur
+ * (ürün zaten varsa `IYZICO_PRODUCT_REF` ile onun altına) — iyzico
  * planın fiyatını sonradan değiştirmeye izin vermiyor, fiyat değişikliği yeni
  * bir plan demek. Eski aboneler eski plandan devam eder, bu beklenen davranış.
  */
@@ -109,13 +110,20 @@ async function main() {
   const live = process.env.IYZICO_ENV === "production";
   console.log(`Ortam: ${live ? "CANLI" : "sandbox"}\n`);
 
-  const product = await call("POST", "/v2/subscription/products", {
-    locale: "tr",
-    name: PRODUCT_NAME,
-    description: "Kiralama paneli aylık aboneliği",
-  });
+  // Ürün zaten varsa (iyzico aynı adla ikinci ürüne izin vermiyor) yeni plan
+  // onun altına açılıyor: `IYZICO_PRODUCT_REF=<kod> IYZICO_PRICE_TRY=1 ...`
+  // — fiyat değişikliği ya da test planı için.
+  const product = process.env.IYZICO_PRODUCT_REF
+    ? { referenceCode: process.env.IYZICO_PRODUCT_REF }
+    : await call("POST", "/v2/subscription/products", {
+        locale: "tr",
+        name: PRODUCT_NAME,
+        description: "Kiralama paneli aylık aboneliği",
+      });
 
-  console.log(`Ürün oluşturuldu: ${product.referenceCode}`);
+  console.log(
+    `Ürün ${process.env.IYZICO_PRODUCT_REF ? "kullanılıyor" : "oluşturuldu"}: ${product.referenceCode}`
+  );
 
   const plan = await call(
     "POST",

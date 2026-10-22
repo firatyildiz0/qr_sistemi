@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { MONTHLY_PRICE_TRY, paidPeriodEnd } from "@/lib/subscription";
+import { paidPeriodEnd } from "@/lib/subscription";
 import {
   iyzicoConfig,
+  priceForPlan,
   retrieveSubscriptionCheckout,
   type IyzicoSubscriptionStatus,
 } from "@/lib/iyzico";
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
   // (aynı token ikinci kez kullanılamıyor, çünkü aşağıda temizleniyor).
   const { data: row } = await admin
     .from("subscriptions")
-    .select("owner_id")
+    .select("owner_id, iyzico_plan_ref")
     .eq("pending_checkout_token", token)
     .maybeSingle();
 
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
       current_period_end: mapped.grantsAccess ? paidPeriodEnd() : null,
       iyzico_subscription_ref: result.data.subscriptionRef,
       iyzico_customer_ref: result.data.customerRef,
-      price_try: mapped.grantsAccess ? MONTHLY_PRICE_TRY : null,
+      price_try: mapped.grantsAccess ? priceForPlan(row.iyzico_plan_ref) : null,
       last_event_at: new Date().toISOString(),
       last_failure_reason: mapped.grantsAccess ? null : `iyzico: ${result.data.status}`,
       // Token tek kullanımlık: temizlenmezse aynı token'la tekrar tekrar

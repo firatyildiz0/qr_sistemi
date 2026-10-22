@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { MONTHLY_PRICE_TRY } from "@/lib/subscription";
 
 /**
  * iyzico abonelik API'si — sunucu tarafı istemci.
@@ -52,6 +53,47 @@ export function iyzicoConfig(): IyzicoConfig | null {
     // ortam değişkeni yüzünden gerçek kart çekilmesin.
     baseUrl: process.env.IYZICO_ENV === "production" ? PRODUCTION_BASE : SANDBOX_BASE,
   };
+}
+
+/** Bir hesabın ödeyeceği plan: iyzico'daki referansı ve tahsil edilen tutar. */
+export type IyzicoPlan = { ref: string; priceTry: number; test: boolean };
+
+/**
+ * Test planı. Canlı hesapta gerçek kartla uçtan uca deneme yapabilmek için:
+ * `IYZICO_TEST_USERNAMES`'te (virgülle ayrılmış) adı geçen hesaplar
+ * `IYZICO_TEST_PLAN_REF` planıyla, `IYZICO_TEST_PRICE_TRY` tutarından öder;
+ * diğer herkes asıl planla. Üçünden biri eksikse test planı yok.
+ *
+ * Hesap listesi ortam değişkeninde, kodda değil: denemeyi başka bir hesaba
+ * taşımak ya da kapatmak yayın gerektirmesin, yalnızca yeniden başlatma.
+ */
+function testPlan(): { ref: string; priceTry: number; usernames: string[] } | null {
+  const ref = process.env.IYZICO_TEST_PLAN_REF?.trim();
+  const priceTry = Number(process.env.IYZICO_TEST_PRICE_TRY);
+  const usernames = (process.env.IYZICO_TEST_USERNAMES ?? "")
+    .split(",")
+    .map((name) => name.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!ref || !(priceTry > 0) || usernames.length === 0) return null;
+  return { ref, priceTry, usernames };
+}
+
+export function planFor(config: IyzicoConfig, username: string): IyzicoPlan {
+  const test = testPlan();
+  if (test && test.usernames.includes(username.toLowerCase())) {
+    return { ref: test.ref, priceTry: test.priceTry, test: true };
+  }
+  return { ref: config.pricingPlanRef, priceTry: MONTHLY_PRICE_TRY, test: false };
+}
+
+/**
+ * Ödeme dönüşünde kayda yazılacak tutar: ödemenin başladığı plana göre.
+ * Test planıyla ödeyen hesabın kaydında 1.999 TL yazmasın.
+ */
+export function priceForPlan(planRef: string | null): number {
+  const test = testPlan();
+  return test && planRef === test.ref ? test.priceTry : MONTHLY_PRICE_TRY;
 }
 
 export function isSandbox(config: IyzicoConfig): boolean {
@@ -207,7 +249,12 @@ export type CheckoutForm = {
  */
 export async function initializeSubscriptionCheckout(
   config: IyzicoConfig,
-  options: { callbackUrl: string; customer: IyzicoCustomer; conversationId: string }
+  options: {
+    callbackUrl: string;
+    customer: IyzicoCustomer;
+    conversationId: string;
+    pricingPlanRef: string;
+  }
 ): Promise<IyzicoResult<CheckoutForm>> {
   const result = await request<{
     token?: string;
@@ -218,7 +265,7 @@ export async function initializeSubscriptionCheckout(
     locale: "tr",
     conversationId: options.conversationId,
     callbackUrl: options.callbackUrl,
-    pricingPlanReferenceCode: config.pricingPlanRef,
+    pricingPlanReferenceCode: options.pricingPlanRef,
     subscriptionInitialStatus: "ACTIVE",
     customer: options.customer,
   });

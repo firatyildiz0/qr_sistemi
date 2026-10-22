@@ -48,14 +48,17 @@ export function KiralamaBaglantisi({
   );
 }
 
-/** Bir günün kiralamaları, satır satır: ürün, müşteri, ne olduğu. */
+/**
+ * Bir günün kiralamaları, satır satır: ürün, müşteri ve ne olduğu — çıkış
+ * (ürün müşteriye gidiyor), dönüş (geri geliyor) ya da kirada.
+ */
 export function GunListesi({ gun, kiradaDahil = false }: { gun: Gun; kiradaDahil?: boolean }) {
   const satirlar = [
     ...gun.baslayan.map((k) => ({ k, tur: "baslar" as const })),
     ...gun.biten.map((k) => ({ k, tur: "biter" as const })),
     ...(kiradaDahil ? gun.kirada.map((k) => ({ k, tur: "kirada" as const })) : []),
   ];
-  const etiket = { baslar: "Başlıyor", biter: "Bitiyor", kirada: "Kirada" };
+  const etiket = { baslar: "Çıkış", biter: "Dönüş", kirada: "Kirada" };
   const renk = { baslar: "text-accent", biter: "text-ink-muted", kirada: "text-success" };
   const nokta = { baslar: "bg-accent", biter: "bg-ink-muted", kirada: "bg-success" };
   return (

@@ -226,10 +226,10 @@ function gunFarki(tarih: string, bugun: string) {
 function goreli(b: BookingHistoryRow, bugun: string) {
   if (b.status === "active") {
     const kalan = gunFarki(b.endDate, bugun);
-    return kalan === 0 ? "Bugün bitiyor" : kalan === 1 ? "Yarın bitiyor" : `${kalan} gün sonra bitiyor`;
+    return kalan === 0 ? "Bugün dönüyor" : kalan === 1 ? "Yarın dönüyor" : `${kalan} gün sonra dönüyor`;
   }
   const kalan = gunFarki(b.startDate, bugun);
-  return kalan === 1 ? "Yarın başlıyor" : `${kalan} gün sonra başlıyor`;
+  return kalan === 1 ? "Yarın çıkıyor" : `${kalan} gün sonra çıkıyor`;
 }
 
 /** "Önce sıradakiler"in bir bölümü: başlık, sayı ve satırlar. */

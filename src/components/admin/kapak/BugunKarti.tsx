@@ -25,8 +25,8 @@ function bosMu(gun: Gun) {
 }
 
 /**
- * Ana sayfanın takvim kartı: yedi gün, her günde o gün başlayan ve biten
- * kiralamalar. Saat yok — rezervasyonlar gün olarak tutuluyor.
+ * Ana sayfanın takvim kartı: yedi gün, her günde o gün çıkan (kiralaması
+ * başlayan) ve dönen (kiralaması biten) ürünler. Saat yok — rezervasyonlar gün olarak tutuluyor.
  *
  * Başlıktaki oklar haftayı kaydırıyor (geçmişe de); büyütme simgesi bütün ayı tam
  * ekranda açıyor. İkisi de yeni istek açmıyor: sayfa bütün kiralamaları
@@ -55,9 +55,13 @@ export default function BugunKarti({ kiralamalar, bugun }: { kiralamalar: Takvim
   const ust = (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
-        <h2 className="kapak-baslik m-0 text-[26px] font-extrabold leading-none text-ink sm:text-[32px]">{baslik}</h2>
+        <h2 className="kapak-baslik m-0 whitespace-nowrap text-[22px] font-extrabold leading-none text-ink sm:text-[32px]">
+          {baslik}
+        </h2>
         {ornek && (
-          <span className="rounded-[6px] bg-warning/15 px-2 py-1 text-[11px] font-bold text-warning">Örnek veri</span>
+          <span className="whitespace-nowrap rounded-[6px] bg-warning/15 px-2 py-1 text-[11px] font-bold text-warning">
+            Örnek veri
+          </span>
         )}
       </div>
       <div className="flex items-center gap-1.5">
@@ -125,16 +129,16 @@ function Oge({ k, tur, koyu }: { k: GunKiralama; tur: "baslar" | "biter"; koyu: 
   return (
     <KiralamaBaglantisi
       k={k}
-      title={`${k.urunAdi} · ${k.musteri} · ${tur === "baslar" ? "başlıyor" : "bitiyor"}`}
+      title={`${k.urunAdi} · ${k.musteri} · ${tur === "baslar" ? "çıkış" : "dönüş"}`}
       className={`flex min-w-0 items-center gap-1.5 rounded-[6px] px-1.5 py-1 text-[12px] font-semibold transition-colors ${
-        koyu ? "hover:bg-on-deep/10" : "hover:bg-card"
+        koyu ? "hover:bg-paper/10" : "hover:bg-card"
       }`}
     >
       <span
         aria-hidden="true"
-        className={`h-2 w-2 shrink-0 rounded-full ${tur === "baslar" ? "bg-accent" : koyu ? "bg-on-deep/50" : "bg-ink-muted"}`}
+        className={`h-2 w-2 shrink-0 rounded-full ${tur === "baslar" ? "bg-accent" : koyu ? "bg-paper/50" : "bg-ink-muted"}`}
       />
-      <span className="sr-only">{tur === "baslar" ? "Başlıyor:" : "Bitiyor:"}</span>
+      <span className="sr-only">{tur === "baslar" ? "Çıkış:" : "Dönüş:"}</span>
       <span className="truncate">{k.urunAdi}</span>
     </KiralamaBaglantisi>
   );
@@ -147,6 +151,8 @@ function Oge({ k, tur, koyu }: { k: GunKiralama; tur: "baslar" | "biter"; koyu: 
  */
 function SiganSerit({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
   const doluGunler = gunler.filter((g) => !bosMu(g));
+  const [hepsi, setHepsi] = useState(false);
+  const gorunen = hepsi ? doluGunler : doluGunler.slice(0, 2);
   return (
     <>
       <ol className="m-0 grid list-none grid-cols-7 gap-1.5 p-0 sm:gap-2">
@@ -156,13 +162,13 @@ function SiganSerit({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
             <li
               key={gun.tarih}
               className={`kapak-satir flex min-w-0 flex-col gap-2 rounded-[6px] p-2 sm:p-3 ${
-                koyu ? "bg-deep text-on-deep" : "bg-surface text-ink"
+                koyu ? "bg-ink text-paper" : "bg-surface text-ink"
               }`}
               style={{ "--i": i } as React.CSSProperties}
             >
               <div className="flex flex-col items-center gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wider sm:text-xs ${koyu ? "text-on-deep/70" : "text-ink-muted"}`}
+                  className={`text-[9px] font-bold uppercase sm:text-xs sm:tracking-wider ${koyu ? "text-paper/70" : "text-ink-muted"}`}
                 >
                   {koyu ? "Bugün" : gunAdi.format(utc(gun.tarih))}
                 </span>
@@ -170,22 +176,16 @@ function SiganSerit({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
                   {gunNo.format(utc(gun.tarih))}
                 </span>
               </div>
-              {/* Telefonda yalnızca noktalar. */}
-              <div className="flex min-h-1.5 flex-wrap justify-center gap-1 sm:hidden">
-                {gun.baslayan.map((k) => (
-                  <span key={`b-${k.id}`} title={`${k.urunAdi} · başlıyor`} className="h-1.5 w-1.5 rounded-full bg-accent" />
-                ))}
-                {gun.biten.map((k) => (
-                  <span
-                    key={`e-${k.id}`}
-                    title={`${k.urunAdi} · bitiyor`}
-                    className={`h-1.5 w-1.5 rounded-full ${koyu ? "bg-on-deep/50" : "bg-ink-muted"}`}
-                  />
-                ))}
+              {/* Telefonda tek işaret: bu günde çıkış ya da dönüş var. Hangisi
+                  olduğu şeridin altında yazıyla. */}
+              <div className="flex h-1.5 justify-center sm:hidden">
+                {!bosMu(gun) && (
+                  <span className={`h-1.5 w-1.5 rounded-full ${koyu ? "bg-paper" : "bg-accent"}`} />
+                )}
               </div>
               <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
                 {bosMu(gun) ? (
-                  <span className={`px-1.5 text-xs ${koyu ? "text-on-deep/45" : "text-ink-muted/60"}`}>—</span>
+                  <span className={`px-1.5 text-xs ${koyu ? "text-paper/45" : "text-ink-muted/60"}`}>—</span>
                 ) : (
                   <>
                     {gun.baslayan.slice(0, 3).map((k) => (
@@ -195,7 +195,7 @@ function SiganSerit({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
                       <Oge key={`e-${k.id}`} k={k} tur="biter" koyu={koyu} />
                     ))}
                     {gun.baslayan.length + gun.biten.length > 6 && (
-                      <span className={`px-1.5 text-xs font-semibold ${koyu ? "text-on-deep/60" : "text-ink-muted"}`}>
+                      <span className={`px-1.5 text-xs font-semibold ${koyu ? "text-paper/60" : "text-ink-muted"}`}>
                         +{gun.baslayan.length + gun.biten.length - 6} daha
                       </span>
                     )}
@@ -206,15 +206,25 @@ function SiganSerit({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
           );
         })}
       </ol>
-      {/* Telefonda adlar şeridin altında; yalnızca dolu günler. */}
+      {/* Telefonda adlar şeridin altında: yalnızca dolu günler, ilk ikisi.
+          Yedi günün hepsi alt alta dizilince liste ekranları buluyordu. */}
       {doluGunler.length > 0 && (
         <div className="mt-4 flex flex-col gap-3 sm:hidden">
-          {doluGunler.map((g) => (
+          {gorunen.map((g) => (
             <div key={g.tarih}>
               <p className="m-0 text-xs font-bold uppercase tracking-wider text-ink-muted">{gunBasligi(g.tarih, bugun)}</p>
               <GunListesi gun={g} />
             </div>
           ))}
+          {doluGunler.length > gorunen.length && (
+            <button
+              type="button"
+              onClick={() => setHepsi(true)}
+              className="h-10 rounded-[6px] border border-border text-sm font-semibold text-ink transition-colors hover:border-ink-muted"
+            >
+              Diğer günleri göster ({doluGunler.length - gorunen.length})
+            </button>
+          )}
         </div>
       )}
     </>
@@ -231,7 +241,7 @@ function Ajanda({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
   if (doluGunler.length === 0) {
     return (
       <p className="m-0 text-[15px] text-ink-muted">
-        <span className="font-semibold text-ink">Bu 7 gün boş.</span> Başlayan ya da biten kiralama yok.
+        <span className="font-semibold text-ink">Bu 7 gün boş.</span> Çıkış ya da dönüş yok.
       </p>
     );
   }
@@ -241,10 +251,10 @@ function Ajanda({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
       {doluGunler.map((g, sira) => (
         <li
           key={g.tarih}
-          className="kapak-satir grid grid-cols-[72px_1fr] gap-4 border-t border-border pt-3 first:border-0 first:pt-0 sm:grid-cols-[110px_1fr]"
+          className="kapak-satir grid grid-cols-1 gap-x-4 border-t border-border pt-3 first:border-0 first:pt-0 sm:grid-cols-[110px_minmax(0,1fr)]"
           style={{ "--i": sira } as React.CSSProperties}
         >
-          <div className="pt-2">
+          <div className="flex items-baseline gap-2 sm:block sm:pt-2">
             <p className={`m-0 text-sm font-bold ${g.tarih === bugun ? "text-accent" : "text-ink"}`}>
               {gunBasligi(g.tarih, bugun)}
             </p>
@@ -279,27 +289,20 @@ function GunSecici({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
               aria-selected={sec}
               onClick={() => setSecili(i)}
               className={`flex flex-col items-center gap-1 rounded-[6px] px-1 py-2.5 transition-colors ${
-                sec ? "bg-deep text-on-deep" : "bg-surface text-ink hover:bg-border/60"
+                sec ? "bg-ink text-paper" : "bg-surface text-ink hover:bg-border/60"
               }`}
             >
               <span
-                className={`text-[10px] font-bold uppercase tracking-wider sm:text-xs ${sec ? "text-on-deep/70" : "text-ink-muted"}`}
+                className={`text-[9px] font-bold uppercase sm:text-xs sm:tracking-wider ${sec ? "text-paper/70" : "text-ink-muted"}`}
               >
                 {g.tarih === bugun ? "Bugün" : gunAdi.format(utc(g.tarih))}
               </span>
               <span className="kapak-baslik text-xl font-extrabold leading-none sm:text-2xl">
                 {gunNo.format(utc(g.tarih))}
               </span>
-              <span className="flex h-1.5 gap-1">
-                {g.baslayan.length > 0 && (
-                  <span title={`${g.baslayan.length} kiralama başlıyor`} className="h-1.5 w-1.5 rounded-full bg-accent" />
-                )}
-                {g.biten.length > 0 && (
-                  <span
-                    title={`${g.biten.length} kiralama bitiyor`}
-                    className={`h-1.5 w-1.5 rounded-full ${sec ? "bg-on-deep/60" : "bg-ink-muted"}`}
-                  />
-                )}
+              {/* Tek işaret: bu günde çıkış ya da dönüş var. Ne olduğu altta. */}
+              <span className="flex h-1.5">
+                {!bosMu(g) && <span className={`h-1.5 w-1.5 rounded-full ${sec ? "bg-paper" : "bg-accent"}`} />}
               </span>
             </button>
           );
@@ -311,7 +314,7 @@ function GunSecici({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
           {gunBasligi(gun.tarih, bugun)}, {gunAy.format(utc(gun.tarih))}
         </p>
         {bosMu(gun) ? (
-          <p className="m-0 py-2 text-sm text-ink-muted">Bu gün başlayan ya da biten kiralama yok.</p>
+          <p className="m-0 py-2 text-sm text-ink-muted">Bu gün çıkış ya da dönüş yok.</p>
         ) : (
           <GunListesi gun={gun} />
         )}

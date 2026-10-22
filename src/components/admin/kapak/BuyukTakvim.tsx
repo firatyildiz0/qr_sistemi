@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { formatDateRange } from "@/lib/bookings";
 import { gunEkle, gunleriOlustur, utc, type Gun, type TakvimKiralama } from "@/components/admin/kapak/takvim";
@@ -41,8 +41,8 @@ function izgara(kiralamalar: TakvimKiralama[], ay: string): Gun[] {
 }
 
 /**
- * Takvimin büyütülmüş hâli: tam ekran bir ay. Her günde o gün başlayan ve
- * biten kiralamalar, arada süren kiralamaların sayısı; bir güne basınca o
+ * Takvimin büyütülmüş hâli: tam ekran bir ay. Her günde o gün çıkan ve dönen
+ * ürünler, arada süren kiralamaların sayısı; bir güne basınca o
  * günün tam listesi yanda (telefonda altta).
  *
  * Aylar oklarla geziliyor; "Tarih seç" belirli bir güne ya da bir tarih
@@ -65,6 +65,7 @@ export default function BuyukTakvim({
   const [secili, setSecili] = useState(baslangic);
   const [aralik, setAralik] = useState<Aralik | null>(null);
   const [tarihAcik, setTarihAcik] = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
 
   const gunler = useMemo(() => izgara(kiralamalar, ay), [kiralamalar, ay]);
   const seciliGun = useMemo(
@@ -98,6 +99,22 @@ export default function BuyukTakvim({
     setAralik(null);
     setSecili(tarih);
     setAy(ayBasi(tarih));
+  }
+
+  /**
+   * Izgaradan bir gün seçildi. Telefonda o günün listesi ızgaranın altında,
+   * çoğu zaman ekranın dışında kalıyor; dokunuşun bir şey yaptığı görünsün diye
+   * liste görünür alana kaydırılıyor. Masaüstünde liste zaten yanda.
+   */
+  function izgaradanSec(tarih: string) {
+    gunSec(tarih);
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    const azalt =
+      document.documentElement.dataset.motion === "reduced" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    requestAnimationFrame(() =>
+      panelRef.current?.scrollIntoView({ behavior: azalt ? "auto" : "smooth", block: "start" }),
+    );
   }
 
   function aralikSec(yeni: Aralik) {
@@ -207,25 +224,27 @@ export default function BuyukTakvim({
                   secili={!aralik && gun.tarih === secili}
                   aralikta={!!aralik && aralik.bas <= gun.tarih && gun.tarih <= aralik.son}
                   bugun={gun.tarih === bugun}
-                  onSec={() => gunSec(gun.tarih)}
+                  onSec={() => izgaradanSec(gun.tarih)}
                 />
               ))}
             </div>
-            <p className="m-0 mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+            {/* Telefonda yok: orada gün kutusunda tek işaret var, ayrıntı
+                altta yazıyla. */}
+            <p className="m-0 mt-4 hidden flex-wrap items-center gap-x-5 gap-y-1 text-xs text-ink-muted sm:flex">
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-accent" /> Kiralama o gün başlıyor
+                <span className="h-2 w-2 rounded-full bg-accent" /> Çıkış · ürün müşteriye gidiyor
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-ink-muted" /> O gün bitiyor, ürün dönüyor
+                <span className="h-2 w-2 rounded-full bg-ink-muted" /> Dönüş · ürün geri geliyor
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-success" /> Ürün kirada
+                <span className="h-2 w-2 rounded-full bg-success" /> Kirada
               </span>
             </p>
           </div>
 
           {/* YAN PANEL */}
-          <aside className="border-t border-border p-4 sm:p-6 lg:w-[360px] lg:shrink-0 lg:overflow-y-auto lg:border-l lg:border-t-0">
+          <aside ref={panelRef} className="scroll-mt-2 border-t border-border p-4 sm:p-6 lg:w-[360px] lg:shrink-0 lg:overflow-y-auto lg:border-l lg:border-t-0">
             {aralik ? (
               <AralikOzeti aralik={aralik} kiralamalar={kiralamalar} />
             ) : (
@@ -238,7 +257,7 @@ export default function BuyukTakvim({
                 </h3>
                 <div className="mt-4">
                   {seciliGun.baslayan.length + seciliGun.biten.length + seciliGun.kirada.length === 0 ? (
-                    <p className="m-0 text-sm text-ink-muted">Bu gün başlayan, biten ya da kirada olan kiralama yok.</p>
+                    <p className="m-0 text-sm text-ink-muted">Bu gün çıkış, dönüş ya da kirada ürün yok.</p>
                   ) : (
                     <GunListesi gun={seciliGun} kiradaDahil />
                   )}
@@ -270,7 +289,7 @@ function GunKutusu({
 }) {
   const sayi = gun.baslayan.length + gun.biten.length;
   const zemin = secili
-    ? "bg-deep text-on-deep"
+    ? "bg-ink text-paper"
     : aralikta
       ? "bg-accent-soft text-ink ring-1 ring-inset ring-accent/40"
       : ayinda
@@ -282,7 +301,7 @@ function GunKutusu({
       type="button"
       onClick={onSec}
       aria-pressed={secili}
-      aria-label={`${gunAy.format(utc(gun.tarih))}: ${gun.baslayan.length} başlıyor, ${gun.biten.length} bitiyor, ${gun.kirada.length} kirada`}
+      aria-label={`${gunAy.format(utc(gun.tarih))}: ${gun.baslayan.length} çıkış, ${gun.biten.length} dönüş, ${gun.kirada.length} kirada`}
       className={`flex min-h-[64px] min-w-0 flex-col gap-1 rounded-[6px] p-1.5 text-left transition-colors sm:min-h-[104px] sm:p-2 ${zemin}`}
     >
       <span className="flex items-center justify-between gap-1">
@@ -296,22 +315,17 @@ function GunKutusu({
         {gun.kirada.length > 0 && (
           <span
             className={`hidden rounded-[6px] px-1.5 py-0.5 text-[10px] font-bold sm:inline ${
-              secili ? "bg-on-deep/15 text-on-deep" : "bg-success/12 text-success"
+              secili ? "bg-paper/15 text-paper" : "bg-success/12 text-success"
             }`}
           >
             {gun.kirada.length} kirada
           </span>
         )}
       </span>
-      {/* Telefonda yalnızca noktalar. */}
-      <span className="flex flex-wrap gap-0.5 sm:hidden">
-        {gun.baslayan.map((k) => (
-          <span key={`b-${k.id}`} className="h-1.5 w-1.5 rounded-full bg-accent" />
-        ))}
-        {gun.biten.map((k) => (
-          <span key={`e-${k.id}`} className={`h-1.5 w-1.5 rounded-full ${secili ? "bg-on-deep/60" : "bg-ink-muted"}`} />
-        ))}
-        {gun.kirada.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-success" />}
+      {/* Telefonda tek işaret: bu günde çıkış ya da dönüş var. Ne olduğu,
+          güne dokununca altta yazıyla. */}
+      <span className="flex h-1.5 sm:hidden">
+        {sayi > 0 && <span className={`h-1.5 w-1.5 rounded-full ${secili ? "bg-paper" : "bg-accent"}`} />}
       </span>
       <span className="hidden min-w-0 flex-col gap-0.5 sm:flex">
         {[...gun.baslayan.map((k) => ({ k, tur: "b" as const })), ...gun.biten.map((k) => ({ k, tur: "e" as const }))]
@@ -321,14 +335,14 @@ function GunKutusu({
               <span
                 aria-hidden="true"
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                  tur === "b" ? "bg-accent" : secili ? "bg-on-deep/60" : "bg-ink-muted"
+                  tur === "b" ? "bg-accent" : secili ? "bg-paper/60" : "bg-ink-muted"
                 }`}
               />
               <span className="truncate">{k.urunAdi}</span>
             </span>
           ))}
         {sayi > 3 && (
-          <span className={`text-[11px] font-semibold ${secili ? "text-on-deep/70" : "text-ink-muted"}`}>
+          <span className={`text-[11px] font-semibold ${secili ? "text-paper/70" : "text-ink-muted"}`}>
             +{sayi - 3} daha
           </span>
         )}
@@ -338,8 +352,8 @@ function GunKutusu({
 }
 
 /**
- * Aralığa değen bütün kiralamalar, başlangıç sırasıyla: aralıkta başlayan,
- * biten ya da aralık boyunca süren. Üstte üç sayı — aralığın özeti.
+ * Aralığa değen bütün kiralamalar, başlangıç sırasıyla: aralıkta çıkan,
+ * dönen ya da aralık boyunca kirada kalan. Üstte üç sayı — aralığın özeti.
  */
 function AralikOzeti({ aralik, kiralamalar }: { aralik: Aralik; kiralamalar: TakvimKiralama[] }) {
   const degen = kiralamalar
@@ -359,8 +373,8 @@ function AralikOzeti({ aralik, kiralamalar }: { aralik: Aralik; kiralamalar: Tak
       <dl className="m-0 mt-4 grid grid-cols-3 gap-2">
         {[
           { deger: degen.length, etiket: "kiralama" },
-          { deger: baslayan, etiket: "başlıyor" },
-          { deger: biten, etiket: "bitiyor" },
+          { deger: baslayan, etiket: "çıkış" },
+          { deger: biten, etiket: "dönüş" },
         ].map((r) => (
           <div key={r.etiket} className="flex flex-col-reverse rounded-[6px] bg-surface px-3 py-2.5">
             <dt className="text-xs text-ink-muted">{r.etiket}</dt>
@@ -376,7 +390,7 @@ function AralikOzeti({ aralik, kiralamalar }: { aralik: Aralik; kiralamalar: Tak
           {degen.map((k) => {
             const basliyor = k.baslangic >= aralik.bas;
             const bitiyor = k.bitis <= aralik.son;
-            const durum = basliyor && bitiyor ? null : basliyor ? "Aralıkta başlıyor" : bitiyor ? "Aralıkta bitiyor" : "Aralık boyunca";
+            const durum = basliyor && bitiyor ? null : basliyor ? "Aralıkta çıkıyor" : bitiyor ? "Aralıkta dönüyor" : "Aralık boyunca";
             return (
               <li key={k.id}>
                 <KiralamaBaglantisi

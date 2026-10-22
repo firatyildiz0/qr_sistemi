@@ -10,7 +10,6 @@ import BookingHistory, { type BookingHistoryRow } from "@/components/admin/Booki
 import { coverImage } from "@/components/admin/ProductThumb";
 import BugunKarti from "@/components/admin/kapak/BugunKarti";
 import { gunleriOlustur, type Gun, type TakvimKiralama } from "@/components/admin/kapak/takvim";
-import Sayac from "@/components/admin/kapak/Sayac";
 import Belir from "@/components/admin/kapak/Belir";
 
 export const metadata: Metadata = {
@@ -25,8 +24,6 @@ type BookingWithProduct = Booking & {
     images: string[] | null;
   } | null;
 };
-
-const SERIT_GUN = 7;
 
 // Sabit saat dilimi: sunucu UTC'de, satıcı İstanbul'da.
 const tarihBasligi = new Intl.DateTimeFormat("tr-TR", {
@@ -48,11 +45,10 @@ function gunAnahtari(kaydir: number) {
 }
 
 /**
- * Panelin ana sayfası, anasayfanın kapağıyla aynı dilde: iri bir selamlama,
- * altında günün tek cümlelik özeti ve yukarı sayan rakamlar. Hemen ardından
- * "Bugün" kartı — satıcının paneli açınca ilk bilmek istediği şey hangi
- * ürünün bugün çıkıp hangisinin döndüğü. Rezervasyon geçmişi en altta,
- * kaydırınca beliriyor.
+ * Panelin ana sayfası, anasayfanın kapağıyla aynı dilde: iri bir selamlama ve
+ * altında günün tek cümlelik özeti. Hemen ardından takvim — satıcının paneli
+ * açınca ilk bilmek istediği şey hangi ürünün bugün çıkıp hangisinin döndüğü.
+ * Rezervasyon geçmişi en altta, kaydırınca beliriyor.
  */
 export default async function AdminHomePage() {
   const [user, profile, supabase] = await Promise.all([getCurrentUser(), getProfile(), createClient()]);
@@ -60,14 +56,11 @@ export default async function AdminHomePage() {
 
   // Joining through products both scopes the rows to this owner and carries the
   // product name, so the list needs a single round trip.
-  const [{ data, error }, { count: urunSayisi }] = await Promise.all([
-    supabase
-      .from("bookings")
-      .select("*, products!inner(id, name, owner_id, images)")
-      .eq("products.owner_id", ownerId)
-      .order("created_at", { ascending: false }),
-    supabase.from("products").select("id", { count: "exact", head: true }).eq("owner_id", ownerId),
-  ]);
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*, products!inner(id, name, owner_id, images)")
+    .eq("products.owner_id", ownerId)
+    .order("created_at", { ascending: false });
 
   const rezervasyonlar = (data ?? []) as BookingWithProduct[];
 
@@ -84,7 +77,6 @@ export default async function AdminHomePage() {
     createdAt: b.created_at,
   }));
 
-  const haftaSonu = gunAnahtari(SERIT_GUN);
   const gecerli = rezervasyonlar.filter((b) => b.status !== "cancelled");
 
   // Takvim bütün geçerli kiralamaları alıyor: hafta değiştirmek ya da
@@ -98,29 +90,14 @@ export default async function AdminHomePage() {
   }));
   const [bugunGun] = gunleriOlustur(takvim, gunAnahtari(0), 1);
 
-  let kirada = 0;
-  let yaklasan = 0;
   let siradaki: string | null = null;
-
   for (const b of gecerli) {
-    const durum = displayStatus(b);
-    if (durum === "active") kirada += 1;
-    if (durum === "upcoming") {
-      if (b.start_date < haftaSonu) yaklasan += 1;
-      if (!siradaki || b.start_date < siradaki) siradaki = b.start_date;
-    }
+    if (displayStatus(b) === "upcoming" && (!siradaki || b.start_date < siradaki)) siradaki = b.start_date;
   }
 
   const ad = profile?.fullName?.split(" ")[0] ?? profile?.username ?? user?.email?.split("@")[0] ?? "";
   const selam = ad ? `${greetingFor()}, ${ad}.` : `${greetingFor()}.`;
   const ozet = gunOzeti(bugunGun, siradaki);
-
-  const rakamlar = [
-    { deger: urunSayisi ?? 0, etiket: "ürün" },
-    { deger: kirada, etiket: "şu an kirada" },
-    { deger: yaklasan, etiket: "7 gün içinde başlayacak" },
-    { deger: gecerli.length, etiket: "toplam rezervasyon" },
-  ];
 
   return (
     <div className="kapak flex flex-1 flex-col">
@@ -143,20 +120,6 @@ export default async function AdminHomePage() {
           >
             {ozet}
           </p>
-
-          <dl
-            className="kapak-giris m-0 mt-2 grid grid-cols-2 gap-x-8 gap-y-5 border-t border-border pt-6 sm:grid-cols-4"
-            style={{ "--i": 4 } as React.CSSProperties}
-          >
-            {rakamlar.map((r) => (
-              <div key={r.etiket} className="kapak-rakam flex flex-col-reverse gap-0.5">
-                <dt className="text-sm text-ink-muted">{r.etiket}</dt>
-                <dd className="kapak-baslik m-0 text-[34px] font-extrabold leading-none text-ink sm:text-[40px]">
-                  <Sayac hedef={r.deger} />
-                </dd>
-              </div>
-            ))}
-          </dl>
         </section>
 
         <div className="kapak-giris" style={{ "--i": 5 } as React.CSSProperties}>
@@ -187,9 +150,9 @@ export default async function AdminHomePage() {
 /** Kapaktaki tek cümle. Uydurma yok: yalnızca kayıtlardan sayılabilen şey. */
 function gunOzeti(bugun: Gun, siradaki: string | null): string {
   const parcalar: string[] = [];
-  if (bugun.baslayan.length) parcalar.push(`${bugun.baslayan.length} kiralama başlıyor`);
-  if (bugun.biten.length) parcalar.push(`${bugun.biten.length} kiralama bitiyor`);
+  if (bugun.baslayan.length) parcalar.push(`${bugun.baslayan.length} ürün çıkıyor`);
+  if (bugun.biten.length) parcalar.push(`${bugun.biten.length} ürün dönüyor`);
   if (parcalar.length) return `Bugün ${parcalar.join(", ")}.`;
-  if (siradaki) return `Bugün sakin. Sıradaki kiralama ${kisaTarih.format(new Date(`${siradaki}T00:00:00Z`))} tarihinde başlıyor.`;
+  if (siradaki) return `Bugün sakin. Sıradaki çıkış: ${kisaTarih.format(new Date(`${siradaki}T00:00:00Z`))}.`;
   return "Bugün sakin. Yaklaşan bir kiralama yok.";
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import type { SVGProps } from "react";
 import { gunEkle, utc, type Gun, type GunKiralama } from "@/components/admin/kapak/takvim";
 
 /**
  * Takvim kartının ve büyütülmüş takvimin ortak parçaları: gün başlığı,
- * renk anahtarı, kiralama bağlantısı ve bir günün listesi.
+ * kiralama bağlantısı, bir günün listesi ve büyütme simgesi.
  */
 
 const gunAdiUzun = new Intl.DateTimeFormat("tr-TR", { weekday: "long", timeZone: "UTC" });
@@ -16,19 +17,6 @@ export function gunBasligi(tarih: string, bugun: string) {
   if (tarih === gunEkle(bugun, -1)) return "Dün";
   const ad = gunAdiUzun.format(utc(tarih));
   return ad.charAt(0).toLocaleUpperCase("tr-TR") + ad.slice(1);
-}
-
-export function Anahtar() {
-  return (
-    <p className="m-0 mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-ink-muted">
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-accent" /> başlıyor
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-ink-muted" /> bitiyor
-      </span>
-    </p>
-  );
 }
 
 /**
@@ -88,5 +76,27 @@ export function GunListesi({ gun, kiradaDahil = false }: { gun: Gun; kiradaDahil
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Büyütme simgesi: karşı köşelere açılan iki ok. Panelin simge setinde yok;
+ * çizgi kalınlığı ve uçları oradakilerle aynı.
+ */
+export function IconBuyut(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
   );
 }

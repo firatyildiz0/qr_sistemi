@@ -12,7 +12,7 @@ import {
   type TakvimKiralama,
 } from "@/components/admin/kapak/takvim";
 import BuyukTakvim from "@/components/admin/kapak/BuyukTakvim";
-import { Anahtar, GunListesi, KiralamaBaglantisi, gunBasligi } from "@/components/admin/kapak/TakvimParcalari";
+import { GunListesi, IconBuyut, KiralamaBaglantisi, gunBasligi } from "@/components/admin/kapak/TakvimParcalari";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 
 const gunAdi = new Intl.DateTimeFormat("tr-TR", { weekday: "short", timeZone: "UTC" });
@@ -28,7 +28,7 @@ function bosMu(gun: Gun) {
  * Ana sayfanın takvim kartı: yedi gün, her günde o gün başlayan ve biten
  * kiralamalar. Saat yok — rezervasyonlar gün olarak tutuluyor.
  *
- * Başlıktaki oklar haftayı kaydırıyor (geçmişe de); "Büyüt" bütün ayı tam
+ * Başlıktaki oklar haftayı kaydırıyor (geçmişe de); büyütme simgesi bütün ayı tam
  * ekranda açıyor. İkisi de yeni istek açmıyor: sayfa bütün kiralamaları
  * zaten veriyor.
  *
@@ -89,9 +89,11 @@ export default function BugunKarti({ kiralamalar, bugun }: { kiralamalar: Takvim
         <button
           type="button"
           onClick={() => setBuyuk(true)}
-          className="ml-1 h-9 rounded-[6px] bg-ink px-3 text-xs font-bold text-paper transition-opacity hover:opacity-85"
+          aria-label="Takvimi büyüt"
+          title="Takvimi büyüt"
+          className="ml-1 flex h-9 w-9 items-center justify-center rounded-[6px] border border-border text-ink-muted transition-colors hover:border-ink-muted hover:text-ink"
         >
-          Büyüt
+          <IconBuyut className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -111,7 +113,6 @@ export default function BugunKarti({ kiralamalar, bugun }: { kiralamalar: Takvim
             <SiganSerit gunler={gunler} bugun={bugun} />
           )}
         </div>
-        <Anahtar />
       </section>
       {buyuk && (
         <BuyukTakvim kiralamalar={liste} bugun={bugun} baslangic={baslangic} onClose={() => setBuyuk(false)} />
@@ -172,10 +173,14 @@ function SiganSerit({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
               {/* Telefonda yalnızca noktalar. */}
               <div className="flex min-h-1.5 flex-wrap justify-center gap-1 sm:hidden">
                 {gun.baslayan.map((k) => (
-                  <span key={`b-${k.id}`} className="h-1.5 w-1.5 rounded-full bg-accent" />
+                  <span key={`b-${k.id}`} title={`${k.urunAdi} · başlıyor`} className="h-1.5 w-1.5 rounded-full bg-accent" />
                 ))}
                 {gun.biten.map((k) => (
-                  <span key={`e-${k.id}`} className={`h-1.5 w-1.5 rounded-full ${koyu ? "bg-on-deep/50" : "bg-ink-muted"}`} />
+                  <span
+                    key={`e-${k.id}`}
+                    title={`${k.urunAdi} · bitiyor`}
+                    className={`h-1.5 w-1.5 rounded-full ${koyu ? "bg-on-deep/50" : "bg-ink-muted"}`}
+                  />
                 ))}
               </div>
               <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
@@ -286,9 +291,14 @@ function GunSecici({ gunler, bugun }: { gunler: Gun[]; bugun: string }) {
                 {gunNo.format(utc(g.tarih))}
               </span>
               <span className="flex h-1.5 gap-1">
-                {g.baslayan.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
+                {g.baslayan.length > 0 && (
+                  <span title={`${g.baslayan.length} kiralama başlıyor`} className="h-1.5 w-1.5 rounded-full bg-accent" />
+                )}
                 {g.biten.length > 0 && (
-                  <span className={`h-1.5 w-1.5 rounded-full ${sec ? "bg-on-deep/60" : "bg-ink-muted"}`} />
+                  <span
+                    title={`${g.biten.length} kiralama bitiyor`}
+                    className={`h-1.5 w-1.5 rounded-full ${sec ? "bg-on-deep/60" : "bg-ink-muted"}`}
+                  />
                 )}
               </span>
             </button>

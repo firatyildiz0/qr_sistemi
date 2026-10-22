@@ -8,6 +8,7 @@ import {
   IconChart,
   IconGauge,
   IconGrid,
+  IconInstagram,
   IconLogOut,
   IconShield,
   IconUsers,
@@ -40,7 +41,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
         </form>
       </header>
 
-      {/* Beş sayfalık bir panel; aktif sekmeyi işaretlemek için istemci
+      {/* Altı sayfalık bir panel; aktif sekmeyi işaretlemek için istemci
           bileşenine geçmeye değmiyor, bağlantılar yeterli. Dar ekranda sekmeler
           sığmıyor: sarmak yerine yana kaydırılıyorlar, sıra tek satırda kalsın. */}
       <nav className="border-b border-border bg-surface px-4 sm:px-8">
@@ -80,6 +81,15 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
             <IconBolt className="h-4 w-4" />
             Yayın
           </Link>
+          {/* Düz bağlantı: editör tam ekran kendi sayfası (route handler),
+              Link'in ön yüklemesi orada bir şey bulamaz. */}
+          <a
+            href="/yonetim/post-editoru"
+            className="flex items-center gap-2 px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <IconInstagram className="h-4 w-4" />
+            Post editörü
+          </a>
 
           {/* Yönetim sayfası değil, panelden çıkış: superuser'ın kendi satıcı
               hesabına geçtiği yer. Sıranın sonunda ve ayrı duruyor ki bir

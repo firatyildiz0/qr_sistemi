@@ -1740,3 +1740,36 @@ summary,
 :root:not([data-theme="dark"]) .logo-tema-koyu {
   display: none;
 }
+
+/* Anasayfa (vitrin). Başlıkların ailesi yalnızca orada yükleniyor
+   (`--font-vitrin`, bkz. lib/fonts.ts). */
+.vitrin-baslik {
+  font-family: var(--font-vitrin), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+/* Sayfa içi bağlantılar ve sağ kenardaki bölüm imleci yumuşak kaysın. Kural
+   yalnızca vitrin açıkken geçerli: panelde sayfa içi kaydırma anında kalmalı.
+   Hareket kapalıysa (sistem ya da Ayarlar) kayma da anında. */
+html:has(.vitrin) {
+  scroll-behavior: smooth;
+}
+:root[data-motion="reduced"]:has(.vitrin) {
+  scroll-behavior: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.vitrin) {
+    scroll-behavior: auto;
+  }
+}
+
+/* Hizmet şeridi fareyle sürüklenirken yakalama kapalı: yoksa her pikselde
+   karta geri çekiyor. Bırakınca en yakın karta oturuyor. */
+.hizmet-seridi {
+  cursor: grab;
+}
+.hizmet-seridi[data-surukleniyor] {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
+}

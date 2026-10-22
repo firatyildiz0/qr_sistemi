@@ -1,4 +1,4 @@
-import { Manrope } from "next/font/google";
+import { Bricolage_Grotesque, Manrope } from "next/font/google";
 
 /**
  * Sedef tek bir aile üstüne kurulu: başlık, gövde ve etiket aynı yazı tipinin
@@ -11,6 +11,18 @@ export const manrope = Manrope({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-display",
+  display: "swap",
+});
+
+/**
+ * Yalnızca anasayfanın başlıkları. Vitrin panelin kendisi değil, onun kapağı:
+ * Bricolage'ın sıkışık, mürekkep tuzaklı harfleri basılı bir etiketin sesini
+ * taşıyor. Panel bu aileyi hiç yüklemiyor — değişken yalnızca anasayfanın kök
+ * öğesine bağlanıyor.
+ */
+export const bricolage = Bricolage_Grotesque({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-vitrin",
   display: "swap",
 });
 

@@ -1,443 +1,275 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfile, homePathFor } from "@/lib/profile";
-import Reveal from "@/components/marketing/Reveal";
-import Logo from "@/components/Logo";
 import SiteFooter from "@/components/SiteFooter";
 import { ABONELIK } from "@/lib/yasal";
 import { vitrinSayilari } from "@/lib/vitrin";
+import { bricolage } from "@/lib/fonts";
 import Counter from "@/components/marketing/Counter";
-import {
-  IconArrowRight,
-  IconBell,
-  IconBolt,
-  IconCalendar,
-  IconCheck,
-  IconGrid,
-  IconPackage,
-  IconQrCode,
-  IconScan,
-} from "@/components/icons";
+import QrEtiket from "@/components/marketing/QrEtiket";
+import BolumImleci, { type Bolum } from "@/components/marketing/BolumImleci";
+import HizmetYelpazesi from "@/components/marketing/HizmetYelpazesi";
+import VitrinMenu from "@/components/marketing/VitrinMenu";
+import { IconCheck } from "@/components/icons";
 
-const fiyatMaddeleri = [
-  "Sınırsız ürün ve QR etiketi",
-  "Canlı müsaitlik takvimi ve rezervasyon takibi",
-  "Müşteri ve iade takibi",
+export const metadata: Metadata = {
+  title: "Voyo Labs — RentQR ile QR etiketle kiralama",
+  description:
+    "Voyo Labs işletmeler için yazılım geliştiriyor. İlk hizmeti RentQR ile kiraya verdiğiniz ürüne QR etiket yapıştırın; müşteri okutup boş günü seçsin ve rezervasyon talebini bıraksın.",
+};
+
+const BOLUMLER: Bolum[] = [
+  { id: "giris", ad: "Başlangıç" },
+  { id: "nasil", ad: "Nasıl çalışır" },
+  { id: "panel", ad: "Panel" },
+  { id: "fiyat", ad: "Fiyat" },
+  { id: "hizmetler", ad: "Hizmetler" },
 ];
 
-const steps = [
+/** Bir kiralamanın sırası; gerçekten bir sıra olduğu için numaralı. */
+const ADIMLAR = [
   {
-    icon: IconPackage,
-    title: "1. Ürününüzü ekleyin",
-    body: "Fiziksel ürününüzü ayrıntılar ve fiyatlandırma ile sisteme kaydedin.",
+    baslik: "Ürünü ekleyin",
+    metin: "Ürünün adını, günlük fiyatını ve fotoğrafını girin. QR kod ve barkod numarası otomatik oluşur.",
   },
   {
-    icon: IconQrCode,
-    title: "2. QR kod alın",
-    body: "Benzersiz etiketi yazdırın ve fiziksel ekipmanınıza yapıştırın.",
-    accent: true,
+    baslik: "Etiketi yapıştırın",
+    metin: "Etiketi PNG ya da PDF olarak indirin, yazdırıp ürüne yapıştırın. Etikette ürün adı ve barkod numarası da yazar.",
   },
   {
-    icon: IconCalendar,
-    title: "3. Rezervasyon alın",
-    body: "Kiracılar kodu okutarak anında müsaitliği görür ve rezervasyon yapar.",
+    baslik: "Müşteri okutur",
+    metin: "Etiketi telefonuyla okutur, boş günleri görür, tarih seçer ve adıyla telefon numarasını yazıp talep gönderir.",
+  },
+  {
+    baslik: "Siz onaylarsınız",
+    metin: "Talep panelinize düşer; onayladığınızda rezervasyon kesinleşir. Dolu günlere talep gönderilemez.",
   },
 ];
 
-const features = [
+const PANEL = [
+  { baslik: "Hangi ürün kimde", metin: "Yaklaşan, süren ve biten kiralamalar tek listede. Her ürünün geçmişi kendi kartında." },
+  { baslik: "İade hatırlatması", metin: "İadesi yaklaşan kiralamalar her sabah panelde bildirim olarak görünür." },
   {
-    icon: IconBolt,
-    title: "Anında QR oluşturma",
-    body: "Yeni bir ürün eklediğiniz anda baskıya hazır QR kodları otomatik olarak oluşturulur.",
+    baslik: "Görselle bulma",
+    metin: "Etiketi okunmayan ürünü telefon kamerasına gösterin, hangi ürün olduğunu bulsun. Fotoğraf telefonunuzdan çıkmaz.",
   },
   {
-    icon: IconCalendar,
-    title: "Canlı müsaitlik takvimi",
-    body: "Gerçek zamanlı senkronizasyon çakışan rezervasyonları önler ve kiracılara ekipmanın ne zaman müsait olduğunu gösterir.",
+    baslik: "Barkodla bulma",
+    metin: "Ürünlerinizde barkod varsa yeni etiket basmanıza gerek yok; barkodu okutunca ürün açılır.",
   },
-  {
-    icon: IconBell,
-    title: "Rezervasyon bildirimleri",
-    body: "Yeni talepler, değişiklikler ve tamamlanan kiralamalar için anında uyarı alın.",
-  },
-  {
-    icon: IconScan,
-    title: "Uygulama gerekmez",
-    body: "Kiracılar varsayılan mobil tarayıcıları üzerinden doğrudan okutup rezervasyon yapabilir.",
-  },
-  {
-    icon: IconGrid,
-    title: "Güvenli yönetim paneli",
-    body: "Envanteri yönetin, rezervasyonları takip edin ve kiracı geçmişini tek bir yerden inceleyin.",
-  },
-  {
-    icon: IconPackage,
-    title: "Her ürün için çalışır",
-    body: "Bisikletten kamera ekipmanına — üzerine kod yapıştırabildiğiniz her şeyi kiralayabilirsiniz.",
-  },
+  { baslik: "Raporlar", metin: "Son 30 günün rezervasyonları ve doluluk oranınız tek ekranda." },
+  { baslik: "Telefonda panel", metin: "Paneli telefonunuzun ana ekranına ekleyip uygulama gibi açın." },
 ];
+
+const FIYAT_MADDELERI = ["Sınırsız ürün ve QR etiketi", "Bütün özellikler dahil", "İstediğiniz zaman iptal edin"];
 
 /**
- * Sitenin anasayfası. Adrese kim gelirse gelsin burası açılıyor: oturumu açık
- * bir satıcı da önce anasayfayı görüyor, panele geçmek isterse üst çubuktaki
- * düğmeyle geçiyor. Otomatik yönlendirme, sayfayı sahibine hiç göstermemek
- * anlamına geliyordu.
+ * Sitenin anasayfası: Voyo Labs'in kapağı, RentQR'ın tanıtımı.
  *
- * Düğmenin gittiği yeri profil belirliyor: onaylı hesap kendi paneline
- * (satıcı `/admin`, superuser `/yonetim`), onay bekleyen ya da oturumu kapalı
- * olan giriş ekranına gidiyor — panele giremeyecek birine "Panele git" demenin
- * anlamı yok.
+ * Voyo Labs bir çatı; RentQR onun ilk hizmeti. Sayfa RentQR'ı baştan sona
+ * anlatıyor (etiket, akış, panel, fiyat) ve en sonda Voyo'nun hizmetlerini
+ * yelpaze gibi gösteriyor — yeni hizmetler oraya ekleniyor. Eskiden ayrı
+ * duran `/veyro-labs` vitrini buraya, `#hizmetler`'e yönleniyor.
+ *
+ * Adrese kim gelirse gelsin burası açılıyor. Düğmenin gittiği yeri profil
+ * belirliyor: onaylı hesap kendi paneline, onay bekleyen ya da oturumu kapalı
+ * olan giriş ekranına — panele giremeyecek birine "Panele git" denmiyor.
  */
 export default async function Home() {
-  const [user, profile, sayilar] = await Promise.all([
-    getCurrentUser(),
-    getProfile(),
-    vitrinSayilari(),
-  ]);
+  const [user, profile, sayilar] = await Promise.all([getCurrentUser(), getProfile(), vitrinSayilari()]);
   const onayli = profile?.status === "approved";
   const ctaHref = onayli ? homePathFor(profile) : "/login";
   const ctaLabel = onayli ? "Panele git" : "Hemen başla";
 
   return (
-    <>
-      {/* Gezinme çubuğu ekranın kenarına yapışmıyor, üstünde yüzüyor: Sedef'te
-          her yüzey zeminden gölgeyle ayrılan bir katman, bu da öyle. Zemini
-          buzlu cam olduğu için altından geçen içerik silinmiyor, bulanıklaşıyor. */}
-      <nav className="fixed inset-x-3 top-3 z-50 mx-auto flex h-16 max-w-6xl items-center justify-between rounded-full border border-border bg-[color-mix(in_oklab,var(--color-card)_80%,transparent)] px-4 shadow-[var(--app-lift)] backdrop-blur-xl backdrop-saturate-150 sm:px-6">
-        <Link href="/" className="tab-press flex items-center">
-          <Logo variant="lockup" className="h-9 w-9" sizes="36px" wordmarkClassName="text-[15px]" />
-        </Link>
+    <div className={`vitrin ${bricolage.variable} relative flex flex-1 flex-col`}>
+      <VitrinMenu girisGoster={!user} ctaHref={ctaHref} ctaLabel={ctaLabel} />
+      <BolumImleci bolumler={BOLUMLER} />
 
-        <div className="hidden items-center gap-1 md:flex">
-          <a
-            href="#how-it-works"
-            className="rounded-full px-4 py-2 text-sm font-semibold text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-          >
-            Nasıl çalışır
-          </a>
-          <a
-            href="#features"
-            className="rounded-full px-4 py-2 text-sm font-semibold text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-          >
-            Özellikler
-          </a>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!user && (
-            <Link
-              href="/login"
-              className="hidden rounded-full px-4 py-2 text-sm font-semibold text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover md:block"
-            >
-              Giriş yap
-            </Link>
-          )}
-          {/* Telefonda alt eylem çubuğu zaten aynı düğmeyi taşıyor; iki kez
-              göstermek yerine üstteki dar ekranda gizleniyor. */}
-          <Link href={ctaHref} className="btn btn-primary hidden h-11 min-h-0 sm:inline-flex">
-            {ctaLabel}
-          </Link>
-        </div>
-      </nav>
-
-      {/* Alt boşluk telefondaki sabit eylem çubuğu için: sayfanın son satırı
-          onun arkasında kalmasın. */}
-      <main className="pt-24 pb-24 sm:pb-0">
-        {/* HERO */}
-        <section className="mx-auto flex max-w-7xl flex-col items-center gap-16 px-6 py-12 lg:flex-row lg:gap-20 lg:py-20">
-          <Reveal className="flex flex-1 flex-col gap-7">
-            <span className="eyebrow w-fit rounded-full bg-accent-soft px-3 py-1.5 text-accent-strong">
-              Fiziksel kiralamalar, dijitalleşti
-            </span>
-            <h1 className="text-[40px] font-extrabold leading-[1.04] tracking-[-0.025em] text-balance text-ink sm:text-[56px] lg:text-[64px]">
-              Her ürünü tek bir okutmayla rezervasyona açık kiralamaya dönüştürün
+      <main className="pt-20 pb-24 sm:pb-0">
+        {/* KAHRAMAN — sayfanın tek gösterişli nesnesi etiketin kendisi. */}
+        <section
+          id="giris"
+          className="mx-auto flex max-w-[1200px] scroll-mt-28 flex-col items-center gap-14 px-6 pb-24 pt-12 lg:flex-row lg:pb-28 lg:pt-16"
+        >
+          <div className="flex min-w-0 flex-1 flex-col gap-7">
+            <h1 className="vitrin-baslik m-0 text-[42px] font-extrabold leading-[0.98] text-balance text-ink sm:text-[60px] lg:text-[70px]">
+              Ürününüze QR etiket yapıştırın. Müşteri okutsun, rezervasyonunu kendisi yapsın.
             </h1>
-            <p className="max-w-lg text-lg leading-relaxed text-ink-muted">
-              Basılı QR kodlarıyla fiziksel ekipmanlar için basit ve pratik kiralama takibi.
+            <p className="m-0 max-w-[520px] text-lg leading-relaxed text-ink-muted">
+              Voyo Labs işletmeler için yazılım geliştiriyor. İlk hizmetimiz RentQR, kiraya verdiğiniz her ürün
+              için bir QR etiket oluşturur. Müşteri etiketi telefonuyla okutur, boş günleri görür ve rezervasyon
+              talebini bırakır; siz onaylayınca kesinleşir.
             </p>
-            <div className="mt-1 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <Link href={ctaHref} className="btn btn-primary h-14 px-8 text-base">
                 {ctaLabel}
               </Link>
-              <a
-                href="#how-it-works"
-                className="btn btn-secondary h-14 px-6 text-base"
-              >
-                Nasıl çalıştığını gör
-                <IconArrowRight className="h-4 w-4 rotate-90" />
+              <a href="#nasil" className="btn btn-secondary h-14 px-6 text-base">
+                Nasıl çalışır?
               </a>
             </div>
-          </Reveal>
 
-          {/* Kahraman görsel: ürünün kendisi. Müşterinin eline aldığı telefonda
-              etiketi okuttuğu an — panelin gerçek yüzeyleriyle, aynı yuvarlak
-              hatlar ve aynı buzlu cam sekme çubuğuyla çiziliyor. */}
-          <Reveal delay={200} className="flex w-full flex-1 items-center justify-center">
-            <div className="relative w-full max-w-[420px]">
-              <div className="absolute -inset-6 rounded-[48px] bg-[radial-gradient(60%_50%_at_50%_0%,var(--color-accent-soft),transparent_70%)]" />
-
-              <div className="relative mx-auto w-[264px] rounded-[46px] bg-card p-3 shadow-[0_40px_80px_-40px_var(--app-shadow),0_0_0_1px_var(--color-border)] sm:w-[288px]">
-                <div className="flex h-[520px] flex-col overflow-hidden rounded-[36px] bg-paper sm:h-[560px]">
-                  <div className="flex items-center justify-between px-6 pb-2 pt-4 text-[11px] font-bold text-ink">
-                    <span>09:41</span>
-                    <span className="flex items-center gap-1">
-                      <span className="h-1 w-1 rounded-full bg-ink/60" />
-                      <span className="h-1 w-1 rounded-full bg-ink/60" />
-                      <span className="h-1 w-1 rounded-full bg-ink/60" />
-                    </span>
-                  </div>
-
-                  <div className="px-5 pb-3 pt-1">
-                    <p className="text-[22px] font-extrabold tracking-tight text-ink">Tara</p>
-                  </div>
-
-                  <div className="mx-5 flex flex-1 flex-col gap-3">
-                    <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-[26px] bg-deep">
-                      <div className="absolute inset-0 diagonal-stripes opacity-20" />
-                      <div className="relative flex h-36 w-36 items-center justify-center rounded-[22px] border-2 border-accent bg-accent/10">
-                        <div className="scan-line absolute left-0 top-0 h-0.5 w-full bg-accent shadow-[0_0_12px_var(--color-accent)]" />
-                        <IconQrCode className="h-14 w-14 text-accent opacity-80" strokeWidth={1.2} />
-                      </div>
-                      <p className="eyebrow absolute bottom-4 text-on-deep/70">QR kod algılandı</p>
-                    </div>
-
-                    <div className="flex items-center gap-3 rounded-3xl bg-card p-3 shadow-[var(--app-lift)]">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent-soft">
-                        <IconPackage className="h-5 w-5 text-accent" />
-                      </span>
-                      <span className="flex min-w-0 flex-col">
-                        <span className="truncate text-sm font-bold text-ink">Sony A7 III gövde</span>
-                        <span className="truncate text-xs text-ink-muted">12–16 Eylül · müsait</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Sekme çubuğu: paneldekinin aynısı — buzlu cam, ortada
-                      yükseltilmiş okutma düğmesi. */}
-                  <div className="mt-3 flex items-end justify-around border-t border-border/70 bg-[color-mix(in_oklab,var(--color-card)_82%,transparent)] px-4 pb-5 pt-2 backdrop-blur-xl">
-                    <span className="h-1.5 w-6 rounded-full bg-ink-muted/30" />
-                    <span className="h-1.5 w-6 rounded-full bg-ink-muted/30" />
-                    <span className="tab-fab -mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white">
-                      <IconScan className="h-6 w-6" />
-                    </span>
-                    <span className="h-1.5 w-6 rounded-full bg-ink-muted/30" />
-                    <span className="h-1.5 w-6 rounded-full bg-accent" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-        </section>
-
-        {/* HOW IT WORKS */}
-        <section id="how-it-works" className="px-3 py-10 lg:py-16">
-          <div className="mx-auto max-w-7xl rounded-[40px] bg-surface px-6 py-16 lg:px-12 lg:py-20">
-            <Reveal className="mb-14 text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight text-ink lg:text-[38px]">
-                Nasıl çalışır
-              </h2>
-              <p className="mt-4 text-ink-muted">
-                Fiziksel ekipmandan dijital rezervasyona üç adımda.
-              </p>
-            </Reveal>
-
-            <div className="relative flex flex-col items-start gap-12 md:flex-row md:justify-between md:gap-8">
-              <div className="absolute left-[16%] right-[16%] top-12 hidden h-0.5 rounded-full bg-border md:block" />
-              {steps.map((step, i) => (
-                <Reveal
-                  key={step.title}
-                  delay={i * 150}
-                  className="relative z-10 flex flex-1 flex-col items-center text-center"
-                >
-                  <div
-                    className={`mb-6 flex h-24 w-24 items-center justify-center rounded-full shadow-[var(--app-lift)] ${
-                      step.accent ? "bg-accent text-white" : "bg-card text-ink-muted"
-                    }`}
-                  >
-                    <step.icon className="h-9 w-9" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-bold text-ink">{step.title}</h3>
-                  <p className="max-w-[240px] text-sm leading-relaxed text-ink-muted">{step.body}</p>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section id="features" className="mx-auto max-w-7xl px-6 py-12 lg:py-20">
-          <Reveal className="mb-12">
-            <h2 className="max-w-2xl text-3xl font-extrabold tracking-tight text-balance text-ink lg:text-[38px]">
-              Fiziksel varlıklar için tasarlandı
-            </h2>
-            <p className="mt-4 text-ink-muted">
-              Kiralama envanterinizi yönetmek için ihtiyacınız olan her şey.
-            </p>
-          </Reveal>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((f, i) => (
-              <Reveal key={f.title} delay={(i % 3) * 100}>
-                <div className="card card-hover group flex h-full flex-col gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft transition-transform duration-300 group-hover:scale-110">
-                    <f.icon className="h-5 w-5 text-accent" />
-                  </div>
-                  <h3 className="text-lg font-bold text-ink">{f.title}</h3>
-                  <p className="text-sm leading-relaxed text-ink-muted">{f.body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* STATS — canlı veritabanından (bkz. lib/vitrin.ts); okunamazsa bant hiç
-            çizilmiyor, uydurma ya da sıfır bir sayı gösterilmesin. */}
-        {sayilar && (
-          <section className="px-3 py-10 lg:py-16">
-            <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[40px] bg-deep py-16">
-              <div
-                className="absolute inset-0 opacity-10"
-                style={{
-                  backgroundImage: "radial-gradient(var(--color-on-deep) 1px, transparent 1px)",
-                  backgroundSize: "24px 24px",
-                }}
-              />
-              <div className="relative mx-auto grid max-w-4xl grid-cols-3 gap-6 px-6 text-center">
+            {/* Canlı veritabanından (bkz. lib/vitrin.ts); okunamazsa hiç
+                çizilmiyor — uydurma ya da sıfır bir sayı gösterilmesin. */}
+            {sayilar && (
+              <dl className="m-0 mt-3 flex flex-wrap gap-x-10 gap-y-4 border-t border-border pt-6">
                 {[
-                  { deger: sayilar.urun, etiket: "Listelenen ürün" },
-                  { deger: sayilar.rezervasyon, etiket: "Rezervasyon" },
-                  { deger: sayilar.isletme, etiket: "İşletme" },
-                ].map((oge, sira) => (
-                  <Reveal key={oge.etiket} delay={sira * 100} className="flex flex-col items-center">
-                    <span className="text-4xl font-extrabold tracking-tight text-on-deep sm:text-5xl">
+                  { deger: sayilar.urun, etiket: "listelenen ürün" },
+                  { deger: sayilar.rezervasyon, etiket: "rezervasyon" },
+                  { deger: sayilar.isletme, etiket: "RentQR kullanan işletme" },
+                ].map((oge) => (
+                  <div key={oge.etiket} className="flex flex-col-reverse gap-0.5">
+                    <dt className="text-sm text-ink-muted">{oge.etiket}</dt>
+                    <dd className="vitrin-baslik m-0 text-3xl font-extrabold tabular-nums text-ink">
                       <Counter target={oge.deger} />
-                    </span>
-                    <span className="eyebrow mt-2 text-on-deep/60">{oge.etiket}</span>
-                  </Reveal>
+                    </dd>
+                  </div>
                 ))}
-              </div>
-            </div>
-          </section>
-        )}
+              </dl>
+            )}
+          </div>
 
-        {/* FİYATLANDIRMA — ödeme kuruluşu incelemesi fiyatı ve ödeme yöntemini
-            sitede açıkça görmek istiyor; "iyzico ile Öde" logosu iyzico'nun
-            resmî ödeme adımı (checkout) paketinden. */}
-        <section id="fiyat" className="scroll-mt-24 px-6 py-12 lg:py-20">
-          <Reveal className="mb-10 text-center">
-            <h2 className="text-3xl font-extrabold tracking-tight text-balance text-ink lg:text-[38px]">
-              Tek plan, sürpriz yok
-            </h2>
-            <p className="mt-4 text-ink-muted">Bütün özellikler dahil, dilediğiniz zaman iptal edin.</p>
-          </Reveal>
-          <Reveal className="card mx-auto flex max-w-md flex-col gap-6 rounded-[32px] p-8">
-            <div>
-              <h3 className="text-lg font-bold text-ink">{ABONELIK.ad}</h3>
-              <p className="mt-3 flex items-end gap-1.5">
-                <span className="text-5xl font-extrabold tracking-tight text-ink">
-                  {ABONELIK.fiyat}
-                </span>
-                <span className="pb-1.5 text-ink-muted">/ ay</span>
+          <div className="flex w-full min-w-0 flex-1 justify-center">
+            <QrEtiket />
+          </div>
+        </section>
+
+        {/* NASIL ÇALIŞIR */}
+        <section id="nasil" className="scroll-mt-20 bg-card">
+          <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-6 py-24">
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <h2 className="vitrin-baslik m-0 max-w-2xl text-[34px] font-extrabold leading-[1.02] text-balance text-ink sm:text-[52px]">
+                Dört adımda kiralamaya hazır
+              </h2>
+              <p className="m-0 max-w-sm text-[17px] leading-relaxed text-ink-muted">
+                Müşterinizin uygulama indirmesi ya da üye olması gerekmez. Telefonunun kamerası yeterli.
               </p>
             </div>
-            <ul className="space-y-3 text-sm text-ink-muted">
-              {fiyatMaddeleri.map((madde) => (
-                <li key={madde} className="flex gap-3">
-                  <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                  <span>{madde}</span>
-                </li>
-              ))}
-            </ul>
-            <Link href={ctaHref} className="btn btn-primary h-13 w-full text-base">
-              {onayli ? "Panele git" : "Hemen başla"}
-            </Link>
-            <div className="flex flex-col items-center gap-3 border-t border-border pt-6">
+            <ol className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
+              {ADIMLAR.map((adim, i) => {
+                const son = i === ADIMLAR.length - 1;
+                return (
+                  <li
+                    key={adim.baslik}
+                    className={`flex flex-col gap-3.5 rounded-[24px] p-7 ${son ? "bg-deep text-on-deep" : "bg-paper"}`}
+                  >
+                    <span className={`vitrin-baslik text-[44px] font-extrabold leading-none ${son ? "text-[#ff6b61]" : "text-accent"}`}>
+                      {i + 1}
+                    </span>
+                    <h3 className="m-0 text-[19px] font-extrabold">{adim.baslik}</h3>
+                    <p className={`m-0 text-[15px] leading-relaxed ${son ? "text-on-deep/75" : "text-ink-muted"}`}>
+                      {adim.metin}
+                    </p>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </section>
+
+        {/* PANEL */}
+        <section id="panel" className="mx-auto flex max-w-[1200px] scroll-mt-24 flex-wrap gap-14 px-6 py-24">
+          <div className="min-w-0 flex-[1_1_320px]">
+            <h2 className="vitrin-baslik m-0 mb-4 text-[32px] font-extrabold leading-[1.04] text-ink sm:text-[46px]">
+              Kiralamalarınızı tek panelden yönetin
+            </h2>
+            <p className="m-0 max-w-sm text-[17px] leading-relaxed text-ink-muted">
+              Gelinlikten kameraya, kamp çadırından bisiklete; üzerine etiket yapıştırabildiğiniz her ürün için
+              çalışır.
+            </p>
+          </div>
+          <dl className="m-0 grid min-w-0 flex-[2_1_560px] grid-cols-1 gap-x-10 sm:grid-cols-2">
+            {PANEL.map((oge) => (
+              <div key={oge.baslik} className="border-t-[1.5px] border-ink py-5">
+                <dt className="mb-1.5 text-lg font-extrabold text-ink">{oge.baslik}</dt>
+                <dd className="m-0 text-[15px] leading-relaxed text-ink-muted">{oge.metin}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        {/* FİYAT — ödeme kuruluşu incelemesi fiyatı, ödeme yöntemini ve
+            sözleşme bağlantılarını sitede açıkça görmek istiyor. */}
+        <section id="fiyat" className="scroll-mt-28 px-3 pb-24 sm:px-6">
+          <div className="mx-auto flex max-w-[1152px] flex-col gap-8 rounded-[32px] bg-deep p-8 text-on-deep sm:p-12">
+            <div className="flex flex-wrap items-center justify-between gap-8">
+              <div className="flex flex-col gap-4">
+                <h2 className="vitrin-baslik m-0 text-[32px] font-extrabold">{ABONELIK.ad}</h2>
+                <ul className="m-0 flex list-none flex-wrap gap-x-6 gap-y-2 p-0 text-[15px] text-on-deep/80">
+                  {FIYAT_MADDELERI.map((madde) => (
+                    <li key={madde} className="flex items-center gap-2">
+                      <IconCheck className="h-4 w-4 shrink-0 text-[#ff6b61]" />
+                      {madde}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex flex-wrap items-center gap-7">
+                <p className="m-0 flex items-baseline gap-1.5">
+                  <span className="vitrin-baslik text-[56px] font-extrabold leading-none">{ABONELIK.fiyat}</span>
+                  <span className="text-on-deep/70">/ ay</span>
+                </p>
+                {/* Düğme "Hesap açın" diyor; söylediğini yapsın diye kayıt
+                    ekranına gidiyor. Onaylı hesap ise doğrudan paneline. */}
+                <Link href={onayli ? ctaHref : "/signup"} className="btn btn-primary h-13 px-8 text-base">
+                  {onayli ? "Panele git" : "Hesap açın"}
+                </Link>
+              </div>
+            </div>
+            <div className="flex flex-col gap-4 border-t border-border-dark pt-6 sm:flex-row sm:items-center sm:gap-6">
+              {/* Zemin her iki temada da koyu: logonun beyaz sürümü. */}
               {/* eslint-disable-next-line @next/next/no-img-element -- statik SVG, optimizasyon gerekmez */}
-              <img
-                src="/odeme/iyzico-ile-ode-renkli.svg"
-                alt="iyzico ile Öde"
-                width={210}
-                height={31}
-                className="logo-tema-acik h-7 w-auto"
-              />
-              {/* eslint-disable-next-line @next/next/no-img-element -- statik SVG, optimizasyon gerekmez */}
-              <img
-                src="/odeme/iyzico-ile-ode-beyaz.svg"
-                alt="iyzico ile Öde"
-                width={210}
-                height={31}
-                className="logo-tema-koyu h-7 w-auto"
-              />
-              <p className="text-center text-xs leading-relaxed text-ink-muted">
+              <img src="/odeme/iyzico-ile-ode-beyaz.svg" alt="iyzico ile Öde" width={210} height={31} className="h-7 w-auto shrink-0 self-start sm:self-center" />
+              <p className="m-0 text-xs leading-relaxed text-on-deep/70">
                 Ödemeler iyzico güvencesiyle kredi kartı veya banka kartı ile alınır. Satın alarak{" "}
-                <Link href="/on-bilgilendirme-formu" className="link-underline text-accent">
+                <Link href="/on-bilgilendirme-formu" className="link-underline text-on-deep">
                   Ön Bilgilendirme Formu
                 </Link>
                 ,{" "}
-                <Link href="/mesafeli-satis-sozlesmesi" className="link-underline text-accent">
+                <Link href="/mesafeli-satis-sozlesmesi" className="link-underline text-on-deep">
                   Mesafeli Satış Sözleşmesi
                 </Link>{" "}
                 ve{" "}
-                <Link href="/teslimat-ve-iade" className="link-underline text-accent">
+                <Link href="/teslimat-ve-iade" className="link-underline text-on-deep">
                   Teslimat ve İade Şartları
                 </Link>
                 ’nı kabul etmiş olursunuz.
               </p>
             </div>
-          </Reveal>
+          </div>
         </section>
 
-        {/* FINAL CTA */}
-        <section className="px-6 py-12 lg:py-20">
-          <Reveal className="mx-auto flex max-w-3xl flex-col items-center rounded-[40px] bg-card px-6 py-14 text-center shadow-[var(--app-lift)]">
-            <div className="mb-7 flex h-16 w-16 items-center justify-center rounded-3xl bg-accent-soft">
-              <IconPackage className="h-7 w-7 text-accent" />
-            </div>
-            <h2 className="mb-7 text-[32px] font-extrabold leading-tight tracking-tight text-balance text-ink sm:text-[44px]">
-              İlk ürününüzü listelemeye hazır mısınız?
-            </h2>
-            <Link href={ctaHref} className="btn btn-primary h-14 px-10 text-base">
-              {onayli ? "Panele git" : "Hemen başla"}
-            </Link>
-          </Reveal>
+        {/* HİZMETLER — Voyo Labs'in hizmetleri, yelpaze gibi. */}
+        <section id="hizmetler" className="scroll-mt-20">
+          <HizmetYelpazesi
+            ctaHref={ctaHref}
+            baslik="Voyo Labs hizmetleri"
+            aciklama="RentQR ilk hizmetimiz. Yenileri hazır oldukça burada yer alacak."
+          />
         </section>
       </main>
 
       <SiteFooter
         className="pb-32 sm:pb-12"
         ekLinkler={
-          <>
-            <Link
-              href={ctaHref}
-              className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-            >
-              {onayli ? "Panel" : "Giriş yap"}
-            </Link>
-            <a
-              href="#features"
-              className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-            >
-              Ürün
-            </a>
-            <a
-              href="#fiyat"
-              className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
-            >
-              Fiyatlandırma
-            </a>
-          </>
+          <Link
+            href={ctaHref}
+            className="rounded-full px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover"
+          >
+            {onayli ? "Panel" : "Giriş yap"}
+          </Link>
         }
       />
 
-      {/* Telefonda sayfanın altına sabitlenen eylem çubuğu: bir uygulamanın
-          birincil düğmesi gibi her zaman parmağın altında duruyor, kullanıcının
-          en başa dönmesi gerekmiyor. Masaüstünde gizli — orada aynı düğme üst
-          çubukta zaten duruyor. */}
+      {/* Telefonda sayfanın altına sabitlenen eylem çubuğu: birincil düğme her
+          zaman parmağın altında. Masaüstünde üst çubukta zaten duruyor. */}
       <div className="tab-bar safe-b fixed inset-x-0 bottom-0 z-50 px-4 pt-3 sm:hidden">
         <Link href={ctaHref} className="btn btn-primary h-13 w-full text-base">
           {ctaLabel}
         </Link>
       </div>
-    </>
+    </div>
   );
 }

@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Anasayfa Voyo Labs'in sayfası oldu, RentQR ilk hizmet olarak anlatılıyor",
+  "aciklama": "Anasayfa baştan tasarlandı: yeni Voyo Labs logosu ve sade bir üst menü; en üstte okutulabilir gerçek bir QR etiketi; ardından RentQR'ın dört adımda nasıl çalıştığı, panelde neler olduğu ve fiyat. En altta Voyo Labs'in hizmetleri yelpaze gibi dizilmiş kartlarda: RentQR yayında, sıradaki hizmetler için yer ve fikir yazılabilecek bir kart var. Bilgisayarda sağ kenardaki etiketlerle bölümler arasında yumuşakça geçiliyor. Sayfadaki metinler sadeleştirildi; fiyattaki düğme artık doğrudan kayıt ekranını açıyor. Eski Veyro Labs vitrini bu sayfanın hizmetler bölümüne yönleniyor.",
+  "dikkat": "Bu sayfa müşterinin QR etiketten rezervasyon talebi bırakabildiğini anlatıyor. Önce 'Müşteri ürünün QR etiketini okutup rezervasyon talebi bırakabiliyor' işini canlıya alın, sonra bunu."
+}

@@ -39,7 +39,7 @@ export default function HizmetYelpazesi({
       ad: "RentQR",
       tur: "canli",
       rozet: "Yayında",
-      metin: "QR etiketle kiralama. Müşteri ürünü okutur, boş günü seçer ve rezervasyon yapar.",
+      metin: "QR etiketle kiralama. Müşteri ürünü okutur, boş günü seçer ve rezervasyon talebi bırakır.",
       bag: { href: ctaHref, ad: "RentQR’ı dene" },
     },
     {

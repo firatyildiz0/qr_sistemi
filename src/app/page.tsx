@@ -16,7 +16,7 @@ import { IconCheck } from "@/components/icons";
 export const metadata: Metadata = {
   title: "Voyo Labs — RentQR ile QR etiketle kiralama",
   description:
-    "Voyo Labs işletmeler için yazılım geliştiriyor. İlk hizmeti RentQR ile kiraya verdiğiniz ürüne QR etiket yapıştırın; müşteri okutup boş günü seçsin ve rezervasyon yapsın.",
+    "Voyo Labs işletmeler için yazılım geliştiriyor. İlk hizmeti RentQR ile kiraya verdiğiniz ürüne QR etiket yapıştırın; müşteri okutup boş günü seçsin ve rezervasyon talebini bıraksın.",
 };
 
 const BOLUMLER: Bolum[] = [
@@ -39,11 +39,11 @@ const ADIMLAR = [
   },
   {
     baslik: "Müşteri okutur",
-    metin: "Etiketi telefonuyla okutur, boş günleri görür, tarih seçer, adını ve telefon numarasını yazar.",
+    metin: "Etiketi telefonuyla okutur, boş günleri görür, tarih seçer ve adıyla telefon numarasını yazıp talep gönderir.",
   },
   {
-    baslik: "Panelinize düşer",
-    metin: "Rezervasyon panelinizdeki listeye düşer. Dolu günlere ikinci rezervasyon yapılamaz.",
+    baslik: "Siz onaylarsınız",
+    metin: "Talep panelinize düşer; onayladığınızda rezervasyon kesinleşir. Dolu günlere talep gönderilemez.",
   },
 ];
 
@@ -100,7 +100,7 @@ export default async function Home() {
             <p className="m-0 max-w-[520px] text-lg leading-relaxed text-ink-muted">
               Voyo Labs işletmeler için yazılım geliştiriyor. İlk hizmetimiz RentQR, kiraya verdiğiniz her ürün
               için bir QR etiket oluşturur. Müşteri etiketi telefonuyla okutur, boş günleri görür ve rezervasyon
-              yapar.
+              talebini bırakır; siz onaylayınca kesinleşir.
             </p>
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <Link href={ctaHref} className="btn btn-primary h-14 px-8 text-base">

@@ -1,14 +1,20 @@
-import Link from "next/link";
 import SiteFooter from "@/components/SiteFooter";
+import VitrinMenu from "@/components/marketing/VitrinMenu";
+import { getCurrentUser } from "@/lib/auth";
+import { getProfile, homePathFor } from "@/lib/profile";
+import { bricolage } from "@/lib/fonts";
 import { SATICI } from "@/lib/yasal";
 
 /**
  * Yasal metinlerin ortak iskeleti: başlık, güncelleme tarihi, bölümler ve
  * altta ödeme logolarını taşıyan site altbilgisi. Sayfalar herkese açık ve
  * oturum istemez — ödeme kuruluşu incelemesi dışarıdan açabilmeli.
+ *
+ * Üstte anasayfanın menüsü duruyor ama bölüm bağlantıları olmadan; düğmesi
+ * anasayfadakiyle aynı kurala uyuyor (onaylı hesap paneline, diğerleri girişe).
  */
 
-export function YasalSayfa({
+export async function YasalSayfa({
   baslik,
   guncelleme,
   giris,
@@ -19,16 +25,19 @@ export function YasalSayfa({
   giris: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
+  const onayli = profile?.status === "approved";
+
   return (
-    <>
-      <main className="mx-auto w-full max-w-3xl px-6 py-12 sm:py-16">
+    <div className={`vitrin ${bricolage.variable} relative flex flex-1 flex-col`}>
+      <VitrinMenu
+        girisGoster={!user}
+        ctaHref={onayli ? homePathFor(profile) : "/login"}
+        ctaLabel={onayli ? "Panele git" : "Hemen başla"}
+        bolumler={false}
+      />
+      <main className="mx-auto w-full max-w-3xl px-6 pb-12 pt-28 sm:pb-16 sm:pt-32">
         <header className="space-y-3 border-b border-border pb-8">
-          <Link
-            href="/"
-            className="text-sm font-medium text-ink-muted transition-colors hover:text-accent-hover"
-          >
-            ← {SATICI.urun}
-          </Link>
           <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{baslik}</h1>
           <p className="text-ink-muted">
             Son güncelleme: {guncelleme}. {giris}
@@ -38,7 +47,7 @@ export function YasalSayfa({
         <div className="mt-10 space-y-10">{children}</div>
       </main>
       <SiteFooter />
-    </>
+    </div>
   );
 }
 
@@ -52,7 +61,7 @@ export function Bolum({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-8 space-y-3">
+    <section id={id} className="scroll-mt-24 space-y-3">
       <h2 className="text-xl font-bold tracking-tight text-ink">{baslik}</h2>
       {children}
     </section>

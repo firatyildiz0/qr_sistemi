@@ -19,15 +19,20 @@ const BOLUM_LINKLERI = [
  * Telefonda bağlantılar ve birincil düğme gizli: orada sayfanın altındaki
  * eylem çubuğu aynı düğmeyi taşıyor, bölümler de zaten alt alta. Tema düğmesi
  * her ekranda duruyor.
+ *
+ * Anasayfa dışındaki sayfalarda (yasal metinler) `bolumler={false}`: oradan
+ * anasayfanın bölümlerine atlamanın anlamı yok, logo anasayfaya dönüyor.
  */
 export default function VitrinMenu({
   girisGoster,
   ctaHref,
   ctaLabel,
+  bolumler = true,
 }: {
   girisGoster: boolean;
   ctaHref: string;
   ctaLabel: string;
+  bolumler?: boolean;
 }) {
   const [kaydi, setKaydi] = useState(false);
 
@@ -48,16 +53,24 @@ export default function VitrinMenu({
       }`}
     >
       <div className="mx-auto flex h-[72px] max-w-[1200px] items-center justify-between px-6">
-        <a href="#giris" className="text-ink">
-          <VoyoLogo />
-        </a>
-        <div className="hidden items-center gap-9 text-[15px] font-semibold text-ink md:flex">
-          {BOLUM_LINKLERI.map((l) => (
-            <a key={l.href} href={l.href} className="transition-colors hover:text-accent">
-              {l.ad}
-            </a>
-          ))}
-        </div>
+        {bolumler ? (
+          <a href="#giris" className="text-ink">
+            <VoyoLogo />
+          </a>
+        ) : (
+          <Link href="/" className="text-ink">
+            <VoyoLogo />
+          </Link>
+        )}
+        {bolumler && (
+          <div className="hidden items-center gap-9 text-[15px] font-semibold text-ink md:flex">
+            {BOLUM_LINKLERI.map((l) => (
+              <a key={l.href} href={l.href} className="transition-colors hover:text-accent">
+                {l.ad}
+              </a>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-5 text-[15px] font-bold">
           {/* Telefonda menüde görünen tek şey: diğerleri altta. */}
           <TemaDugmesi className="-mr-2 md:mr-0" />

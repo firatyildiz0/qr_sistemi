@@ -90,7 +90,8 @@ export default async function AdminProductsPage({
         {error && <p className="text-sm text-danger">{error.message}</p>}
 
         <section>
-          <div className="mb-6 flex items-center justify-between">
+          {/* GEÇİCİ: sade düzende sayfa başlığını tekrar eden ara başlık yok. */}
+          <div className="yalniz-mevcut mb-6 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-ink">Envanter</h2>
           </div>
 

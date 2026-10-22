@@ -1,10 +1,8 @@
 import Link from "next/link";
-import ProductThumb from "@/components/admin/ProductThumb";
 
 export type GunKiralama = {
   id: string;
   urunAdi: string;
-  urunGorseli: string | null;
   musteri: string;
 };
 
@@ -25,76 +23,14 @@ function utc(tarih: string) {
 }
 
 /**
- * "Bugün ne var" kartı. İki hâli de sunucuda çiziliyor; hangisinin görüneceğini
- * seçim panosunun yazdığı `data-bugun` belirliyor (kapak.css). Seçim
- * yapıldığında yalnızca seçilen kalacak.
+ * "Önümüzdeki 7 gün" kartı: bugün koyu, sonraki altı gün açık sütunlar. Her
+ * günde o gün başlayan ve biten kiralamalar.
  *
- * Saat yok: rezervasyonlar gün olarak tutuluyor. Kart da günü anlatıyor —
- * hangi kiralama bugün başlıyor, hangisi bugün bitiyor.
+ * Saat yok: rezervasyonlar gün olarak tutuluyor. Kart da günü anlatıyor.
  */
 export default function BugunKarti({ gunler }: { gunler: Gun[] }) {
   return (
-    <>
-      <KoyuListe bugun={gunler[0]} />
-      <Serit gunler={gunler} />
-    </>
-  );
-}
-
-function KoyuListe({ bugun }: { bugun: Gun }) {
-  return (
-    <section
-      aria-label="Bugün"
-      className="bugun-koyu kapak-kart rounded-[28px] bg-deep p-6 text-on-deep sm:p-8"
-    >
-      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="kapak-baslik m-0 text-[32px] font-extrabold leading-none sm:text-[40px]">Bugün</h2>
-        <Link href="/admin/customers" className="text-sm font-semibold text-on-deep/70 hover:text-on-deep">
-          Bütün rezervasyonlar →
-        </Link>
-      </div>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-10">
-        <Sutun baslik="Başlayan kiralamalar" bos="Bugün başlayan kiralama yok." liste={bugun.baslayan} />
-        <Sutun baslik="Biten kiralamalar" bos="Bugün biten kiralama yok." liste={bugun.biten} />
-      </div>
-    </section>
-  );
-}
-
-function Sutun({ baslik, bos, liste }: { baslik: string; bos: string; liste: GunKiralama[] }) {
-  return (
-    <div className="min-w-0">
-      <p className="m-0 mb-3 flex items-center gap-2 border-b border-border-dark pb-3 text-sm font-semibold text-on-deep/70">
-        {baslik}
-        <span className="kapak-baslik ml-auto text-2xl font-extrabold text-on-deep">{liste.length}</span>
-      </p>
-      {liste.length === 0 ? (
-        <p className="m-0 py-2 text-sm text-on-deep/60">{bos}</p>
-      ) : (
-        <ul className="m-0 flex list-none flex-col gap-1 p-0">
-          {liste.map((k, i) => (
-            <li key={k.id} className="kapak-satir" style={{ "--i": i } as React.CSSProperties}>
-              <Link
-                href={`/admin/bookings/${k.id}`}
-                className="-mx-2 flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-on-deep/10"
-              >
-                <ProductThumb src={k.urunGorseli} className="h-10 w-10 border-border-dark" sizes="40px" />
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate text-[15px] font-bold">{k.urunAdi}</span>
-                  <span className="truncate text-[13px] text-on-deep/65">{k.musteri}</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function Serit({ gunler }: { gunler: Gun[] }) {
-  return (
-    <section aria-label="Önümüzdeki 7 gün" className="bugun-serit kapak-kart rounded-[28px] bg-card p-5 sm:p-7">
+    <section aria-label="Önümüzdeki 7 gün" className="kapak-kart rounded-[28px] bg-card p-5 sm:p-7">
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="kapak-baslik m-0 text-[28px] font-extrabold leading-none text-ink sm:text-[34px]">
           Önümüzdeki 7 gün

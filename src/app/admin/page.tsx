@@ -101,7 +101,6 @@ export default async function AdminHomePage() {
     const kiralama: GunKiralama = {
       id: b.id,
       urunAdi: b.products?.name ?? "Silinmiş ürün",
-      urunGorseli: coverImage(b.products?.images),
       musteri: b.customer_name,
     };
     gunBul.get(b.start_date)?.baslayan.push(kiralama);

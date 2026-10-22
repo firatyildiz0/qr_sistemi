@@ -10,6 +10,8 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import PhoneActions from "@/components/admin/PhoneActions";
 import ProductThumb from "@/components/admin/ProductThumb";
 import { IconCalendar, IconChevronRight, IconTrash } from "@/components/icons";
+import DurumYazisi from "@/components/admin/kapak/DurumYazisi";
+import { useDuzen } from "@/components/admin/kapak/duzen";
 
 export type BookingHistoryRow = {
   id: string;
@@ -52,6 +54,7 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
   // Tek bir onay penceresi bütün satırlara yetiyor: aynı anda yalnızca biri
   // silinebilir, o yüzden açık olan satırı tutmak satır başına state'ten basit.
   const [pendingDelete, setPendingDelete] = useState<BookingHistoryRow | null>(null);
+  const duzen = useDuzen();
 
   const counts = useMemo(() => {
     const map: Record<Filter, number> = {
@@ -101,6 +104,8 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
               : "Bu filtreye uyan rezervasyon yok."}
           </p>
         </div>
+      ) : duzen !== "mevcut" ? (
+        <SadeListe bookings={visible} kompakt={duzen === "kompakt"} onDelete={setPendingDelete} />
       ) : (
         <div className="flex flex-col gap-3">
           {visible.map((b, i) => (
@@ -204,5 +209,70 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
         tone="danger"
       />
     </div>
+  );
+}
+
+/**
+ * GEÇİCİ karşılaştırma hâlleri (bkz. kapak/duzen.ts).
+ *
+ * Satırda yalnızca okunması gereken kalıyor: kim, hangi ürün, hangi günler,
+ * hangi durumda. Oluşturulma zamanı rezervasyonun detayında zaten yazıyor;
+ * sil düğmesi de satırın üzerine gelince (telefonda soluk olarak) beliriyor.
+ *
+ * - sade: ayrı kartlar, iki satır
+ * - kompakt: tek kartta çizgiyle ayrılmış, tek satır
+ */
+function SadeListe({
+  bookings,
+  kompakt,
+  onDelete,
+}: {
+  bookings: BookingHistoryRow[];
+  kompakt: boolean;
+  onDelete: (b: BookingHistoryRow) => void;
+}) {
+  return (
+    <ul className={`m-0 flex list-none flex-col p-0 ${kompakt ? "card divide-y divide-border p-0" : "gap-2"}`}>
+      {bookings.map((b, i) => (
+        <li
+          key={b.id}
+          className={`fade-slide-up group relative flex items-center gap-3 ${
+            kompakt ? "px-4 py-3 transition-colors hover:bg-surface" : "card card-hover px-4 py-3.5"
+          }`}
+          style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
+        >
+          <Link
+            href={`/admin/bookings/${b.id}`}
+            aria-label={`${b.customerName} rezervasyonunu aç`}
+            className="absolute inset-0 rounded-[inherit]"
+          />
+          {!kompakt && <ProductThumb src={b.productImageUrl} className="h-10 w-10" sizes="40px" />}
+          {kompakt ? (
+            <div className="grid min-w-0 flex-1 grid-cols-1 items-center gap-x-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <p className="m-0 truncate text-sm font-semibold text-ink">{b.customerName}</p>
+              <p className="m-0 truncate text-sm text-ink-muted">{b.productName}</p>
+              <p className="m-0 text-sm tabular-nums text-ink-muted">{formatDateRange(b.startDate, b.endDate)}</p>
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1">
+              <p className="m-0 truncate font-semibold text-ink">{b.customerName}</p>
+              <p className="m-0 mt-0.5 truncate text-sm text-ink-muted">
+                {b.productName} · {formatDateRange(b.startDate, b.endDate)}
+              </p>
+            </div>
+          )}
+          <DurumYazisi status={b.status} className="sm:w-28" />
+          <button
+            type="button"
+            onClick={() => onDelete(b)}
+            aria-label={`${b.customerName} rezervasyonunu sil`}
+            title="Sil"
+            className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-muted opacity-40 transition hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 sm:opacity-0"
+          >
+            <IconTrash className="h-4 w-4" />
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }

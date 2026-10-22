@@ -11,6 +11,7 @@ import {
   IconQrCode,
 } from "@/components/icons";
 import { formatPrice } from "@/lib/format";
+import { useDuzen } from "@/components/admin/kapak/duzen";
 
 export type ProductCardData = {
   id: string;
@@ -69,6 +70,7 @@ export default function ProductGrid({
   emptyAction?: { href: string; label: string };
 }) {
   const [view, setView] = useState<"grid" | "list">("grid");
+  const duzen = useDuzen();
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_KEY);
@@ -96,6 +98,26 @@ export default function ProductGrid({
           </Link>
         )}
       </div>
+    );
+  }
+
+  if (duzen === "sade") {
+    return (
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+        {products.map((p, i) => (
+          <SadeKart key={p.id} product={p} sira={i} />
+        ))}
+      </div>
+    );
+  }
+
+  if (duzen === "kompakt") {
+    return (
+      <ul className="card m-0 list-none divide-y divide-border p-0">
+        {products.map((p, i) => (
+          <KompaktSatir key={p.id} product={p} sira={i} />
+        ))}
+      </ul>
     );
   }
 
@@ -244,5 +266,67 @@ function ProductFullCard({ product: p }: { product: ProductCardData }) {
         </div>
       </Link>
     </div>
+  );
+}
+
+/**
+ * GEÇİCİ karşılaştırma hâlleri (bkz. kapak/duzen.ts).
+ *
+ * Her kartta tekrarlanan "Müsait" rozeti kalkıyor: istisna olan işaretleniyor,
+ * yani yalnızca bugün kirada olan ürün rozet taşıyor. Açıklama, ayırıcı çizgi
+ * ve adet hapı da gidiyor; adet yalnızca birden fazlaysa fiyatın yanında.
+ */
+function SadeKart({ product: p, sira }: { product: ProductCardData; sira: number }) {
+  return (
+    <Link
+      href={`/admin/products/${p.id}`}
+      className="fade-slide-up group flex flex-col gap-3"
+      style={{ animationDelay: `${Math.min(sira, 12) * 40}ms` }}
+    >
+      <div className="relative aspect-square w-full overflow-hidden rounded-[22px] bg-card shadow-[var(--app-lift)] transition-transform duration-300 group-hover:-translate-y-1">
+        <Thumb product={p} sizes="(max-width: 1024px) 50vw, 25vw" iconClass="h-10 w-10" />
+        {p.stock === 0 ? (
+          <span className="absolute left-3 top-3 rounded-full bg-danger px-2.5 py-1 text-[11px] font-bold text-white">
+            Stok yok
+          </span>
+        ) : (
+          p.bookedToday && (
+            <span className="absolute left-3 top-3 rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold text-paper">
+              Bugün kirada
+            </span>
+          )
+        )}
+      </div>
+      <div className="px-1">
+        <h3 className="m-0 line-clamp-1 text-[15px] font-semibold text-ink group-hover:text-accent-hover">{p.name}</h3>
+        <p className="m-0 mt-0.5 text-sm text-ink-muted">
+          {p.dailyPrice != null ? `${formatPrice(p.dailyPrice)}/gün` : "Fiyat yok"}
+          {p.stock > 1 && ` · ${p.stock} adet`}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function KompaktSatir({ product: p, sira }: { product: ProductCardData; sira: number }) {
+  return (
+    <li className="fade-slide-up" style={{ animationDelay: `${Math.min(sira, 12) * 30}ms` }}>
+      <Link
+        href={`/admin/products/${p.id}`}
+        className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface"
+      >
+        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-surface">
+          <Thumb product={p} sizes="36px" iconClass="h-4 w-4" />
+        </div>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{p.name}</span>
+        {p.bookedToday && <span className="text-xs font-semibold text-status-upcoming">Bugün kirada</span>}
+        <span className="hidden w-16 text-right text-sm tabular-nums text-ink-muted sm:block">
+          {p.stock > 0 ? `${p.stock} adet` : "Stok yok"}
+        </span>
+        <span className="w-28 text-right text-sm font-semibold tabular-nums text-ink">
+          {p.dailyPrice != null ? `${formatPrice(p.dailyPrice)}/gün` : "—"}
+        </span>
+      </Link>
+    </li>
   );
 }

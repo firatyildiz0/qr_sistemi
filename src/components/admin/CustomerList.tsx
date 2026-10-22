@@ -18,6 +18,7 @@ import {
   IconTrash,
   IconUsers,
 } from "@/components/icons";
+import { useDuzen } from "@/components/admin/kapak/duzen";
 
 export default function CustomerList({
   customers,
@@ -32,6 +33,9 @@ export default function CustomerList({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   // The customers queued for deletion; non-null is what opens the dialog.
   const [pending, setPending] = useState<Customer[] | null>(null);
+  const duzen = useDuzen();
+  const sade = duzen !== "mevcut";
+  const kompakt = duzen === "kompakt";
 
   // Derived from what is on screen rather than read straight out of the set:
   // a search can hide a row that was ticked earlier, and a hidden row must
@@ -104,7 +108,7 @@ export default function CustomerList({
         </button>
       </div>
 
-      <ul className="flex flex-col gap-3">
+      <ul className={`flex flex-col ${kompakt ? "card divide-y divide-border p-0" : sade ? "gap-2" : "gap-3"}`}>
         {customers.map((customer, i) => {
           const isSelected = selectedKeys.has(customer.key);
 
@@ -114,8 +118,10 @@ export default function CustomerList({
                   kısayolları onun içine giremez: bağlantı kartı kaplayan bir
                   katman olarak duruyor, düğmeler de onun üstünde kalıyor. */}
               <div
-                className={`fade-slide-up card relative flex items-center gap-3 ${
-                  isSelected ? "border-accent bg-accent-soft" : "card-hover"
+                className={`fade-slide-up relative flex items-center gap-3 ${
+                  kompakt
+                    ? `px-4 py-3 transition-colors ${isSelected ? "bg-accent-soft" : "hover:bg-surface"}`
+                    : `card ${sade ? "px-4 py-3.5" : ""} ${isSelected ? "border-accent bg-accent-soft" : "card-hover"}`
                 }`}
                 style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
               >
@@ -143,10 +149,14 @@ export default function CustomerList({
                 <div className="flex min-w-0 flex-1 items-center gap-4">
                   {/* Seçim sırasında dokunuş satırı işaretlemeli; kısayollar
                       araya girmesin diye numara düz yazıya dönüyor. */}
-                  <CustomerRow customer={customer} phoneActions={!selecting} />
+                  {sade ? (
+                    <SadeSatir customer={customer} kompakt={kompakt} />
+                  ) : (
+                    <CustomerRow customer={customer} phoneActions={!selecting} />
+                  )}
                 </div>
 
-                {!selecting && (
+                {!selecting && !sade && (
                   <>
                     <IconChevronRight className="h-4 w-4 shrink-0 text-ink-muted" />
                     <button
@@ -294,6 +304,61 @@ function CustomerRow({
           {customer.spendIsPartial && <span className="text-ink-muted">+</span>}
         </span>
       )}
+    </>
+  );
+}
+
+/**
+ * GEÇİCİ karşılaştırma hâlleri (bkz. kapak/duzen.ts).
+ *
+ * Satırda kim, kaç kiralama, ne zamandan ne zamana ve toplam tutar kalıyor.
+ * Arama kısayolları müşterinin sayfasında; silmek için "Seç" var — satır
+ * başına çöp kutusu bu ekranı en çok kalabalıklaştıran şeydi.
+ */
+function SadeSatir({ customer, kompakt }: { customer: Customer; kompakt: boolean }) {
+  const latest = customer.bookings[0];
+  const durum =
+    customer.counts.active > 0
+      ? { metin: `${customer.counts.active} aktif`, renk: "text-success", nokta: "bg-success" }
+      : customer.counts.upcoming > 0
+        ? { metin: `${customer.counts.upcoming} yaklaşan`, renk: "text-status-upcoming", nokta: "bg-status-upcoming" }
+        : null;
+  const tutar =
+    customer.totalSpend != null ? `${formatPrice(customer.totalSpend)}${customer.spendIsPartial ? "+" : ""}` : null;
+
+  if (kompakt) {
+    return (
+      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_7rem_6rem]">
+        <p className="m-0 truncate text-sm font-semibold text-ink">{customer.name}</p>
+        <p className="m-0 hidden truncate text-sm tabular-nums text-ink-muted sm:block">
+          {formatDateRange(customer.firstDate, customer.lastDate)}
+        </p>
+        <span className={`text-xs font-semibold ${durum?.renk ?? "text-ink-muted"}`}>
+          {durum?.metin ?? `${customer.bookings.length} kiralama`}
+        </span>
+        <span className="hidden text-right text-sm font-semibold tabular-nums text-ink sm:block">{tutar}</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <ProductThumb src={latest?.imageUrl ?? null} className="h-10 w-10" sizes="40px" />
+      <div className="min-w-0 flex-1">
+        <p className="m-0 truncate font-semibold text-ink">{customer.name}</p>
+        <p className="m-0 mt-0.5 truncate text-sm text-ink-muted">
+          {customer.bookings.length} kiralama · {formatDateRange(customer.firstDate, customer.lastDate)}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        {tutar && <span className="text-sm font-semibold tabular-nums text-ink">{tutar}</span>}
+        {durum && (
+          <span className={`flex items-center gap-1.5 text-xs font-semibold ${durum.renk}`}>
+            <span aria-hidden="true" className={`h-2 w-2 rounded-full ${durum.nokta}`} />
+            {durum.metin}
+          </span>
+        )}
+      </div>
     </>
   );
 }

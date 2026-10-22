@@ -4,48 +4,58 @@ import { useEffect, useState } from "react";
 
 /**
  * GEÇİCİ — yalnızca tasarım seçimi için. Seçim yapılınca bu dosya, seçilmeyen
- * seçeneklerin CSS'i ve `data-kabuk` / `data-bugun` / `data-hareket`
- * öznitelikleri kaldırılacak.
+ * seçeneklerin CSS'i ve `data-dugme` / `data-etki` / `data-yukleme` /
+ * `data-duzen` öznitelikleri kaldırılacak.
  *
- * Yön A'nın üç ekseni canlı veriyle yan yana denensin diye ekranın köşesinde
- * küçük bir pano. Seçimler `<html>`'e öznitelik olarak yazılıyor; bütün
- * farklar CSS'te. Adres parametresiyle de verilebiliyor
- * (`/admin?kabuk=koyu&bugun=serit&hareket=canli`), bir bağlantıyla belli bir
+ * Seçimler `<html>`'e öznitelik olarak yazılıyor; düğme ve yükleme farkları
+ * CSS'te, ekran düzenleri `useDuzen` ile bileşenlerde. Adres parametresiyle de
+ * verilebiliyor (`/admin?dugme=yumusak&duzen=sade`), bir bağlantıyla belli bir
  * birleşimi göstermek için.
  */
 
 const EKSENLER = [
   {
-    ad: "kabuk",
-    baslik: "Kenar çubuğu",
+    ad: "duzen",
+    baslik: "Ekran düzeni",
     secenekler: [
-      { deger: "acik", ad: "Açık ray" },
-      { deger: "koyu", ad: "Koyu ray" },
-      { deger: "yuzen", ad: "Yüzen ray" },
-    ],
-  },
-  {
-    ad: "bugun",
-    baslik: "Bugün kartı",
-    secenekler: [
-      { deger: "koyu", ad: "Koyu liste" },
-      { deger: "serit", ad: "7 günlük şerit" },
-    ],
-  },
-  {
-    ad: "hareket",
-    baslik: "Hareket",
-    secenekler: [
+      { deger: "mevcut", ad: "Bugünkü" },
       { deger: "sade", ad: "Sade" },
-      { deger: "canli", ad: "Canlı" },
+      { deger: "kompakt", ad: "Kompakt" },
+    ],
+  },
+  {
+    ad: "dugme",
+    baslik: "Düğme şekli",
+    secenekler: [
+      { deger: "hap", ad: "Hap" },
+      { deger: "yumusak", ad: "Yumuşak köşe" },
+      { deger: "koseli", ad: "Keskin köşe" },
+    ],
+  },
+  {
+    ad: "etki",
+    baslik: "Düğme etkisi",
+    secenekler: [
+      { deger: "parilti", ad: "Kalkma + parlama" },
+      { deger: "cokme", ad: "Basınca çökme" },
+      { deger: "sade", ad: "Yalnızca renk" },
+    ],
+  },
+  {
+    ad: "yukleme",
+    baslik: "Yükleme animasyonu",
+    secenekler: [
+      { deger: "nabiz", ad: "Nabız" },
+      { deger: "parilti", ad: "Parıltı" },
+      { deger: "cizgi", ad: "Üst çizgi" },
     ],
   },
 ] as const;
 
 type Secim = Record<(typeof EKSENLER)[number]["ad"], string>;
 
-const ANAHTAR = "panel-kapak-secim";
-const VARSAYILAN: Secim = { kabuk: "acik", bugun: "koyu", hareket: "canli" };
+const ANAHTAR = "panel-kapak-secim-2";
+const VARSAYILAN: Secim = { duzen: "sade", dugme: "hap", etki: "parilti", yukleme: "nabiz" };
 
 function uygula(secim: Secim) {
   const kok = document.documentElement;
@@ -91,12 +101,16 @@ export default function SecimPaneli() {
     } catch {}
   }
 
+  // Sol altta, kenar çubuğunun hemen yanında: sağ alttaki "Ürün bul"
+  // düğmesinin üstüne binmesin.
+  const konum = "fixed z-[60] bottom-24 md:bottom-6 md:left-[17rem]";
+
   if (!acik) {
     return (
       <button
         type="button"
         onClick={() => ac(true)}
-        className="secim-paneli fixed bottom-24 left-4 z-[60] rounded-full bg-ink px-4 py-2.5 text-xs font-bold text-paper shadow-lg md:bottom-6 md:left-auto md:right-24"
+        className={`${konum} left-4 rounded-full bg-ink px-4 py-2.5 text-xs font-bold text-paper shadow-lg`}
       >
         Tasarım seçimi
       </button>
@@ -107,7 +121,7 @@ export default function SecimPaneli() {
     <div
       role="region"
       aria-label="Tasarım seçimi"
-      className="secim-paneli fixed inset-x-3 bottom-24 z-[60] rounded-[22px] bg-ink p-4 text-paper shadow-2xl md:inset-x-auto md:bottom-6 md:right-24 md:w-[300px]"
+      className={`${konum} inset-x-3 max-h-[70vh] overflow-y-auto rounded-[22px] bg-ink p-4 text-paper shadow-2xl md:right-auto md:w-[320px]`}
     >
       <div className="mb-3 flex items-center justify-between">
         <p className="m-0 text-xs font-bold uppercase tracking-[0.12em] text-paper/60">Tasarım seçimi · geçici</p>
@@ -144,6 +158,10 @@ export default function SecimPaneli() {
           </div>
         ))}
       </div>
+      <p className="m-0 mt-3 text-[11px] leading-snug text-paper/55">
+        Ekran düzeni şu ekranlarda değişiyor: Ana sayfa geçmişi, Rezervasyonlar, Ürünler, Ürün detayı, Bildirimler.
+        Yüklemeyi görmek için menüden başka bir bölüme geçin.
+      </p>
     </div>
   );
 }

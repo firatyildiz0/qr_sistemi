@@ -54,9 +54,6 @@ export default async function SubscriptionPage({
 
   // Onaysız hesabın burada işi yok: abonelik onaydan sonra başlıyor.
   if (!profile || profile.status !== "approved") redirect("/login");
-  // Superuser'dan ücret beklenmiyor (bkz. `can_write`), ekran ona boş görünür.
-  if (profile.role === "superuser") redirect("/yonetim");
-
   // Aboneliği çalışan biri buraya kendi isteğiyle gelmiş olabilir — ekranı
   // görsün, ama ödeme formu yerine durumunu görsün.
   const config = iyzicoConfig();
@@ -64,6 +61,11 @@ export default async function SubscriptionPage({
   // Test hesabı farklı bir plandan, farklı tutar öder (bkz. `planFor`);
   // ekrandaki tutar karttan çekilecek olanla aynı olsun.
   const plan = config ? planFor(config, profile.username) : null;
+
+  // Superuser'dan ücret beklenmiyor (bkz. `can_write`), ekran ona boş görünür.
+  // Test listesindeyse istisna: ödeme akışını canlıda kendi hesabıyla
+  // deneyebilsin. Aldığı abonelik erişimini değiştirmiyor, zaten muaf.
+  if (profile.role === "superuser" && !plan?.test) redirect("/yonetim");
   const price = plan?.priceTry ?? MONTHLY_PRICE_TRY;
   const nonce = headerList.get("x-nonce") ?? undefined;
 

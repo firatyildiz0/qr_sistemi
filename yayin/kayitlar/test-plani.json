@@ -1,6 +1,6 @@
 {
   "tip": "iyilestirme",
-  "baslik": "Ödeme sistemi tek bir test hesabıyla 1 TL'ye denenebiliyor",
-  "aciklama": "Seçilen test hesabı aboneliği 1 TL'lik deneme planıyla alıyor ve ödeme ekranında bunun bir test olduğunu görüyor. Diğer bütün satıcılar 1.999 TL ödemeye devam ediyor.",
+  "baslik": "Ödeme sistemi yönetici hesabıyla 1 TL'ye denenebiliyor",
+  "aciklama": "Seçilen hesap, yönetici hesabı da olsa, ödeme ekranını açıp aboneliği 1 TL'lik deneme planıyla alabiliyor; ekranda bunun bir test olduğu yazıyor. Diğer bütün satıcılar 1.999 TL ödemeye devam ediyor.",
   "dikkat": "Test bitince Vercel'den IYZICO_TEST_USERNAMES ayarını silip yeniden yayınlayın; test planı o an devre dışı kalır."
 }

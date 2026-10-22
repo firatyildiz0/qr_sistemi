@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Müşteri ürünün QR etiketini okutup rezervasyon talebi bırakabiliyor",
+  "aciklama": "Etiketi okutan müşteri artık yalnızca boş günleri görmüyor: tarih seçip adını, telefonunu, il/ilçesini ve teslim şeklini yazarak talep gönderebiliyor. Talep panelde Talepler ekranına ve bildirimlere düşüyor; onayladığınızda rezervasyon oluşuyor, reddederken yazdığınız not müşteriye gösteriliyor. Müşteri talebinin durumunu kendisine verilen bağlantıdan takip ediyor.",
+  "dikkat": "Canlıya almadan önce Supabase SQL editöründen 0031_qr_talep.sql migration'ını çalıştırın; çalışmadan talep kaydedilemez ve takip sayfası açılmaz."
+}

@@ -1108,10 +1108,13 @@ create index if not exists instagram_events_received_idx
 create table if not exists booking_requests (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
-  source text not null default 'instagram' check (source in ('instagram')),
+  -- 'qr': müşteri ürünün etiketini okutup sayfadan talep bıraktı (bkz. 0031).
+  source text not null default 'instagram' check (source in ('instagram', 'qr')),
   thread_id uuid references instagram_threads(id) on delete set null,
   -- Kararın müşteriye geri yazılabilmesi için; thread silinse de duruyor.
   sender_id text,
+  -- QR talebinin takip sayfası anahtarı; Instagram talebinde boş.
+  takip_kodu text,
   customer_name text not null,
   customer_phone text,
   customer_city text not null,
@@ -1502,3 +1505,57 @@ $$;
 
 revoke all on function instagram_account_status() from public, anon;
 grant execute on function instagram_account_status() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- QR talebi takibi (bkz. migrations/0031_qr_talep.sql)
+-- ---------------------------------------------------------------------------
+create unique index if not exists booking_requests_takip_kodu_unique
+  on booking_requests(takip_kodu) where takip_kodu is not null;
+
+-- Takip sayfasının okuduğu tek şey.
+--
+-- `security definer`: tabloda ziyaretçiye select politikası yok ve olmamalı —
+-- içinde müşterinin adı, telefonu, adresi var. Fonksiyon yalnızca durumu ve
+-- müşterinin zaten bildiği talep ayrıntılarını döndürüyor; telefon ve adres
+-- dönmüyor, kodu ele geçiren biri bunları göremesin.
+create or replace function qr_talep_durumu(p_kod text)
+returns table (
+  status text,
+  decision_note text,
+  start_date date,
+  end_date date,
+  delivery_mode text,
+  created_at timestamptz,
+  decided_at timestamptz,
+  urunler jsonb
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    r.status,
+    r.decision_note,
+    r.start_date,
+    r.end_date,
+    r.delivery_mode,
+    r.created_at,
+    r.decided_at,
+    coalesce(
+      (
+        select jsonb_agg(jsonb_build_object('ad', p.name, 'adet', i.quantity, 'id', p.id) order by p.name)
+        from booking_request_items i
+        join products p on p.id = i.product_id
+        where i.request_id = r.id
+      ),
+      '[]'::jsonb
+    ) as urunler
+  from booking_requests r
+  where r.source = 'qr'
+    and r.takip_kodu = p_kod
+    and length(p_kod) >= 20;
+$$;
+
+revoke all on function qr_talep_durumu(text) from public;
+grant execute on function qr_talep_durumu(text) to anon, authenticated;

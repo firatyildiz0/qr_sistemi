@@ -17,6 +17,8 @@ export type SecurityEventKind =
   | "login_failed"
   | "login_ok"
   | "signup"
+  /** Müşteri bir ürünün QR sayfasından rezervasyon talebi bıraktı. */
+  | "qr_talep"
   | "rate_limited"
   | "unauthorized"
   | "cron_unauthorized"
@@ -108,6 +110,8 @@ const LIMITS = {
   perIp: { max: 20, windowMinutes: 15 },
   /** Aynı IP: bir saatte 5 kayıt (aşağıdaki gerekçe). */
   signupPerIp: { max: 5, windowMinutes: 60 },
+  /** Aynı IP: bir saatte 5 QR rezervasyon talebi (aşağıdaki gerekçe). */
+  qrTalepPerIp: { max: 5, windowMinutes: 60 },
 };
 
 export type RateLimitResult = { allowed: true } | { allowed: false; message: string };
@@ -206,6 +210,38 @@ export async function checkSignupRateLimit(): Promise<RateLimitResult> {
     // Girişteki gerekçenin aynısı: güvenlik tablosundaki bir arıza yeni
     // satıcıların kaydolmasını tümden engellemesin.
     console.error("[security] kayıt hız sınırı okunamadı:", error);
+    return { allowed: true };
+  }
+}
+
+const QR_TALEP_BLOCKED_MESSAGE =
+  "Bu bağlantıdan kısa sürede çok fazla talep gönderildi. Bir saat sonra tekrar deneyin ya da işletmeyi arayın.";
+
+/**
+ * QR talebi eşiği.
+ *
+ * Ürün sayfası giriş istemiyor; etiketi okutan herkes talep bırakabiliyor. Her
+ * talep satıcıya bildirim düşürdüğü için bir betiğin paneli doldurması kolay —
+ * aynı IP'den saatte beş talep, bir müşterinin gerçekten isteyeceğinden fazla.
+ * Girişteki sayaçlarla aynı davranış: sayamazsak engellemiyoruz.
+ */
+export async function checkQrTalepRateLimit(): Promise<RateLimitResult> {
+  try {
+    const { ip } = await requestContext();
+    if (!ip) return { allowed: true };
+
+    const recent = await countRecent("ip", ip, "qr_talep", LIMITS.qrTalepPerIp.windowMinutes);
+    if (recent < LIMITS.qrTalepPerIp.max) return { allowed: true };
+
+    await recordSecurityEvent({
+      kind: "rate_limited",
+      severity: "warning",
+      detail: { qrTaleplerForIp: recent, reason: "qr_talep_ip" },
+    });
+
+    return { allowed: false, message: QR_TALEP_BLOCKED_MESSAGE };
+  } catch (error) {
+    console.error("[security] QR talep hız sınırı okunamadı:", error);
     return { allowed: true };
   }
 }

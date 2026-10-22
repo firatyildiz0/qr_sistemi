@@ -1,5 +1,4 @@
 import { kapakBaslik } from "@/components/admin/kapak/font";
-import SecimPaneli from "@/components/admin/kapak/SecimPaneli";
 import "@/components/admin/kapak/kapak.css";
 
 /**
@@ -13,9 +12,6 @@ import "@/components/admin/kapak/kapak.css";
  */
 export default function AdminTemplate({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <div className={`sayfa-gecis ${kapakBaslik.variable} flex min-w-0 flex-1 flex-col`}>{children}</div>
-      <SecimPaneli />
-    </>
+    <div className={`sayfa-gecis ${kapakBaslik.variable} flex min-w-0 flex-1 flex-col`}>{children}</div>
   );
 }

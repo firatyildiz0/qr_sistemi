@@ -4,10 +4,7 @@
    `@layer utilities` içinde, yani buradaki bir kural seçici gücüne bakılmadan
    onları eziyor. Düğme kuralları ise `@layer components` içinde, çünkü
    `.btn`'in kendisi orada ve `!important` katmanlar arasında ters işliyor —
-   katmansız bir `!important` katmandakini ezemiyor.
-
-   GEÇİCİ: `data-gecmis` ve `data-hafta` seçim panosunun öznitelikleri.
-   Seçim yapılınca kazanan hâl tek hâl olacak, ötekiler silinecek. */
+   katmansız bir `!important` katmandakini ezemiyor. */
 
 .kapak-baslik {
   font-family: var(--font-kapak), var(--font-display), ui-sans-serif, system-ui, sans-serif;

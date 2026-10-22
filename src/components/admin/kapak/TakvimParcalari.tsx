@@ -19,10 +19,7 @@ export function gunBasligi(tarih: string, bugun: string) {
   return ad.charAt(0).toLocaleUpperCase("tr-TR") + ad.slice(1);
 }
 
-/**
- * Kiralamaya giden bağlantı. Örnek verinin gideceği bir rezervasyon yok;
- * orada aynı görünümde düz bir kutu.
- */
+/** Rezervasyonun detay sayfasına giden satır. */
 export function KiralamaBaglantisi({
   k,
   className,
@@ -34,13 +31,6 @@ export function KiralamaBaglantisi({
   title?: string;
   children: React.ReactNode;
 }) {
-  if (k.ornek) {
-    return (
-      <span className={className} title={title}>
-        {children}
-      </span>
-    );
-  }
   return (
     <Link href={`/admin/bookings/${k.id}`} className={className} title={title}>
       {children}

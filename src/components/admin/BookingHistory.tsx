@@ -6,8 +6,7 @@ import { formatDateRange } from "@/lib/bookings";
 import { deleteBooking } from "@/app/product/[id]/actions";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { IconCalendar } from "@/components/icons";
-import { GECMIS_HALLERI, useSecim } from "@/components/admin/kapak/secim";
-import { AylaraGoreListe, SiradakilerListe, TarihRozetliListe } from "@/components/admin/kapak/GecmisHalleri";
+import GecmisListesi from "@/components/admin/kapak/GecmisListesi";
 
 export type BookingHistoryRow = {
   id: string;
@@ -39,9 +38,6 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
   // Tek bir onay penceresi bütün satırlara yetiyor: aynı anda yalnızca biri
   // silinebilir, o yüzden açık olan satırı tutmak satır başına state'ten basit.
   const [pendingDelete, setPendingDelete] = useState<BookingHistoryRow | null>(null);
-  // GEÇİCİ: üç hâlden hangisi (bkz. kapak/secim.ts). "Önce sıradakiler"
-  // filtre şeridini kullanmıyor; listeyi kendisi bölüyor.
-  const hal = useSecim("gecmis", GECMIS_HALLERI, "tarih");
 
   const counts = useMemo(() => {
     const map: Record<Filter, number> = {
@@ -60,10 +56,6 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
 
   return (
     <div className="flex flex-col gap-5">
-      {hal === "sirada" ? (
-        <SiradakilerListe bookings={bookings} onDelete={setPendingDelete} />
-      ) : (
-      <>
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => {
           const selected = filter === f.key;
@@ -95,12 +87,8 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
               : "Bu filtreye uyan rezervasyon yok."}
           </p>
         </div>
-      ) : hal === "aylar" ? (
-        <AylaraGoreListe bookings={visible} onDelete={setPendingDelete} />
       ) : (
-        <TarihRozetliListe bookings={visible} onDelete={setPendingDelete} />
-      )}
-      </>
+        <GecmisListesi bookings={visible} onDelete={setPendingDelete} />
       )}
 
       <ConfirmDialog

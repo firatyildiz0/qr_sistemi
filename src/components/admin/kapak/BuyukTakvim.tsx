@@ -296,15 +296,21 @@ function GunKutusu({
         ? "bg-surface text-ink hover:bg-border/60"
         : "bg-surface/40 text-ink-muted/60 hover:bg-surface";
 
+  // Kutunun tamamı günü seçiyor; içindeki ürün adları ise rezervasyonu
+  // açıyor. Bağlantı bir düğmenin içine konamadığı için seçim, kutuyu kaplayan
+  // bir katman; adlar onun üstünde duruyor.
   return (
-    <button
-      type="button"
-      onClick={onSec}
-      aria-pressed={secili}
-      aria-label={`${gunAy.format(utc(gun.tarih))}: ${gun.baslayan.length} çıkış, ${gun.biten.length} dönüş, ${gun.kirada.length} kirada`}
-      className={`flex min-h-[64px] min-w-0 flex-col gap-1 rounded-[6px] p-1.5 text-left transition-colors sm:min-h-[104px] sm:p-2 ${zemin}`}
+    <div
+      className={`relative flex min-h-[64px] min-w-0 flex-col gap-1 rounded-[6px] p-1.5 transition-colors sm:min-h-[104px] sm:p-2 ${zemin}`}
     >
-      <span className="flex items-center justify-between gap-1">
+      <button
+        type="button"
+        onClick={onSec}
+        aria-pressed={secili}
+        aria-label={`${gunAy.format(utc(gun.tarih))}: ${gun.baslayan.length} çıkış, ${gun.biten.length} dönüş, ${gun.kirada.length} kirada`}
+        className="absolute inset-0 rounded-[inherit]"
+      />
+      <span className="pointer-events-none relative flex items-center justify-between gap-1">
         <span
           className={`kapak-baslik flex h-6 min-w-6 items-center justify-center rounded-[6px] px-1 text-[15px] font-extrabold leading-none ${
             bugun && !secili ? "bg-accent text-white" : ""
@@ -323,15 +329,22 @@ function GunKutusu({
         )}
       </span>
       {/* Telefonda tek işaret: bu günde çıkış ya da dönüş var. Ne olduğu,
-          güne dokununca altta yazıyla. */}
-      <span className="flex h-1.5 sm:hidden">
+          güne dokununca altta yazıyla — ad orada, dokunulacak kadar büyük. */}
+      <span className="pointer-events-none relative flex h-1.5 sm:hidden">
         {sayi > 0 && <span className={`h-1.5 w-1.5 rounded-full ${secili ? "bg-paper" : "bg-accent"}`} />}
       </span>
-      <span className="hidden min-w-0 flex-col gap-0.5 sm:flex">
+      <span className="pointer-events-none relative hidden min-w-0 flex-col gap-0.5 sm:flex">
         {[...gun.baslayan.map((k) => ({ k, tur: "b" as const })), ...gun.biten.map((k) => ({ k, tur: "e" as const }))]
           .slice(0, 3)
           .map(({ k, tur }) => (
-            <span key={`${tur}-${k.id}`} className="flex min-w-0 items-center gap-1 text-[11px] font-semibold">
+            <KiralamaBaglantisi
+              key={`${tur}-${k.id}`}
+              k={k}
+              title={`${k.urunAdi} · ${k.musteri} · ${tur === "b" ? "çıkış" : "dönüş"}`}
+              className={`pointer-events-auto -mx-1 flex min-w-0 items-center gap-1 rounded-[4px] px-1 text-[11px] font-semibold hover:underline ${
+                secili ? "hover:bg-paper/10" : "hover:bg-card"
+              }`}
+            >
               <span
                 aria-hidden="true"
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
@@ -339,7 +352,7 @@ function GunKutusu({
                 }`}
               />
               <span className="truncate">{k.urunAdi}</span>
-            </span>
+            </KiralamaBaglantisi>
           ))}
         {sayi > 3 && (
           <span className={`text-[11px] font-semibold ${secili ? "text-paper/70" : "text-ink-muted"}`}>
@@ -347,7 +360,7 @@ function GunKutusu({
           </span>
         )}
       </span>
-    </button>
+    </div>
   );
 }
 

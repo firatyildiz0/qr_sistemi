@@ -1762,14 +1762,3 @@ html:has(.vitrin) {
     scroll-behavior: auto;
   }
 }
-
-/* Hizmet şeridi fareyle sürüklenirken yakalama kapalı: yoksa her pikselde
-   karta geri çekiyor. Bırakınca en yakın karta oturuyor. */
-.hizmet-seridi {
-  cursor: grab;
-}
-.hizmet-seridi[data-surukleniyor] {
-  cursor: grabbing;
-  scroll-snap-type: none;
-  user-select: none;
-}

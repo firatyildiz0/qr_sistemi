@@ -34,6 +34,16 @@ export default function CheckoutFrame({
     const host = hostRef.current;
     if (!host) return;
 
+    // iyzico'nun parçacığı `if (typeof iyziInit == 'undefined')` ile
+    // başlıyor: sayfada daha önce bir form açıldıysa (kullanıcı "Fatura
+    // bilgilerini düzenle" deyip yeniden gönderdiyse) yeni form hiç
+    // çizilmiyordu. Önceki formun bıraktığı değişkenler sıfırlanıyor; yeni
+    // parçacık kendi token'ıyla baştan kuruluyor.
+    const iyziGlobals = window as unknown as Record<string, unknown>;
+    for (const name of ["iyziInit", "iyziUcsInit", "iyziSubscriptionInit"]) {
+      iyziGlobals[name] = undefined;
+    }
+
     // Parçacık `<script>` ve genellikle bir kap `<div>` içeriyor. `template`
     // ile ayrıştırılıyor: içindekiler ayrıştırma anında çalıştırılmaz ve
     // yüklenmez, yani ne script yürür ne görsel istek gider — kontrol bizde

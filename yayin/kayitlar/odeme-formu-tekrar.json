@@ -1,0 +1,6 @@
+{
+  "tip": "hata",
+  "baslik": "Fatura bilgilerine dönüp tekrar ilerleyince kart formu açılmıyordu",
+  "aciklama": "Ödeme ekranında 'Fatura bilgilerini düzenle' deyip yeniden 'Kart bilgilerine geç'e basınca kart formunun yeri boş kalıyordu. Artık form her seferinde yeniden açılıyor.",
+  "dikkat": null
+}

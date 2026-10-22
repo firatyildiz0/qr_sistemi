@@ -25,9 +25,13 @@ export async function kararBildir(
 
   const { data: talep } = await db
     .from("booking_requests")
-    .select("owner_id, sender_id, start_date, end_date")
+    .select("owner_id, sender_id, source, start_date, end_date")
     .eq("id", talepId)
     .maybeSingle();
+
+  // QR talebinde gönderilecek bir sohbet yok: müşteri kararı kendi takip
+  // sayfasında görüyor (bkz. app/talep/[kod]). Haber verilmiş sayılır.
+  if (talep?.source === "qr") return { ok: true };
 
   if (!talep?.sender_id) return { ok: false, hata: "Müşterinin sohbeti bulunamadı." };
 

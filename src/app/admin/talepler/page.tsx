@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
@@ -14,7 +13,8 @@ import { IconInbox } from "@/components/icons";
 import TalepKarti, { type Talep } from "@/components/instagram/TalepKarti";
 
 /**
- * Instagram'dan gelen rezervasyon talepleri.
+ * Müşterilerin bıraktığı rezervasyon talepleri: ürünün QR etiketinden ya da
+ * (açıkken) Instagram mesajından.
  *
  * Ekranın tek işi satıcının "olur" ya da "olmaz" diyebilmesi, ama bunu bilerek
  * söyleyebilmesi: her talebin yanında ürünün o tarihlerde gerçekten müsait
@@ -49,13 +49,14 @@ type TalepSatiri = {
   created_at: string;
   decided_at: string | null;
   group_id: string | null;
+  source: "qr" | "instagram";
   booking_request_items: KalemSatiri[];
 };
 
 const SECIM =
   "id, customer_name, customer_phone, customer_city, customer_district, " +
   "start_date, end_date, delivery_mode, blocked_start, blocked_end, status, " +
-  "decision_note, created_at, decided_at, group_id, " +
+  "decision_note, created_at, decided_at, group_id, source, " +
   "booking_request_items(quantity, product_id, products(name, barcode, stock))";
 
 /**
@@ -142,6 +143,7 @@ function talebeCevir(satir: TalepSatiri, cakisma: string | undefined): Talep {
     durum: satir.status,
     not: satir.decision_note,
     grupId: satir.group_id,
+    kaynak: satir.source,
     cakisma: cakisma ?? null,
     kalemler: satir.booking_request_items.map((kalem) => ({
       ad: kalem.products?.name ?? "Silinmiş ürün",
@@ -152,7 +154,6 @@ function talebeCevir(satir: TalepSatiri, cakisma: string | undefined): Talep {
 }
 
 export default async function TaleplerPage() {
-  if (!INSTAGRAM_AKTIF) notFound();
   const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
 
   const [{ data: bekleyenler }, { data: sonuclananlar }] = await Promise.all([
@@ -181,12 +182,14 @@ export default async function TaleplerPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Talepler</h1>
           <p className="text-sm text-ink-muted">
-            Instagram’dan gelen rezervasyon istekleri. Onayladığınızda rezervasyon oluşur.
+            Müşterilerin ürün etiketinden gönderdiği istekler. Onayladığınızda rezervasyon oluşur.
           </p>
         </div>
-        <Link href="/admin/instagram" className="btn btn-secondary self-start sm:self-auto">
-          Instagram bağlantısı
-        </Link>
+        {INSTAGRAM_AKTIF && (
+          <Link href="/admin/instagram" className="btn btn-secondary self-start sm:self-auto">
+            Instagram bağlantısı
+          </Link>
+        )}
       </header>
 
       <div className="mx-auto w-full max-w-3xl flex-1 space-y-8 p-4 sm:p-8">
@@ -197,8 +200,8 @@ export default async function TaleplerPage() {
             </span>
             <p className="font-semibold text-ink">Bekleyen talep yok</p>
             <p className="max-w-sm text-sm text-ink-muted">
-              Müşteriler Instagram’dan mesaj atarak rezervasyon isteyebilir. Gelen istekler onayınız
-              için burada birikir.
+              Müşteri ürünün QR etiketini okutup tarih seçtiğinde talebi buraya düşer. Onayınızı
+              bekleyen talepler burada birikir.
             </p>
           </div>
         ) : (

@@ -17,6 +17,7 @@ import { getTurnaround } from "@/lib/settings";
 import AvailabilityCalendar from "@/components/booking/AvailabilityCalendar";
 import BookingForm from "@/components/booking/BookingForm";
 import BookingList from "@/components/booking/BookingList";
+import TalepFormu from "@/components/booking/TalepFormu";
 import PresenceBeacon from "@/components/PresenceBeacon";
 import { IconQrCode, IconTag } from "@/components/icons";
 
@@ -192,7 +193,7 @@ export default async function ProductDetailPage({
 
         <section>
           <h2 className="mb-3 text-lg font-semibold text-ink">
-            {isOwner ? "Yeni rezervasyon" : "Müsaitlik"}
+            {isOwner ? "Yeni rezervasyon" : product.stock > 0 ? "Rezervasyon talebi" : "Müsaitlik"}
           </h2>
           {isOwner ? (
             <BookingForm
@@ -202,6 +203,10 @@ export default async function ProductDetailPage({
               turnaround={turnaround}
               catalog={catalog}
             />
+          ) : product.stock > 0 ? (
+            // Ziyaretçi takvimi görüp talep bırakıyor; rezervasyonu satıcı
+            // Talepler ekranından onaylayınca açılıyor (bkz. talep.ts).
+            <TalepFormu productId={id} availability={availability} stock={product.stock} />
           ) : (
             <AvailabilityCalendar availability={availability} stock={product.stock} />
           )}

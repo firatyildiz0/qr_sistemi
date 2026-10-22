@@ -31,6 +31,8 @@ export type Talep = {
   /** Ürün bu tarihlerde artık müsait değilse gösterilecek cümle. */
   cakisma: string | null;
   kalemler: TalepKalemi[];
+  /** Talebin geldiği yer: ürünün QR etiketi ya da Instagram mesajı. */
+  kaynak: "qr" | "instagram";
 };
 
 const DURUM_ETIKETI: Record<string, { metin: string; sinif: string }> = {
@@ -93,7 +95,7 @@ export default function TalepKarti({
           <h3 className="truncate text-base font-semibold text-ink">{talep.ad}</h3>
           <p className="flex items-center gap-1 text-xs text-ink-muted">
             <IconClock className="h-3.5 w-3.5" />
-            {gecenSure(talep.olusturuldu)} · Instagram
+            {gecenSure(talep.olusturuldu)} · {talep.kaynak === "qr" ? "QR etiket" : "Instagram"}
           </p>
         </div>
         {etiket && <span className={`pill ${etiket.sinif}`}>{etiket.metin}</span>}

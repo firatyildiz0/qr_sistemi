@@ -86,9 +86,10 @@ const TUM_OGELER: NavItem[] = [
 
 /**
  * Instagram'a bağlı ekranlar. Özellik kapalıyken menüden çıkmıyor, "Yakında"
- * olarak kalıyor ki satıcı neyin geleceğini bilsin.
+ * olarak kalıyor ki satıcı neyin geleceğini bilsin. Talepler bu listede değil:
+ * QR etiketten gelen talepler de oraya düşüyor, Instagram kapalıyken de açık.
  */
-const INSTAGRAM_EKRANLARI = new Set(["/admin/talepler", "/admin/instagram", "/admin/instagram-paneli"]);
+const INSTAGRAM_EKRANLARI = new Set(["/admin/instagram", "/admin/instagram-paneli"]);
 
 export const NAV_ITEMS: NavItem[] = INSTAGRAM_AKTIF
   ? TUM_OGELER

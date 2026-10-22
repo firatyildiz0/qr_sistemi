@@ -3,7 +3,6 @@ import { getCurrentUser } from "@/lib/auth";
 import NotificationRow from "@/components/admin/NotificationRow";
 import MarkAllReadButton from "@/components/admin/MarkAllReadButton";
 import { IconCheckCircle } from "@/components/icons";
-import { INSTAGRAM_AKTIF } from "@/lib/instagram/kurulum";
 
 export default async function NotificationsPage() {
   const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
@@ -11,12 +10,10 @@ export default async function NotificationsPage() {
   // Sahiplik bildirimin kendi kolonundan geliyor; RLS de aynı koşulu arkada
   // uyguluyor. Ürün bağlantısı isteğe bağlı: talep bildirimlerinin tek bir
   // ürünü olmayabilir (toplu talep), o yüzden join `!inner` değil.
-  let sorgu = supabase
+  const sorgu = supabase
     .from("notifications")
     .select("id, kind, request_id, product_id, message, is_read, created_at, products(name)")
     .eq("owner_id", user?.id ?? "");
-  // Instagram kapalıyken talep bildirimleri açılamayan bir ekrana götürür.
-  if (!INSTAGRAM_AKTIF) sorgu = sorgu.neq("kind", "talep");
   const { data: rows } = await sorgu
     .order("created_at", { ascending: false })
     .limit(50);

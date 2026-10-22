@@ -1734,3 +1734,11 @@ html:has(.vitrin) {
     scroll-behavior: auto;
   }
 }
+
+/* iyzico ödeme formu (/abonelik). Tailwind'in temel stilleri her img/svg'yi
+   blok yapıyor; formun cümle içindeki "iyzico" logosu bu yüzden alt satıra
+   düşüyordu. `:where` özgüllüğü sıfırlıyor: iyzico'nun kendi kuralları her
+   zaman kazanıyor, bu yalnızca onların boş bıraktığı yeri dolduruyor. */
+:where(#iyzipay-checkout-form) :where(img, svg) {
+  display: inline;
+}

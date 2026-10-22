@@ -10,16 +10,16 @@ import { IconShield } from "@/components/icons";
 
 const INITIAL: CheckoutState = { error: null };
 
-const FIELD =
-  "w-full rounded-[--radius-md] border border-border bg-paper px-3 py-2 text-sm text-ink outline-none placeholder:text-placeholder focus:border-accent focus:ring-2 focus:ring-accent-muted";
+// Giriş ve kayıt formlarıyla aynı alan ve etiket sınıfları (globals.css).
+const FIELD = "input";
 
-const LABEL = "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted";
+const LABEL = "field-label";
 
 function Submit() {
   const { pending } = useFormStatus();
 
   return (
-    <button type="submit" disabled={pending} className="btn btn-primary w-full">
+    <button type="submit" disabled={pending} className="btn btn-primary h-13 w-full text-base">
       {pending ? "Ödeme formu hazırlanıyor…" : "Ödemeye geç"}
     </button>
   );
@@ -50,7 +50,7 @@ export default function SubscribeForm({ nonce }: { nonce?: string }) {
       {state.error && (
         <p
           role="alert"
-          className="rounded-[--radius-md] border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
+          className="rounded-2xl border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
         >
           {state.error}
         </p>

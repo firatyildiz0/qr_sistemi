@@ -12,20 +12,18 @@
  * nonce'lu script'in *kendi* eklediklerini kapsıyor, iframe'i kapsamıyor — o
  * yüzden alan adları açıkça listeleniyor.
  *
- * Sandbox ve canlı ayrı alan adları kullanıyor; ikisi birden veriliyor ki
- * `IYZICO_ENV` değişince CSP'yi güncellemek gerekmesin.
+ * Sandbox ve canlı ayrı alt alan adları kullanıyor (`sandbox-api.` gibi);
+ * joker ikisini de kapsıyor, `IYZICO_ENV` değişince CSP'yi güncellemek
+ * gerekmiyor.
  */
 export const IYZICO_CSP_ORIGINS = [
-  "https://static.iyzipay.com",
-  "https://sandbox-static.iyzipay.com",
-  "https://api.iyzipay.com",
-  "https://sandbox-api.iyzipay.com",
-  "https://merchantgw.iyzipay.com",
-  "https://sandbox-merchantgw.iyzipay.com",
-  "https://cpp.iyzipay.com",
-  "https://sandbox-cpp.iyzipay.com",
-  "https://ode.iyzico.com",
-  "https://sandbox-ode.iyzico.com",
+  // Ödeme formu dosyalarını birden çok alt alan adından çekiyor ve bu liste
+  // iyzico'nun elinde değişiyor: paket `static.`, kart logoları ve stiller
+  // `cdn.`, istekler `api.`, `merchant-gateway.`, `consumerapigw.`. Tek tek
+  // yazılan liste `cdn.` eksik kaldığında formu stilsiz ve logosuz
+  // bırakmıştı; iki alan adının bütün alt alan adlarına izin veriliyor.
+  "https://*.iyzipay.com",
+  "https://*.iyzico.com",
 ] as const;
 
 /** CSP yönergesine girecek biçim: boşlukla ayrılmış tek dize. */

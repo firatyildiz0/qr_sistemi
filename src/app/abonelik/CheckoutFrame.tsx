@@ -93,7 +93,7 @@ export default function CheckoutFrame({
       {failed && (
         <p
           role="alert"
-          className="rounded-[--radius-md] border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
+          className="rounded-2xl border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
         >
           Ödeme formu yüklenemedi. Reklam engelleyicinizi kapatıp sayfayı
           yenilemeyi deneyin.
@@ -101,8 +101,9 @@ export default function CheckoutFrame({
       )}
 
       {/* Form iyzico'nun kendi alanından geliyor; yüksekliği içeriğine göre
-          değişiyor, o yüzden sabit bir boy verilmiyor. */}
-      <div ref={hostRef} />
+          değişiyor, o yüzden sabit bir boy verilmiyor. Köşeler kartla aynı
+          dilde yuvarlansın diye kırpılıyor. */}
+      <div ref={hostRef} className="overflow-hidden rounded-2xl" />
     </div>
   );
 }

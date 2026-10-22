@@ -26,33 +26,9 @@ export default function ProductForm({
     <form action={formAction} className="space-y-5">
       <div>
         <label htmlFor="name" className="field-label">
-          Ad
+          Ürün adı
         </label>
         <input id="name" name="name" required defaultValue={product?.name} className="input" />
-      </div>
-
-      {/* Etikete basılan numara. Ürün adının hemen altında duruyor çünkü QR
-          etiketinde de öyle çıkıyor — form etiketin sırasını taklit ediyor. */}
-      <div>
-        <label htmlFor="barcode" className="field-label">
-          Barkod numarası
-        </label>
-        <input
-          id="barcode"
-          name="barcode"
-          maxLength={32}
-          inputMode="text"
-          autoComplete="off"
-          placeholder={product ? "" : "Otomatik atanır"}
-          defaultValue={product?.barcode ?? ""}
-          className="input font-mono tracking-wide"
-        />
-        <p className="mt-1.5 text-xs text-ink-muted">
-          QR kodu indirdiğinizde etikete ürün adının altına bu numara basılır.{" "}
-          {product
-            ? "Boş bırakırsanız ürünün şu anki numarası korunur."
-            : "Boş bırakırsanız sistem rastgele bir numara üretir."}
-        </p>
       </div>
 
       <ImageUploader
@@ -79,7 +55,8 @@ export default function ProductForm({
 
         <PriceField
           name="daily_price"
-          label="Günlük kiralama fiyatı (opsiyonel)"
+          label="Günlük kiralama fiyatı"
+          required
           defaultValue={product?.daily_price}
         />
       </div>

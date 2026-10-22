@@ -16,7 +16,20 @@ import { useEffect, useRef, useState } from "react";
  * gizli olduğu için başka yolu yok. Oklar bir ekran boyu ilerletiyor; alttaki
  * ilerleme çizgisi şeridin ne kadarının görüldüğünü gösteriyor.
  */
-export default function HizmetSeridi({ ctaHref, ctaLabel }: { ctaHref: string; ctaLabel: string }) {
+export default function HizmetSeridi({
+  ctaHref,
+  ctaLabel,
+  baslik,
+  aciklama,
+  yeni,
+}: {
+  ctaHref: string;
+  ctaLabel: string;
+  baslik: string;
+  aciklama: string;
+  /** Önerilen metinler mi, şimdikiler mi (bkz. vitrin/secenekler.ts). */
+  yeni: boolean;
+}) {
   const serit = useRef<HTMLUListElement>(null);
   const [durum, setDurum] = useState({ basta: true, sonda: false, oran: 0.5, ilerleme: 0 });
   const surukleme = useRef<{ x: number; sol: number; kaydi: boolean } | null>(null);
@@ -88,11 +101,10 @@ export default function HizmetSeridi({ ctaHref, ctaLabel }: { ctaHref: string; c
       <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-end justify-between gap-6 px-6">
         <div className="flex max-w-2xl flex-col gap-4">
           <h2 className="vitrin-baslik m-0 text-[34px] font-extrabold leading-[1.02] text-ink sm:text-[52px]">
-            RentQR ilk hizmetimiz, sonuncusu değil
+            {baslik}
           </h2>
           <p className="m-0 max-w-lg text-[17px] leading-relaxed text-ink-muted">
-            Voyo Labs işletmeler için yazılım hizmetleri geliştiriyor. Yenileri üzerinde çalışıyoruz;
-            hazır olanlar bu rafa ekleniyor ve hepsi aynı hesapla açılıyor.
+            {aciklama}
           </p>
         </div>
         <div className="flex gap-2">
@@ -161,10 +173,16 @@ export default function HizmetSeridi({ ctaHref, ctaLabel }: { ctaHref: string; c
         </li>
 
         {/* Henüz adı konmamış hizmetler: boş etiket. */}
-        {[
-          { baslik: "Sıradaki hizmet", metin: "Üzerinde çalışıyoruz. Hazır olduğunda RentQR hesabınızla açılacak." },
-          { baslik: "Bir sonraki", metin: "Etiketi henüz basılmadı. Sırası geldiğinde ilk burada duyuracağız." },
-        ].map((bos) => (
+        {(yeni
+          ? [
+              { baslik: "Yeni hizmet", metin: "Üzerinde çalışıyoruz. Hazır olduğunda burada duyuracağız." },
+              { baslik: "Bir sonraki", metin: "Üzerinde çalışıyoruz. Hazır olduğunda burada duyuracağız." },
+            ]
+          : [
+              { baslik: "Sıradaki hizmet", metin: "Üzerinde çalışıyoruz. Hazır olduğunda RentQR hesabınızla açılacak." },
+              { baslik: "Bir sonraki", metin: "Etiketi henüz basılmadı. Sırası geldiğinde ilk burada duyuracağız." },
+            ]
+        ).map((bos) => (
           <li key={bos.baslik} className="flex w-[min(78vw,340px)] shrink-0 snap-start">
             <article className="flex w-full overflow-hidden rounded-[32px] border-2 border-dashed border-border-strong">
               <div aria-hidden className="w-12 flex-none border-r-2 border-dashed border-border-strong bg-[radial-gradient(circle_at_0_50%,var(--color-paper)_6px,transparent_6.5px)] bg-[length:12px_20px] bg-repeat-y" />
@@ -186,8 +204,9 @@ export default function HizmetSeridi({ ctaHref, ctaLabel }: { ctaHref: string; c
               İşinizde hâlâ defterle yürüyen bir şey mi var?
             </h3>
             <p className="m-0 text-[15px] leading-relaxed text-on-deep/75">
-              Sıradaki hizmetleri işletmelerin anlattıklarına bakarak seçiyoruz. Nerede vakit
-              kaybettiğinizi bize yazın.
+              {yeni
+                ? "İşinizde hâlâ defterle ya da telefonla yürüyen bir iş varsa anlatın."
+                : "Sıradaki hizmetleri işletmelerin anlattıklarına bakarak seçiyoruz. Nerede vakit kaybettiğinizi bize yazın."}
             </p>
             <Link
               href="/hakkimizda#iletisim"

@@ -10,12 +10,16 @@ import Counter from "@/components/marketing/Counter";
 import QrEtiket from "@/components/marketing/QrEtiket";
 import HizmetSeridi from "@/components/marketing/HizmetSeridi";
 import BolumImleci, { type Bolum } from "@/components/marketing/BolumImleci";
+import HizmetYelpazesi from "@/components/marketing/vitrin/HizmetYelpazesi";
+import VitrinMenu from "@/components/marketing/vitrin/VitrinMenu";
+import SecenekPaneli from "@/components/marketing/vitrin/SecenekPaneli";
+import { MENU_BOSLUGU, secimiOku } from "@/components/marketing/vitrin/secenekler";
 import { IconCheck } from "@/components/icons";
 
 export const metadata: Metadata = {
   title: "Voyo Labs — RentQR ile QR etiketle kiralama",
   description:
-    "Voyo Labs işletmeler için yazılım hizmetleri geliştiriyor. İlki RentQR: kiraya verdiğiniz ürüne QR etiket yapıştırın, müşteri okutup boş günü seçsin, rezervasyon panelinize düşsün.",
+    "Voyo Labs işletmeler için yazılım geliştiriyor. İlk hizmeti RentQR ile kiraya verdiğiniz ürüne QR etiket yapıştırın; müşteri okutup boş günü seçsin ve rezervasyon yapsın.",
 };
 
 const BOLUMLER: Bolum[] = [
@@ -26,124 +30,145 @@ const BOLUMLER: Bolum[] = [
   { id: "hizmetler", ad: "Hizmetler" },
 ];
 
-/** Bir kiralamanın sırası; gerçekten bir sıra olduğu için numaralı. */
-const ADIMLAR = [
-  {
-    baslik: "Ürünü ekleyin",
-    metin: "Adını, günlük fiyatını ve fotoğrafını girin. QR kodu ve barkod numarası kendiliğinden üretilir.",
-  },
-  {
-    baslik: "Etiketi yapıştırın",
-    metin: "PNG ya da PDF olarak indirip yazdırın. Barkod numarası etikette, ürün adının altında çıkar.",
-  },
-  {
-    baslik: "Müşteri okutur",
-    metin: "Uygulama indirmeden ürünün boş günlerini görür, tarihini seçer, adını ve telefonunu bırakır.",
-  },
-  {
-    baslik: "Panelinize düşer",
-    metin: "Rezervasyon listenizde görünür. Aynı günlere ikinci bir kayıt daha kaydedilmeden engellenir.",
-  },
-];
+type Metin = {
+  heroBaslik: string;
+  heroMetin: string;
+  ikinciDugme: string;
+  sayaclar: [string, string, string];
+  adimBaslik: string;
+  adimAciklama: string;
+  adimlar: { baslik: string; metin: string }[];
+  panelBaslik: string;
+  panelAciklama: string;
+  panel: { baslik: string; metin: string }[];
+  fiyatMaddeleri: string[];
+  aboneDugme: string;
+  hizmetBaslik: string;
+  hizmetAciklama: string;
+};
 
-const PANEL = [
-  { baslik: "Hangi ürün kimde", metin: "Yaklaşan, süren ve biten kiralamalar tek listede. Her ürünün geçmişi kendi kartında." },
-  { baslik: "İade hatırlatması", metin: "İade günü yaklaşanlar her sabah işaretlenir, zil simgesinde birikir." },
-  { baslik: "Etiket yıprandıysa", metin: "Ürünü kameraya gösterin, telefon tanısın. Fotoğraf hiçbir yere gönderilmez." },
-  { baslik: "Barkodla bulma", metin: "Barkodlu stoğunuzu baştan etiketlemeyin; barkodu okutun, ürün karşınıza gelsin." },
-  { baslik: "Son 30 gün", metin: "Rezervasyon eğilimi, ürün sayınız ve doluluğunuz tek ekranda." },
-  { baslik: "Telefonda da panel", metin: "Ana ekrana ekleyin; dükkânda, depoda, teslimatta elinizin altında." },
-];
-
-const FIYAT_MADDELERI = ["Sınırsız ürün ve QR etiketi", "Bütün özellikler dahil", "İstediğiniz ay iptal"];
-
-/** Voyo'nun V'si: ışık alan sol kanat açık, gölgedeki sağ kanat koyu kırmızı. */
-function VoyoIsaret({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 32 32" aria-hidden className={className}>
-      <path d="M5.6 5.2H11.1L16 15.57V27.2Z" fill="#f05a4f" stroke="#f05a4f" strokeWidth={2.4} strokeLinejoin="round" />
-      <path d="M26.4 5.2H20.9L16 15.57V27.2Z" fill="#d81f26" stroke="#d81f26" strokeWidth={2.4} strokeLinejoin="round" />
-    </svg>
-  );
-}
+/**
+ * Sayfanın bütün metinleri, iki hâliyle: şimdiki ve metin incelemesinden sonra
+ * önerilen. Kullanıcı seçim panelinden ikisini karşılaştırıyor; karar
+ * verildiğinde biri kalkacak.
+ */
+const METINLER: Record<"eski" | "yeni", Metin> = {
+  eski: {
+    heroBaslik: "Ürününüze bir etiket yapıştırın. Rezervasyonu o alsın.",
+    heroMetin:
+      "Voyo Labs işletmeler için yazılım hizmetleri geliştiriyor. İlki RentQR: kiraya verdiğiniz her ürüne bir QR etiket basılıyor; müşteri onu telefonuyla okutup boş günleri görüyor ve rezervasyonunu bırakıyor.",
+    ikinciDugme: "Nasıl çalıştığını gör",
+    sayaclar: ["listelenen ürün", "rezervasyon", "işletme"],
+    adimBaslik: "Ürünü eklediğiniz andan teslim gününe kadar",
+    adimAciklama: "Müşterinizin uygulama indirmesi, üye olması gerekmiyor. Telefonun kamerası yetiyor.",
+    adimlar: [
+      { baslik: "Ürünü ekleyin", metin: "Adını, günlük fiyatını ve fotoğrafını girin. QR kodu ve barkod numarası kendiliğinden üretilir." },
+      { baslik: "Etiketi yapıştırın", metin: "PNG ya da PDF olarak indirip yazdırın. Barkod numarası etikette, ürün adının altında çıkar." },
+      { baslik: "Müşteri okutur", metin: "Uygulama indirmeden ürünün boş günlerini görür, tarihini seçer, adını ve telefonunu bırakır." },
+      { baslik: "Panelinize düşer", metin: "Rezervasyon listenizde görünür. Aynı günlere ikinci bir kayıt daha kaydedilmeden engellenir." },
+    ],
+    panelBaslik: "Dükkânın arkasında, panelde",
+    panelAciklama:
+      "Gelinlikten kamera gövdesine, kamp çadırından bisiklete: üstüne etiket yapıştırabildiğiniz her ürün için aynı panel.",
+    panel: [
+      { baslik: "Hangi ürün kimde", metin: "Yaklaşan, süren ve biten kiralamalar tek listede. Her ürünün geçmişi kendi kartında." },
+      { baslik: "İade hatırlatması", metin: "İade günü yaklaşanlar her sabah işaretlenir, zil simgesinde birikir." },
+      { baslik: "Etiket yıprandıysa", metin: "Ürünü kameraya gösterin, telefon tanısın. Fotoğraf hiçbir yere gönderilmez." },
+      { baslik: "Barkodla bulma", metin: "Barkodlu stoğunuzu baştan etiketlemeyin; barkodu okutun, ürün karşınıza gelsin." },
+      { baslik: "Son 30 gün", metin: "Rezervasyon eğilimi, ürün sayınız ve doluluğunuz tek ekranda." },
+      { baslik: "Telefonda da panel", metin: "Ana ekrana ekleyin; dükkânda, depoda, teslimatta elinizin altında." },
+    ],
+    fiyatMaddeleri: ["Sınırsız ürün ve QR etiketi", "Bütün özellikler dahil", "İstediğiniz ay iptal"],
+    aboneDugme: "Abone ol",
+    hizmetBaslik: "RentQR ilk hizmetimiz, sonuncusu değil",
+    hizmetAciklama:
+      "Voyo Labs işletmeler için yazılım hizmetleri geliştiriyor. Yenileri üzerinde çalışıyoruz; hazır olanlar bu rafa ekleniyor ve hepsi aynı hesapla açılıyor.",
+  },
+  yeni: {
+    heroBaslik: "Ürününüze QR etiket yapıştırın. Müşteri okutsun, rezervasyonunu kendisi yapsın.",
+    heroMetin:
+      "Voyo Labs işletmeler için yazılım geliştiriyor. İlk hizmetimiz RentQR, kiraya verdiğiniz her ürün için bir QR etiket oluşturur. Müşteri etiketi telefonuyla okutur, boş günleri görür ve rezervasyon yapar.",
+    ikinciDugme: "Nasıl çalışır?",
+    sayaclar: ["listelenen ürün", "rezervasyon", "RentQR kullanan işletme"],
+    adimBaslik: "Dört adımda kiralamaya hazır",
+    adimAciklama: "Müşterinizin uygulama indirmesi ya da üye olması gerekmez. Telefonunun kamerası yeterli.",
+    adimlar: [
+      { baslik: "Ürünü ekleyin", metin: "Ürünün adını, günlük fiyatını ve fotoğrafını girin. QR kod ve barkod numarası otomatik oluşur." },
+      { baslik: "Etiketi yapıştırın", metin: "Etiketi PNG ya da PDF olarak indirin, yazdırıp ürüne yapıştırın. Etikette ürün adı ve barkod numarası da yazar." },
+      { baslik: "Müşteri okutur", metin: "Etiketi telefonuyla okutur, boş günleri görür, tarih seçer, adını ve telefon numarasını yazar." },
+      { baslik: "Panelinize düşer", metin: "Rezervasyon panelinizdeki listeye düşer. Dolu günlere ikinci rezervasyon yapılamaz." },
+    ],
+    panelBaslik: "Kiralamalarınızı tek panelden yönetin",
+    panelAciklama:
+      "Gelinlikten kameraya, kamp çadırından bisiklete; üzerine etiket yapıştırabildiğiniz her ürün için çalışır.",
+    panel: [
+      { baslik: "Hangi ürün kimde", metin: "Yaklaşan, süren ve biten kiralamalar tek listede. Her ürünün geçmişi kendi kartında." },
+      { baslik: "İade hatırlatması", metin: "İadesi yaklaşan kiralamalar her sabah panelde bildirim olarak görünür." },
+      { baslik: "Görselle bulma", metin: "Etiketi okunmayan ürünü telefon kamerasına gösterin, hangi ürün olduğunu bulsun. Fotoğraf telefonunuzdan çıkmaz." },
+      { baslik: "Barkodla bulma", metin: "Ürünlerinizde barkod varsa yeni etiket basmanıza gerek yok; barkodu okutunca ürün açılır." },
+      { baslik: "Raporlar", metin: "Son 30 günün rezervasyonları ve doluluk oranınız tek ekranda." },
+      { baslik: "Telefonda panel", metin: "Paneli telefonunuzun ana ekranına ekleyip uygulama gibi açın." },
+    ],
+    fiyatMaddeleri: ["Sınırsız ürün ve QR etiketi", "Bütün özellikler dahil", "İstediğiniz zaman iptal edin"],
+    aboneDugme: "Hesap açın",
+    hizmetBaslik: "Voyo Labs hizmetleri",
+    hizmetAciklama: "RentQR ilk hizmetimiz. Yenileri hazır oldukça burada yer alacak.",
+  },
+};
 
 /**
  * Sitenin anasayfası: Voyo Labs'in kapağı, RentQR'ın tanıtımı.
  *
- * Voyo Labs bir çatı; RentQR onun ilk hizmeti. Sayfa bu yüzden RentQR'ı baştan
- * sona anlatıyor (etiket, akış, panel, fiyat) ve en sonda Voyo'nun hizmet
- * rafını gösteriyor — yeni hizmetler oraya ekleniyor. Eskiden ayrı duran
- * `/veyro-labs` vitrini artık buraya, `#hizmetler`'e yönleniyor.
+ * Voyo Labs bir çatı; RentQR onun ilk hizmeti. Sayfa RentQR'ı baştan sona
+ * anlatıyor (etiket, akış, panel, fiyat) ve en sonda Voyo'nun hizmetlerini
+ * gösteriyor. Eskiden ayrı duran `/veyro-labs` vitrini buraya yönleniyor.
  *
- * Adrese kim gelirse gelsin burası açılıyor. Düğmenin gittiği yeri profil
- * belirliyor: onaylı hesap kendi paneline, onay bekleyen ya da oturumu kapalı
- * olan giriş ekranına — panele giremeyecek birine "Panele git" denmiyor.
+ * Logo, menü, bölüm imleci, hizmet görünümü ve metinlerin birden fazla adayı
+ * var; hangisinin çizileceğini adres belirliyor (bkz. vitrin/secenekler.ts).
+ *
+ * Düğmenin gittiği yeri profil belirliyor: onaylı hesap kendi paneline, onay
+ * bekleyen ya da oturumu kapalı olan giriş ekranına.
  */
-export default async function Home() {
-  const [user, profile, sayilar] = await Promise.all([getCurrentUser(), getProfile(), vitrinSayilari()]);
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [user, profile, sayilar, params] = await Promise.all([
+    getCurrentUser(),
+    getProfile(),
+    vitrinSayilari(),
+    searchParams,
+  ]);
+  const secim = secimiOku(params);
+  const m = METINLER[secim.metin];
   const onayli = profile?.status === "approved";
   const ctaHref = onayli ? homePathFor(profile) : "/login";
   const ctaLabel = onayli ? "Panele git" : "Hemen başla";
 
-  const navLink =
-    "rounded-full px-4 py-2.5 text-sm font-semibold text-ink-muted transition-colors hover:bg-accent-soft hover:text-accent-hover";
-
   return (
-    <div className={`vitrin ${bricolage.variable} flex flex-1 flex-col`}>
-      <nav className="fixed inset-x-3 top-3 z-50 mx-auto flex h-16 max-w-6xl items-center justify-between rounded-full border border-border bg-[color-mix(in_oklab,var(--color-card)_80%,transparent)] px-4 shadow-[var(--app-lift)] backdrop-blur-xl backdrop-saturate-150 sm:px-6">
-        <a href="#giris" className="tab-press flex items-center gap-2.5 text-ink">
-          <VoyoIsaret className="h-8 w-8" />
-          <span className="vitrin-baslik text-xl font-extrabold">Voyo Labs</span>
-        </a>
+    <div className={`vitrin ${bricolage.variable} relative flex flex-1 flex-col`}>
+      <VitrinMenu tur={secim.menu} logo={secim.logo} girisGoster={!user} ctaHref={ctaHref} ctaLabel={ctaLabel} />
+      <BolumImleci bolumler={BOLUMLER} tur={secim.imlec} />
+      <SecenekPaneli secim={secim} />
 
-        <div className="hidden items-center gap-1 md:flex">
-          <a href="#hizmetler" className={navLink}>
-            Hizmetler
-          </a>
-          <a href="#nasil" className={navLink}>
-            RentQR
-          </a>
-          <a href="#fiyat" className={navLink}>
-            Fiyat
-          </a>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!user && (
-            <Link href="/login" className={`${navLink} hidden md:block`}>
-              Giriş yap
-            </Link>
-          )}
-          {/* Telefonda alt eylem çubuğu aynı düğmeyi taşıyor. */}
-          <Link href={ctaHref} className="btn btn-primary hidden h-11 min-h-0 sm:inline-flex">
-            {ctaLabel}
-          </Link>
-        </div>
-      </nav>
-
-      <BolumImleci bolumler={BOLUMLER} />
-
-      <main className="pt-24 pb-24 sm:pb-0">
+      <main className={`${MENU_BOSLUGU[secim.menu]} pb-24 sm:pb-0`}>
         {/* KAHRAMAN — sayfanın tek gösterişli nesnesi etiketin kendisi. */}
         <section
           id="giris"
-          className="mx-auto flex max-w-[1200px] scroll-mt-28 flex-col items-center gap-14 px-6 pb-24 pt-12 lg:flex-row lg:pb-28 lg:pt-20"
+          className="mx-auto flex max-w-[1200px] scroll-mt-28 flex-col items-center gap-14 px-6 pb-24 pt-12 lg:flex-row lg:pb-28 lg:pt-16"
         >
           <div className="flex min-w-0 flex-1 flex-col gap-7">
-            <h1 className="vitrin-baslik m-0 text-[44px] font-extrabold leading-[0.98] text-balance text-ink sm:text-[64px] lg:text-[76px]">
-              Ürününüze bir etiket yapıştırın. Rezervasyonu o alsın.
+            <h1 className="vitrin-baslik m-0 text-[42px] font-extrabold leading-[0.98] text-balance text-ink sm:text-[60px] lg:text-[70px]">
+              {m.heroBaslik}
             </h1>
-            <p className="m-0 max-w-[520px] text-lg leading-relaxed text-ink-muted">
-              Voyo Labs işletmeler için yazılım hizmetleri geliştiriyor. İlki RentQR: kiraya verdiğiniz
-              her ürüne bir QR etiket basılıyor; müşteri onu telefonuyla okutup boş günleri görüyor ve
-              rezervasyonunu bırakıyor.
-            </p>
+            <p className="m-0 max-w-[520px] text-lg leading-relaxed text-ink-muted">{m.heroMetin}</p>
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <Link href={ctaHref} className="btn btn-primary h-14 px-8 text-base">
                 {ctaLabel}
               </Link>
               <a href="#nasil" className="btn btn-secondary h-14 px-6 text-base">
-                Nasıl çalıştığını gör
+                {m.ikinciDugme}
               </a>
             </div>
 
@@ -151,15 +176,11 @@ export default async function Home() {
                 çizilmiyor — uydurma ya da sıfır bir sayı gösterilmesin. */}
             {sayilar && (
               <dl className="m-0 mt-3 flex flex-wrap gap-x-10 gap-y-4 border-t border-border pt-6">
-                {[
-                  { deger: sayilar.urun, etiket: "listelenen ürün" },
-                  { deger: sayilar.rezervasyon, etiket: "rezervasyon" },
-                  { deger: sayilar.isletme, etiket: "işletme" },
-                ].map((oge) => (
-                  <div key={oge.etiket} className="flex flex-col-reverse gap-0.5">
-                    <dt className="text-sm text-ink-muted">{oge.etiket}</dt>
+                {[sayilar.urun, sayilar.rezervasyon, sayilar.isletme].map((deger, i) => (
+                  <div key={m.sayaclar[i]} className="flex flex-col-reverse gap-0.5">
+                    <dt className="text-sm text-ink-muted">{m.sayaclar[i]}</dt>
                     <dd className="vitrin-baslik m-0 text-3xl font-extrabold tabular-nums text-ink">
-                      <Counter target={oge.deger} />
+                      <Counter target={deger} />
                     </dd>
                   </div>
                 ))}
@@ -177,15 +198,13 @@ export default async function Home() {
           <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-6 py-24">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <h2 className="vitrin-baslik m-0 max-w-2xl text-[34px] font-extrabold leading-[1.02] text-balance text-ink sm:text-[52px]">
-                Ürünü eklediğiniz andan teslim gününe kadar
+                {m.adimBaslik}
               </h2>
-              <p className="m-0 max-w-sm text-[17px] leading-relaxed text-ink-muted">
-                Müşterinizin uygulama indirmesi, üye olması gerekmiyor. Telefonun kamerası yetiyor.
-              </p>
+              <p className="m-0 max-w-sm text-[17px] leading-relaxed text-ink-muted">{m.adimAciklama}</p>
             </div>
             <ol className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
-              {ADIMLAR.map((adim, i) => {
-                const son = i === ADIMLAR.length - 1;
+              {m.adimlar.map((adim, i) => {
+                const son = i === m.adimlar.length - 1;
                 return (
                   <li
                     key={adim.baslik}
@@ -209,15 +228,12 @@ export default async function Home() {
         <section id="panel" className="mx-auto flex max-w-[1200px] scroll-mt-24 flex-wrap gap-14 px-6 py-24">
           <div className="min-w-0 flex-[1_1_320px]">
             <h2 className="vitrin-baslik m-0 mb-4 text-[32px] font-extrabold leading-[1.04] text-ink sm:text-[46px]">
-              Dükkânın arkasında, panelde
+              {m.panelBaslik}
             </h2>
-            <p className="m-0 max-w-sm text-[17px] leading-relaxed text-ink-muted">
-              Gelinlikten kamera gövdesine, kamp çadırından bisiklete: üstüne etiket yapıştırabildiğiniz
-              her ürün için aynı panel.
-            </p>
+            <p className="m-0 max-w-sm text-[17px] leading-relaxed text-ink-muted">{m.panelAciklama}</p>
           </div>
           <dl className="m-0 grid min-w-0 flex-[2_1_560px] grid-cols-1 gap-x-10 sm:grid-cols-2">
-            {PANEL.map((oge) => (
+            {m.panel.map((oge) => (
               <div key={oge.baslik} className="border-t-[1.5px] border-ink py-5">
                 <dt className="mb-1.5 text-lg font-extrabold text-ink">{oge.baslik}</dt>
                 <dd className="m-0 text-[15px] leading-relaxed text-ink-muted">{oge.metin}</dd>
@@ -234,7 +250,7 @@ export default async function Home() {
               <div className="flex flex-col gap-4">
                 <h2 className="vitrin-baslik m-0 text-[32px] font-extrabold">{ABONELIK.ad}</h2>
                 <ul className="m-0 flex list-none flex-wrap gap-x-6 gap-y-2 p-0 text-[15px] text-on-deep/80">
-                  {FIYAT_MADDELERI.map((madde) => (
+                  {m.fiyatMaddeleri.map((madde) => (
                     <li key={madde} className="flex items-center gap-2">
                       <IconCheck className="h-4 w-4 shrink-0 text-[#ff6b61]" />
                       {madde}
@@ -247,8 +263,13 @@ export default async function Home() {
                   <span className="vitrin-baslik text-[56px] font-extrabold leading-none">{ABONELIK.fiyat}</span>
                   <span className="text-on-deep/70">/ ay</span>
                 </p>
-                <Link href={ctaHref} className="btn btn-primary h-13 px-8 text-base">
-                  {onayli ? "Panele git" : "Abone ol"}
+                {/* Önerilen metinde düğme "Hesap açın" diyor; söylediğini
+                    yapsın diye kayıt ekranına gidiyor. */}
+                <Link
+                  href={onayli ? ctaHref : secim.metin === "yeni" ? "/signup" : ctaHref}
+                  className="btn btn-primary h-13 px-8 text-base"
+                >
+                  {onayli ? "Panele git" : m.aboneDugme}
                 </Link>
               </div>
             </div>
@@ -275,14 +296,26 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* HİZMETLER — Voyo Labs'in rafı, yana kayan şerit. */}
-        <section id="hizmetler" className="scroll-mt-20 bg-border/60 py-24">
-          <HizmetSeridi ctaHref={ctaHref} ctaLabel={ctaLabel} />
-        </section>
+        {/* HİZMETLER — Voyo Labs'in hizmetleri. */}
+        {secim.hizmet === "H1" ? (
+          <section id="hizmetler" className="scroll-mt-20 bg-border/60 py-24">
+            <HizmetSeridi
+              ctaHref={ctaHref}
+              ctaLabel={ctaLabel}
+              baslik={m.hizmetBaslik}
+              aciklama={m.hizmetAciklama}
+              yeni={secim.metin === "yeni"}
+            />
+          </section>
+        ) : (
+          <section id="hizmetler" className="scroll-mt-20">
+            <HizmetYelpazesi ctaHref={ctaHref} baslik={m.hizmetBaslik} aciklama={m.hizmetAciklama} />
+          </section>
+        )}
       </main>
 
       <SiteFooter
-        className="pb-32 sm:pb-12"
+        className={secim.menu === "N4" ? "pb-36" : "pb-32 sm:pb-12"}
         ekLinkler={
           <Link
             href={ctaHref}
@@ -293,13 +326,15 @@ export default async function Home() {
         }
       />
 
-      {/* Telefonda sayfanın altına sabitlenen eylem çubuğu: birincil düğme her
-          zaman parmağın altında. Masaüstünde üst çubukta zaten duruyor. */}
-      <div className="tab-bar safe-b fixed inset-x-0 bottom-0 z-50 px-4 pt-3 sm:hidden">
-        <Link href={ctaHref} className="btn btn-primary h-13 w-full text-base">
-          {ctaLabel}
-        </Link>
-      </div>
+      {/* Telefonda sayfanın altına sabitlenen eylem çubuğu. N4'te gerek yok:
+          orada menünün kendisi ekranın altında ve düğmeyi taşıyor. */}
+      {secim.menu !== "N4" && (
+        <div className="tab-bar safe-b fixed inset-x-0 bottom-0 z-50 px-4 pt-3 sm:hidden">
+          <Link href={ctaHref} className="btn btn-primary h-13 w-full text-base">
+            {ctaLabel}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

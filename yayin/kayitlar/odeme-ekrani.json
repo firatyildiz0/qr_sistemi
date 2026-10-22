@@ -1,6 +1,6 @@
 {
   "tip": "hata",
-  "baslik": "Ödeme ekranındaki kart formu stilsiz ve banka logoları olmadan açılıyordu",
-  "aciklama": "Kart bilgilerinin girildiği iyzico formu düz yazı gibi görünüyor, banka logoları yüklenmiyordu; artık iyzico'nun kendi tasarımıyla ve bütün logolarıyla açılıyor. Ödeme ekranının kendisi de anasayfa ve paketler sayfasıyla aynı görünüme kavuştu.",
+  "baslik": "Ödeme ekranı yenilendi; kart formu artık stilli ve banka logolarıyla açılıyor",
+  "aciklama": "Kart bilgilerinin girildiği iyzico formu düz yazı gibi görünüyor, banka logoları yüklenmiyordu; artık düzgün açılıyor. Ödeme ekranı anasayfayla aynı görünüme kavuştu, kaç adım kaldığını gösteriyor, hata alınca ya da kart adımından geri dönülünce girilen bilgiler kaybolmuyor. Hiç ödemesi olmamış hesaplara yanlışlıkla gösterilen 'Abonelik sona erdi' uyarısı da kalktı.",
   "dikkat": null
 }

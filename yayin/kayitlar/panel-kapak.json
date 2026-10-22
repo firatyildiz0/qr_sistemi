@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Panelin ana sayfası yenilendi: takvim, sade rezervasyon listesi ve yeni düğmeler",
+  "aciklama": "Panel açılınca iri bir selamlama ve günün özeti, altında önümüzdeki 7 günün takvimi geliyor; bir güne basınca o gün çıkan ve dönen ürünler, satıra basınca rezervasyon açılıyor. Takvim haftalar arasında geziliyor, büyütülünce ay görünümü ve tarih ya da tarih aralığı seçimi var. Rezervasyon geçmişi sadeleşti; düğmeler köşeli, sayfa geçişleri ve yükleme ekranları animasyonlu.",
+  "dikkat": null
+}

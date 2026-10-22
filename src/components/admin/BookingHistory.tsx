@@ -1,15 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import type { BookingStatus } from "@/lib/types";
 import { formatDateRange } from "@/lib/bookings";
 import { deleteBooking } from "@/app/product/[id]/actions";
-import BookingStatusStamp from "@/components/booking/BookingStatusStamp";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import PhoneActions from "@/components/admin/PhoneActions";
-import ProductThumb from "@/components/admin/ProductThumb";
-import { IconCalendar, IconChevronRight, IconTrash } from "@/components/icons";
+import { IconCalendar } from "@/components/icons";
+import GecmisListesi from "@/components/admin/kapak/GecmisListesi";
 
 export type BookingHistoryRow = {
   id: string;
@@ -35,17 +32,6 @@ const filters: { key: Filter; label: string; countClass: string }[] = [
   { key: "completed", label: "Teslim edildi", countClass: "text-ink-muted" },
   { key: "cancelled", label: "İptal edildi", countClass: "text-danger" },
 ];
-
-// Pinned to a fixed zone so the server render and the browser agree — the
-// server runs in UTC, the visitor does not.
-const createdFormat = new Intl.DateTimeFormat("tr-TR", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "Europe/Istanbul",
-});
 
 export default function BookingHistory({ bookings }: { bookings: BookingHistoryRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -102,78 +88,7 @@ export default function BookingHistory({ bookings }: { bookings: BookingHistoryR
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {visible.map((b, i) => (
-            // Satırın tamamı hâlâ bir bağlantı, ama sil düğmesi onun içine
-            // giremez: bağlantı kartı kaplayan bir katman olarak duruyor, düğme
-            // de onun üstünde kalıyor.
-            <div
-              key={b.id}
-              className="fade-slide-up card card-hover relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-              style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
-            >
-              <Link
-                href={`/admin/bookings/${b.id}`}
-                aria-label={`${b.customerName} rezervasyonunu aç`}
-                className="absolute inset-0 rounded-[inherit]"
-              />
-
-              {/* Görsel adın önünde: satır listede gözle taranıyor, ürünü
-                  okumadan tanımak sırayı hızlandırıyor. */}
-              <div className="flex min-w-0 items-start gap-3">
-                <ProductThumb src={b.productImageUrl} />
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-ink">{b.customerName}</p>
-                    {/* Telefonda durum burada; masaüstünde sağdaki damgada. */}
-                    <BookingStatusStamp status={b.status} variant="chip" className="sm:hidden" />
-                  </div>
-                  {/* Telefonda alt alta: yan yana dizilince en uzun öğe (telefon
-                      numarası ve iki kısayol düğmesi) ekrandan taşıyordu. */}
-                  <div className="mt-1.5 flex flex-col gap-1 text-sm text-ink-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
-                    <span className="truncate">{b.productName}</span>
-                    <span className="flex items-center gap-1.5">
-                      <IconCalendar className="h-3.5 w-3.5 shrink-0" />
-                      {formatDateRange(b.startDate, b.endDate)}
-                    </span>
-                    {b.customerPhone && (
-                      <PhoneActions phone={b.customerPhone} name={b.customerName} />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* pointer-events: üstteki katman tıklamayı yutmasın diye kolon
-                  geçirgen, yalnızca düğme tıklanabilir.
-
-                  Damga sondan bir önceki: arkasında yalnızca sabit genişlikli
-                  ok kaldığı için bütün satırlarda aynı hizaya oturuyor, liste
-                  boyunca da tek bir durum sütunu oluşuyor. Tarihin uzunluğu
-                  satırdan satıra değiştiği için damga başta olsaydı kayardı. */}
-              {/* Telefonda kartın alt şeridi: solda ne zaman oluşturulduğu,
-                  sağda sil. Masaüstünde aynı öğeler satırın sağ ucundaki
-                  kolona dönüşüyor. */}
-              <div className="pointer-events-none relative flex w-full shrink-0 items-center justify-between gap-3 border-t border-border pt-3 text-xs text-ink-muted sm:w-auto sm:justify-end sm:self-center sm:border-0 sm:pt-0">
-                <span>
-                  {createdFormat.format(new Date(b.createdAt))}
-                  <span className="hidden sm:inline"> tarihinde oluşturuldu</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setPendingDelete(b)}
-                  className="btn btn-danger-ghost pointer-events-auto min-h-0 px-3 py-1.5 text-xs"
-                >
-                  <IconTrash className="h-3.5 w-3.5" />
-                  Sil
-                </button>
-                <BookingStatusStamp status={b.status} className="hidden sm:flex" />
-                {/* Telefonda gereksiz: kartın tamamı zaten dokunulabilir. */}
-                <IconChevronRight className="hidden h-4 w-4 sm:block" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <GecmisListesi bookings={visible} onDelete={setPendingDelete} />
       )}
 
       <ConfirmDialog

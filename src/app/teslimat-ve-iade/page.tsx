@@ -20,7 +20,7 @@ export default function TeslimatVeIadePage() {
   return (
     <YasalSayfa
       baslik="Teslimat ve İade Şartları"
-      guncelleme="7 Ekim 2026"
+      guncelleme="22 Ekim 2026"
       giris={`${SATICI.urun} aboneliğinin nasıl teslim edildiğini, nasıl iptal edileceğini ve hangi durumlarda ücret iadesi yapıldığını anlatır.`}
     >
       <Bolum baslik="Hizmetin niteliği">
@@ -36,7 +36,7 @@ export default function TeslimatVeIadePage() {
         <Liste
           maddeler={[
             "Ödemeniz iyzico tarafından onaylandığı anda aboneliğiniz etkinleşir ve hesabınızla panele hemen erişebilirsiniz.",
-            "Ödeme onayı ve abonelik bilgileri, hesabınıza kayıtlı e-posta adresine gönderilir.",
+            "Ödeme sonucu ödeme ekranında gösterilir; abonelik durumunuzu ve dönem bitiş tarihini abonelik ekranında her zaman görebilirsiniz.",
             "Teknik bir sorun nedeniyle aboneliğiniz ödemeden sonra 24 saat içinde etkinleşmezse bize yazın; sorun giderilir ya da ödemeniz eksiksiz iade edilir.",
           ]}
         />

@@ -67,7 +67,7 @@ export async function fikirGonder(_onceki: FikirFormDurumu, formData: FormData):
   }
 
   if (formData.get("onay") !== "on") {
-    return hata("Bilgilerinizin size dönüş için kullanılmasını onaylamanız gerekiyor.");
+    return hata("Gizlilik Sözleşmesi’ni okuduğunuzu işaretleyin.");
   }
 
   const sinir = await checkFikirRateLimit();

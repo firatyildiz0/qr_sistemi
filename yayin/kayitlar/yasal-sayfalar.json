@@ -1,6 +1,6 @@
 {
-  "tip": "ozellik",
-  "baslik": "Ödeme için gereken yasal sayfalar, fiyat kartı ve iyzico logoları eklendi",
-  "aciklama": "Ana sayfaya aylık 1.999 TL abonelik fiyatını ve altında 'iyzico ile Öde' logosunu gösteren bir fiyatlandırma bölümü eklendi. Sitenin altında Hakkımızda, Mesafeli Satış Sözleşmesi, Teslimat ve İade Şartları ve Gizlilik Sözleşmesi bağlantıları, SSL ibaresi ve iyzico, Visa, Mastercard logoları var; işletme adı her yerde Voyo Labs. Gizlilik sayfasından saklama süreleri listesi, Instagram ve güvenlik e-postası anlatımları çıkarıldı.",
-  "dikkat": null
+  "tip": "iyilestirme",
+  "baslik": "İşlem Rehberi ve Çerez Politikası eklendi, gizlilik ve sözleşme metinleri güncellendi",
+  "aciklama": "Mevzuatın istediği İşlem Rehberi ve Çerez Politikası sayfaları eklendi ve sitenin altına bağlandı. Gizlilik metnine yeni toplanan bilgiler (QR'dan talep, öneri formu, profil), verilerin hangi hukuki sebeple işlendiği ve yurt dışında hangi ülkelerde tutulduğu yazıldı. Sözleşmelerdeki 'e-postanıza gönderilir' gibi sistemin gerçekte yapmadığı ifadeler düzeltildi; formlardaki onay kutuları 'okudum ve anladım' oldu.",
+  "dikkat": "Canlıya aldıktan sonra yasal açıdan yapılacaklar: (1) Supabase (Japonya) ve Vercel/Sentry (ABD) için KVKK standart sözleşmesini imzalayıp 5 iş günü içinde Kurum'a bildirin. (2) KEP adresinizi ve kayıtlı olduğunuz meslek odasını İletişim bölümüne eklememiz gerekiyor; bilgiler hazır olunca yazın."
 }

@@ -22,7 +22,7 @@ export default function MesafeliSatisPage() {
   return (
     <YasalSayfa
       baslik="Mesafeli Satış Sözleşmesi"
-      guncelleme="7 Ekim 2026"
+      guncelleme="22 Ekim 2026"
       giris={`Bu sözleşme, ${SATICI.urun} aboneliğinin internet üzerinden satın alınmasına ilişkin tarafların hak ve yükümlülüklerini düzenler. Ödeme adımında elektronik ortamda onaylanarak kurulur.`}
     >
       <Bolum baslik="1. Taraflar">
@@ -84,7 +84,7 @@ export default function MesafeliSatisPage() {
       <Bolum baslik="5. İfa (teslimat)">
         <Paragraf>
           Hizmet, ödemenin onaylanmasıyla birlikte Alıcı’nın hesabında anında etkinleştirilir ve
-          ödeme onayı Alıcı’nın kayıtlı e-posta adresine bildirilir. Ayrıntılar{" "}
+          ödeme sonucu ödeme ekranında Alıcı’ya gösterilir. Ayrıntılar{" "}
           <Link href="/teslimat-ve-iade" className={linkSinifi}>
             Teslimat ve İade Şartları
           </Link>{" "}
@@ -154,7 +154,7 @@ export default function MesafeliSatisPage() {
             Teslimat ve İade Şartları
           </Link>
           ’nı okuduğunu ve kabul ettiğini elektronik ortamda onayladığı anda sözleşme kurulmuş
-          sayılır. Sözleşmenin bir örneği Alıcı’nın e-posta adresine gönderilir ve bu sayfada her
+          sayılır. Sözleşmenin bir örneği Alıcı talep ettiğinde e-posta adresine gönderilir ve bu sayfada her
           zaman erişilebilir durumdadır.
         </Paragraf>
       </Bolum>

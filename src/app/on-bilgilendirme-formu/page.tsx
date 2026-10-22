@@ -31,7 +31,7 @@ export default function OnBilgilendirmePage() {
   return (
     <YasalSayfa
       baslik="Ön Bilgilendirme Formu"
-      guncelleme="7 Ekim 2026"
+      guncelleme="22 Ekim 2026"
       giris={`6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği uyarınca, ${SATICI.urun} aboneliği satın alınmadan önce alıcının bilgilendirilmesi için hazırlanmıştır.`}
     >
       <Bolum baslik="1. Satıcı bilgileri">
@@ -77,7 +77,7 @@ export default function OnBilgilendirmePage() {
       <Bolum baslik="5. İfa (teslimat)">
         <Paragraf>
           Hizmet, ödemenin iyzico tarafından onaylanmasıyla birlikte alıcının hesabında anında
-          etkinleştirilir. Ödeme onayı alıcının kayıtlı e-posta adresine bildirilir. Teknik bir
+          etkinleştirilir. Ödeme sonucu ödeme ekranında alıcıya gösterilir. Teknik bir
           sorun nedeniyle hizmet 24 saat içinde etkinleşmezse ödeme eksiksiz iade edilir.
         </Paragraf>
       </Bolum>
@@ -128,7 +128,7 @@ export default function OnBilgilendirmePage() {
           </Link>
           ’ni okuduğunu, hizmetin ödeme onayıyla birlikte anında başlayacağını ve bu nedenle cayma
           hakkının bulunmadığını bildiğini elektronik ortamda onaylar. Formun bir örneği alıcının
-          e-posta adresine gönderilir ve bu sayfada her zaman erişilebilir durumdadır.
+          talebi hâlinde e-posta adresine gönderilir ve bu sayfada her zaman erişilebilir durumdadır.
         </Paragraf>
       </Bolum>
     </YasalSayfa>

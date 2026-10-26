@@ -4,11 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  IconCheck,
+  IconDownload,
   IconGrid,
   IconList,
   IconPackage,
   IconPencil,
   IconQrCode,
+  IconX,
 } from "@/components/icons";
 import { formatPrice } from "@/lib/format";
 
@@ -57,7 +60,47 @@ function StockPill({ stock }: { stock: number }) {
   );
 }
 
+/** Toplu etiket PDF'inde bir A4'e düşen etiket (bkz. productQrSheetPdf). */
+const LABELS_PER_PAGE = 12;
+
 const VIEW_KEY = "admin-product-view";
+
+/** Seçim modunda kartın üstüne binen, tıklamayı seçime çeviren katman. */
+function SelectOverlay({
+  name,
+  selected,
+  onToggle,
+}: {
+  name: string;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      // Mobil kartlarda katman bağlantının içinde; seçim, ürün sayfasını açmasın.
+      onClick={(e) => {
+        e.preventDefault();
+        onToggle();
+      }}
+      aria-pressed={selected}
+      aria-label={`${name} — ${selected ? "seçimi kaldır" : "seç"}`}
+      className={`absolute inset-0 z-10 rounded-[inherit] transition-colors ${
+        selected ? "bg-accent/10 ring-2 ring-inset ring-accent" : "hover:bg-ink/5"
+      }`}
+    >
+      <span
+        className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-md border-2 transition-colors ${
+          selected ? "border-accent bg-accent text-white" : "border-border bg-card"
+        }`}
+      >
+        {selected && <IconCheck className="h-4 w-4" strokeWidth={3} />}
+      </span>
+    </button>
+  );
+}
+
+type Selection = { selected: boolean; onToggle: () => void } | null;
 
 export default function ProductGrid({
   products,
@@ -69,6 +112,8 @@ export default function ProductGrid({
   emptyAction?: { href: string; label: string };
 }) {
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_KEY);
@@ -82,6 +127,26 @@ export default function ProductGrid({
     setView(next);
     window.localStorage.setItem(VIEW_KEY, next);
   }
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function stopSelecting() {
+    setSelecting(false);
+    setSelected(new Set());
+  }
+
+  const selection = (id: string): Selection =>
+    selecting ? { selected: selected.has(id), onToggle: () => toggle(id) } : null;
+  const allSelected = products.length > 0 && products.every((p) => selected.has(p.id));
+  // Etiketler ekrandaki sırayla basılsın diye kimlikler listenin sırasıyla.
+  const selectedIds = products.filter((p) => selected.has(p.id)).map((p) => p.id);
 
   if (products.length === 0) {
     return (
@@ -101,7 +166,34 @@ export default function ProductGrid({
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-end gap-1 sm:hidden">
+      <div className="mb-3 flex items-center justify-between gap-2 sm:mb-5">
+        {selecting ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setSelected(allSelected ? new Set() : new Set(products.map((p) => p.id)))
+              }
+              className="btn btn-secondary h-8 px-3 text-sm"
+            >
+              {allSelected ? "Seçimi temizle" : "Tümünü seç"}
+            </button>
+            <button type="button" onClick={stopSelecting} className="btn btn-ghost h-8 px-3 text-sm">
+              <IconX className="h-4 w-4" />
+              Vazgeç
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSelecting(true)}
+            className="btn btn-secondary h-8 px-3 text-sm"
+          >
+            <IconQrCode className="h-4 w-4" />
+            Toplu QR indir
+          </button>
+        )}
+        <div className="flex items-center gap-1 sm:hidden">
         <button
           type="button"
           onClick={() => selectView("grid")}
@@ -128,15 +220,16 @@ export default function ProductGrid({
         >
           <IconList className="h-4 w-4" />
         </button>
+        </div>
       </div>
 
       {/* Mobile */}
       <div className={`sm:hidden ${view === "list" ? "flex flex-col gap-3" : "grid grid-cols-2 gap-3"}`}>
         {products.map((p) =>
           view === "list" ? (
-            <ProductListRow key={p.id} product={p} />
+            <ProductListRow key={p.id} product={p} selection={selection(p.id)} />
           ) : (
-            <ProductCompactCard key={p.id} product={p} />
+            <ProductCompactCard key={p.id} product={p} selection={selection(p.id)} />
           )
         )}
       </div>
@@ -144,19 +237,60 @@ export default function ProductGrid({
       {/* Desktop / tablet */}
       <div className="hidden sm:grid sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {products.map((p) => (
-          <ProductFullCard key={p.id} product={p} />
+          <ProductFullCard key={p.id} product={p} selection={selection(p.id)} />
         ))}
       </div>
+
+      {selecting && (
+        <div className="sticky bottom-24 z-20 mt-6 md:bottom-6">
+          <div className="card mx-auto flex max-w-xl items-center justify-between gap-3 p-3 pl-4 shadow-lg">
+            <p className="text-sm text-ink">
+              {selectedIds.length > 0 ? (
+                <>
+                  <span className="font-semibold">{selectedIds.length} ürün</span>{" "}
+                  <span className="text-ink-muted">
+                    · {Math.ceil(selectedIds.length / LABELS_PER_PAGE)} A4 sayfa
+                  </span>
+                </>
+              ) : (
+                <span className="text-ink-muted">Etiketini basacağınız ürünleri seçin</span>
+              )}
+            </p>
+            {selectedIds.length > 0 ? (
+              <a
+                href={`/api/products/qr-etiketleri?ids=${selectedIds.join(",")}`}
+                download
+                className="btn btn-primary shrink-0"
+              >
+                <IconDownload className="h-4 w-4" />
+                PDF indir
+              </a>
+            ) : (
+              <button type="button" disabled className="btn btn-primary shrink-0">
+                <IconDownload className="h-4 w-4" />
+                PDF indir
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ProductListRow({ product: p }: { product: ProductCardData }) {
+function ProductListRow({
+  product: p,
+  selection,
+}: {
+  product: ProductCardData;
+  selection: Selection;
+}) {
   return (
     <Link
       href={`/admin/products/${p.id}`}
-      className="card card-hover flex items-center gap-3 p-3"
+      className="card card-hover relative flex items-center gap-3 p-3"
     >
+      {selection && <SelectOverlay name={p.name} {...selection} />}
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-surface">
         <Thumb product={p} sizes="56px" iconClass="h-6 w-6" />
       </div>
@@ -178,12 +312,19 @@ function ProductListRow({ product: p }: { product: ProductCardData }) {
   );
 }
 
-function ProductCompactCard({ product: p }: { product: ProductCardData }) {
+function ProductCompactCard({
+  product: p,
+  selection,
+}: {
+  product: ProductCardData;
+  selection: Selection;
+}) {
   return (
     <Link
       href={`/admin/products/${p.id}`}
-      className="card card-hover flex flex-col overflow-hidden p-0"
+      className="card card-hover relative flex flex-col overflow-hidden p-0"
     >
+      {selection && <SelectOverlay name={p.name} {...selection} />}
       <div className="relative h-24 w-full overflow-hidden border-b border-border bg-surface">
         <Thumb product={p} sizes="50vw" iconClass="h-8 w-8" />
       </div>
@@ -205,9 +346,16 @@ function ProductCompactCard({ product: p }: { product: ProductCardData }) {
   );
 }
 
-function ProductFullCard({ product: p }: { product: ProductCardData }) {
+function ProductFullCard({
+  product: p,
+  selection,
+}: {
+  product: ProductCardData;
+  selection: Selection;
+}) {
   return (
-    <div className="card card-hover group flex flex-col overflow-hidden p-0">
+    <div className="card card-hover group relative flex flex-col overflow-hidden p-0">
+      {selection && <SelectOverlay name={p.name} {...selection} />}
       {/* Four across leaves little width, so the status moves onto the image
           instead of competing with the title for the same row. */}
       <div className="relative aspect-4/3 w-full overflow-hidden border-b border-border bg-surface">

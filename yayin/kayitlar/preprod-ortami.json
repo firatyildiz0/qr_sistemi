@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Yeni geliştirmeleri canlıya almadan önce deneyebileceğiniz bir test ortamı (preprod) eklendi",
+  "aciklama": "Yayın ekranında 'Preprod'u güncelle' düğmesi var: canlı ve onay bekleyen bütün işler, canlıdan ayrı bir test veritabanıyla preprod.voyolabs.com'da birlikte açılıyor. Her işin yanında yalnız o işi gösteren bir önizleme bağlantısı da var. Test ortamına yalnızca yönetici hesapları girebiliyor; oradaki hiçbir işlem canlıya yansımıyor.",
+  "dikkat": "Preprod'un çalışması için test veritabanı, Vercel ayarları ve alan adı kaydı gerekiyor; bunları Claude ile birlikte tamamlayın. Bu iş canlıya alınmadan da kurulum yapılabilir, ama düğme canlıya alındıktan sonra görünür."
+}

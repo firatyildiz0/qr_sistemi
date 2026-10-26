@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "preprod-hazirlik": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/notifications",

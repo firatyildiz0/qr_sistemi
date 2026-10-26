@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getProfile } from "@/lib/profile";
 import {
   canliyaAl,
+  preprodKur,
   reddet as reddetVeKaydet,
   reddiGeriAl,
   yayinDurumu,
@@ -19,6 +20,15 @@ import {
  */
 export type YayinSonucu = { tamam: true } | { tamam: false; mesaj: string };
 
+/**
+ * Preprod ve önizlemelerde yayın kararı verilmiyor: oradaki GitHub anahtarı
+ * canlınınkiyle aynı depoya yazıyor, test ortamındaki bir tıklama canlıyı
+ * değiştirmesin.
+ */
+const PREPROD_ENGELI = process.env.PREPROD_KILIDI === "1"
+  ? "Bu bir test ortamı. Yayın kararları canlıdaki yönetim panelinden verilir."
+  : null;
+
 /** Reddederken yazılabilecek en uzun not. */
 const SEBEP_SINIRI = 500;
 
@@ -33,6 +43,8 @@ async function dogrula(
   dal: string,
   liste: "bekleyen" | "reddedilen",
 ): Promise<string | null> {
+  if (PREPROD_ENGELI) return PREPROD_ENGELI;
+
   // Sayfanın `/yonetim` altında olması yetki değildir — bu işlemler herkesin
   // gönderebileceği POST uçları, kontrol burada yapılmak zorunda.
   const me = await getProfile();
@@ -104,4 +116,38 @@ export async function geriAl(dal: string): Promise<YayinSonucu> {
 
   revalidatePath("/yonetim/yayin");
   return { tamam: true };
+}
+
+export type PreprodGuncellemeSonucu =
+  | { tamam: true; eklenen: string[]; cakisan: string[] }
+  | { tamam: false; mesaj: string };
+
+/**
+ * Preprod'u canlı + bekleyen bütün işler olarak yeniden kurar.
+ *
+ * Hangi işlerin gireceğini istemci söylemiyor: listeyi sunucu kendisi okuyor.
+ * Yoksa bu uç, depodaki herhangi bir dalı preprod'a — ve oradan preprod
+ * veritabanına — sokan bir düğme olurdu.
+ */
+export async function preprodGuncelle(): Promise<PreprodGuncellemeSonucu> {
+  if (PREPROD_ENGELI) return { tamam: false, mesaj: PREPROD_ENGELI };
+
+  const me = await getProfile();
+  if (me?.role !== "superuser" || me.status !== "approved") {
+    return { tamam: false, mesaj: "Bu işlem için yetkiniz yok." };
+  }
+
+  const durum = await yayinDurumu();
+  if ("kurulum" in durum) return { tamam: false, mesaj: durum.kurulum };
+
+  try {
+    const sonuc = await preprodKur(durum.degisiklikler.map((d) => d.dal));
+    revalidatePath("/yonetim/yayin");
+    return { tamam: true, ...sonuc };
+  } catch (e) {
+    return {
+      tamam: false,
+      mesaj: e instanceof Error ? e.message : "Preprod güncellenemedi.",
+    };
+  }
 }

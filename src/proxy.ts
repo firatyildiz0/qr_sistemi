@@ -91,8 +91,43 @@ function contentSecurityPolicy(
     .join("; ");
 }
 
+/**
+ * Preprod ve iş önizlemeleri: Vercel'in Preview ortamında `PREPROD_KILIDI=1`.
+ *
+ * Kilitliyken site yalnızca onaylı superuser hesaplarına açık. Giriş sayfası
+ * ve onun ihtiyaç duyduğu simgeler dışında her sayfa bu kapıdan geçiyor;
+ * herkese açık anasayfa ve ürün sayfaları da. Arama motorlarına da hiç
+ * gösterilmiyor.
+ *
+ * API uçları matcher dışında, yani bu kapıdan geçmiyor; her biri kendi oturum
+ * kontrolünü yapıyor ve arkalarındaki veritabanı zaten preprod'un kendi test
+ * veritabanı.
+ */
+const PREPROD_KILITLI = process.env.PREPROD_KILIDI === "1";
+
+/** Kilitliyken de açık kalanlar: giriş ekranı ve sayfanın simgeleri. */
+function preprodaAcik(pathname: string): boolean {
+  return pathname === "/login" || /\.(png|jpe?g|svg|ico|webp|webmanifest)$/.test(pathname);
+}
+
+/** Oturumu olup superuser olmayan biri için: neden giremediğini söyleyen düz bir sayfa. */
+function preprodYasak(csp: string): NextResponse {
+  const response = new NextResponse(
+    `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Test ortamı</title></head>` +
+      `<body style="font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 1.5rem;line-height:1.5;color:#1f2937">` +
+      `<h1 style="font-size:1.25rem">Bu bir test ortamı</h1>` +
+      `<p>Burası yalnızca yönetici hesaplarına açık. Hesabınızı kullanmak için asıl siteye gidin.</p>` +
+      `</body></html>`,
+    { status: 403, headers: { "content-type": "text/html; charset=utf-8" } }
+  );
+  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
 /** Oturum kontrolünün gerektiği yollar. Gerisi için Supabase'e hiç gidilmiyor. */
 function needsSession(pathname: string): boolean {
+  if (PREPROD_KILITLI && !preprodaAcik(pathname)) return true;
   return (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/yonetim") ||
@@ -131,6 +166,7 @@ export async function proxy(request: NextRequest) {
   if (!needsSession(pathname)) {
     const response = NextResponse.next({ request: { headers: requestHeaders } });
     response.headers.set("Content-Security-Policy", csp);
+    if (PREPROD_KILITLI) response.headers.set("X-Robots-Tag", "noindex, nofollow");
     return response;
   }
 
@@ -171,6 +207,28 @@ export async function proxy(request: NextRequest) {
   const { data: claimsData } = await supabase.auth.getClaims();
   const user = claimsData?.claims ?? null;
 
+  if (PREPROD_KILITLI && !preprodaAcik(pathname)) {
+    if (!user) {
+      const redirectUrl = new URL("/login", request.url);
+      if (pathname !== "/") redirectUrl.searchParams.set("next", pathname);
+      const redirect = NextResponse.redirect(redirectUrl);
+      redirect.headers.set("Content-Security-Policy", csp);
+      redirect.headers.set("X-Robots-Tag", "noindex, nofollow");
+      return redirect;
+    }
+
+    // Rol JWT'de değil, veritabanında. Satır sahibine açık (bkz. 0011), yani
+    // kullanıcının kendi oturumuyla okunabiliyor.
+    const { data: profil } = await supabase
+      .from("profiles")
+      .select("role, status")
+      .eq("id", user.sub)
+      .maybeSingle();
+    if (profil?.role !== "superuser" || profil.status !== "approved") {
+      return preprodYasak(csp);
+    }
+  }
+
   // Rol ve onay durumu JWT'de değil veritabanında; onları layout'lardaki
   // AccessGuard kontrol ediyor. Buradaki kapı yalnızca "oturum var mı".
   const isAdminRoute =
@@ -200,6 +258,7 @@ export async function proxy(request: NextRequest) {
   }
 
   response.headers.set("Content-Security-Policy", csp);
+  if (PREPROD_KILITLI) response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
 }
 

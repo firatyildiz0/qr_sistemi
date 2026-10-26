@@ -559,3 +559,152 @@ export async function canliyaAl(dal: string): Promise<void> {
   }
   throw new Error(`Canlıya alınamadı (HTTP ${yanit.status}).${detay}`);
 }
+
+/**
+ * Preprod: canlı + onay bekleyen bütün işler, bir arada.
+ *
+ * İşler ayrı dallarda durduğu için hiçbiri tek başına "hepsi birlikte nasıl
+ * çalışıyor" sorusunu cevaplamıyor. Preprod dalı bunun için var: her
+ * güncellemede `main`'den baştan kuruluyor ve bekleyen işler sırayla üstüne
+ * birleştiriliyor. Kalıcı bir dal değil, her seferinde yeniden üretilen bir
+ * görüntü; o yüzden zorla (force) ilerletilmesi sorun değil.
+ *
+ * Birleştirmeler önce hazırlık dalında yapılıyor, preprod en sonda tek
+ * hamlede ona çekiliyor. Doğrudan preprod üzerinde yapılsaydı her birleştirme
+ * ayrı bir push olur, Vercel de her biri için ayrı bir kurulum başlatırdı.
+ * Hazırlık dalının kendi kurulumu `vercel.json`'da kapalı.
+ */
+export const PREPROD_DALI = "preprod";
+const PREPROD_HAZIRLIK_DALI = "preprod-hazirlik";
+const PREPROD_BIRLESTIRME_MESAJI = /^Merge (is\/\S+) into preprod/;
+
+export type PreprodDurumu =
+  | { var: false }
+  | {
+      var: true;
+      /** Preprod'a giren işler, birleştirildikleri sırayla. */
+      dallar: string[];
+      /** Son güncelleme. */
+      tarih: string;
+      /** Canlıya, preprod kurulduktan sonra yeni bir şey girdiyse. */
+      canlidanGeride: boolean;
+    };
+
+export type PreprodSonucu = { eklenen: string[]; cakisan: string[] };
+
+/** Bir dalı verilen commit'e çeker; dal yoksa açar. */
+async function dalCek(repo: string, token: string, dal: string, sha: string) {
+  const guncelle = await github(`/repos/${repo}/git/refs/heads/${dal}`, token, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sha, force: true }),
+  });
+  if (guncelle.ok) return;
+
+  // GitHub var olmayan bir ref için 422 dönüyor.
+  if (guncelle.status === 422 || guncelle.status === 404) {
+    const ac = await github(`/repos/${repo}/git/refs`, token, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ref: `refs/heads/${dal}`, sha }),
+    });
+    if (ac.ok) return;
+    throw new Error(`"${dal}" dalı açılamadı (HTTP ${ac.status}).${await detayOku(ac)}`);
+  }
+  throw new Error(`"${dal}" dalı güncellenemedi (HTTP ${guncelle.status}).${await detayOku(guncelle)}`);
+}
+
+export async function preprodDurumu(): Promise<PreprodDurumu> {
+  const yapilandirma = ayarlar();
+  if (!yapilandirma) return { var: false };
+  const { repo, token } = yapilandirma;
+
+  const yanit = await github(
+    `/repos/${repo}/compare/${CANLI_DALI}...${PREPROD_DALI}`,
+    token,
+  );
+  if (!yanit.ok) return { var: false };
+
+  const karsilastirma = (await yanit.json()) as {
+    behind_by: number;
+    commits: { commit: { message: string; committer: { date: string } } }[];
+  };
+
+  const dallar = karsilastirma.commits.flatMap((c) => {
+    const eslesme = c.commit.message.match(PREPROD_BIRLESTIRME_MESAJI);
+    return eslesme ? [eslesme[1]] : [];
+  });
+  const son = karsilastirma.commits.at(-1)?.commit.committer.date;
+
+  return {
+    var: true,
+    dallar,
+    tarih: son ?? new Date().toISOString(),
+    canlidanGeride: karsilastirma.behind_by > 0,
+  };
+}
+
+/**
+ * Preprod'u `main` + verilen işler olarak yeniden kurar. Canlıyla ya da
+ * kendinden önce eklenen bir işle çakışan iş atlanıyor; geri kalanlar yine de
+ * preprod'a giriyor.
+ */
+export async function preprodKur(dallar: string[]): Promise<PreprodSonucu> {
+  const yapilandirma = ayarlar();
+  if (!yapilandirma) throw new Error("GitHub ayarları eksik.");
+  const { repo, token } = yapilandirma;
+
+  const anaYanit = await github(`/repos/${repo}/git/ref/heads/${CANLI_DALI}`, token);
+  if (!anaYanit.ok) {
+    throw new Error(`Canlının son hali okunamadı (HTTP ${anaYanit.status}).${await detayOku(anaYanit)}`);
+  }
+  const ana = (await anaYanit.json()) as Ref;
+
+  await dalCek(repo, token, PREPROD_HAZIRLIK_DALI, ana.object.sha);
+
+  // Sırayla: her birleştirme bir öncekinin üstüne kuruluyor.
+  const eklenen: string[] = [];
+  const cakisan: string[] = [];
+  for (const dal of dallar) {
+    const yanit = await github(`/repos/${repo}/merges`, token, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        base: PREPROD_HAZIRLIK_DALI,
+        head: dal,
+        commit_message: `Merge ${dal} into preprod`,
+      }),
+    });
+    if (yanit.status === 201 || yanit.status === 204) eklenen.push(dal);
+    else if (yanit.status === 409) cakisan.push(dal);
+    else {
+      throw new Error(`"${dal}" preprod'a eklenemedi (HTTP ${yanit.status}).${await detayOku(yanit)}`);
+    }
+  }
+
+  const hazirlikYaniti = await github(
+    `/repos/${repo}/git/ref/heads/${PREPROD_HAZIRLIK_DALI}`,
+    token,
+  );
+  if (!hazirlikYaniti.ok) {
+    throw new Error(`Hazırlanan preprod okunamadı (HTTP ${hazirlikYaniti.status}).`);
+  }
+  const hazirlik = (await hazirlikYaniti.json()) as Ref;
+  await dalCek(repo, token, PREPROD_DALI, hazirlik.object.sha);
+
+  return { eklenen, cakisan };
+}
+
+/**
+ * Bir işin tek başına önizlemesi: Vercel her dal için sabit bir adres veriyor
+ * (`<proje>-git-<dal>-<takım>.vercel.app`). Adres 63 karakteri aşınca Vercel
+ * dal adını kısaltıp sonuna bir özet ekliyor; o adresi tahmin edemediğimiz
+ * için bağlantı hiç verilmiyor.
+ */
+export function onizlemeAdresi(dal: string): string | null {
+  const proje = process.env.ONIZLEME_PROJE_ADI ?? "qrsistemi";
+  const takim = process.env.ONIZLEME_TAKIM_ADI ?? "firatyildiz0s-projects";
+  const parca = dal.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const alan = `${proje}-git-${parca}-${takim}`;
+  return alan.length <= 63 ? `https://${alan}.vercel.app` : null;
+}

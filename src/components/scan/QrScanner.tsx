@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { resolveScannedCode, type ScanResult } from "@/app/actions";
-import { IconQrCode, IconScan, IconX } from "@/components/icons";
+import { IconImage, IconQrCode, IconScan, IconX } from "@/components/icons";
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]>;
@@ -16,8 +16,13 @@ type BarcodeDetectorCtor = new (options: {
 
 type Phase = "idle" | "starting" | "scanning" | "resolving" | "failed";
 
-/** Native detector where it exists (Chrome/Edge/Android), jsQR everywhere else. */
-async function createDecoder(): Promise<
+/**
+ * Native detector where it exists (Chrome/Edge/Android), jsQR everywhere else.
+ *
+ * `invert`: also look for light-on-dark codes. Too slow to do on every camera
+ * frame, but a single photo from the gallery can afford it.
+ */
+async function createDecoder(invert = false): Promise<
   (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => Promise<string | null>
 > {
   const Ctor = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor })
@@ -39,10 +44,62 @@ async function createDecoder(): Promise<
   return async (canvas, ctx) => {
     const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const result = jsQR(image.data, image.width, image.height, {
-      inversionAttempts: "dontInvert",
+      inversionAttempts: invert ? "attemptBoth" : "dontInvert",
     });
     return result?.data ?? null;
   };
+}
+
+/** Seçilen dosyayı tarayıcının çözebildiği bir görsel olarak yükler. */
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("unreadable image"));
+    };
+    image.src = url;
+  });
+}
+
+/**
+ * Galeriden seçilen fotoğraftaki QR kodu okur.
+ *
+ * Telefon fotoğrafları kamera karesinden çok daha büyük; jsQR tam boyda hem
+ * yavaş hem, kod küçük kaldığında, daha başarısız. Önce makul bir boya
+ * küçültülüyor, bulunamazsa daha küçük boylarla yeniden deneniyor: ekran
+ * görüntüsündeki koca bir kod küçük boyda, uzaktan çekilmiş küçük bir kod
+ * büyük boyda okunuyor.
+ */
+async function decodeImageFile(file: File): Promise<string | null> {
+  const image = await loadImage(file);
+  const decode = await createDecoder(true);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+
+  for (const maxSide of [1600, 1000, 600]) {
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    canvas.width = Math.round(image.naturalWidth * scale);
+    canvas.height = Math.round(image.naturalHeight * scale);
+    // Beyaz zemin: saydam bir PNG'de kod siyah zemin üstünde kaybolmasın.
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    try {
+      const value = await decode(canvas, ctx);
+      if (value) return value;
+    } catch {
+      // Bir boyda çözücü hata verse de öbür boylar denensin.
+    }
+    if (scale === 1) break;
+  }
+  return null;
 }
 
 export default function QrScanner({
@@ -67,6 +124,7 @@ export default function QrScanner({
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
   const busyRef = useRef(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -182,6 +240,36 @@ export default function QrScanner({
     }
   }, [handleCode, stopCamera]);
 
+  const handleFile = useCallback(
+    async (file: File) => {
+      stopCamera();
+      setResult(null);
+      setPhase("resolving");
+
+      let value: string | null = null;
+      try {
+        value = await decodeImageFile(file);
+      } catch {
+        setResult({ ok: false, error: "Bu dosya açılamadı. Bir fotoğraf ya da ekran görüntüsü seçin." });
+        setPhase("failed");
+        return;
+      }
+
+      if (!value) {
+        setResult({
+          ok: false,
+          error: "Bu görselde QR kod bulunamadı. Kodun net ve tamamen göründüğü bir fotoğraf seçin.",
+        });
+        setPhase("failed");
+        return;
+      }
+
+      busyRef.current = false;
+      await handleCode(value);
+    },
+    [handleCode, stopCamera]
+  );
+
   useEffect(() => stopCamera, [stopCamera]);
 
   // Only ever fires on mount: `startCamera` is re-created on every state change,
@@ -258,6 +346,29 @@ export default function QrScanner({
           </button>
         )}
       </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          // Aynı dosya art arda seçilebilsin diye alan boşaltılıyor.
+          e.target.value = "";
+          if (file) void handleFile(file);
+        }}
+      />
+      {phase !== "resolving" && (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="btn btn-secondary -mt-2 self-center"
+        >
+          <IconImage className="h-4 w-4" />
+          Galeriden QR seç
+        </button>
+      )}
 
       {result && !result.ok && (
         <div className="card border-accent/40 bg-accent/5">

@@ -69,6 +69,16 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-paper text-ink font-display">
         {children}
+        {/* Preprod ve iş önizlemelerinde: canlıyla karıştırılmasın diye her
+            ekranda. Tıklamaları engellemiyor. */}
+        {process.env.PREPROD_KILIDI === "1" && (
+          <div
+            aria-hidden
+            className="pointer-events-none fixed left-1/2 top-0 z-[100] -translate-x-1/2 rounded-b-md bg-warning px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink shadow"
+          >
+            Preprod · test ortamı
+          </div>
+        )}
       </body>
     </html>
   );

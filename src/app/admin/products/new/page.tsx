@@ -17,6 +17,12 @@ export default function NewProductPage() {
       <div className="card">
         <ProductForm action={createProduct} submitLabel="Ürün oluştur" />
       </div>
+      <p className="mt-4 text-center text-sm text-ink-muted">
+        Çok sayıda ürününüz mü var?{" "}
+        <Link href="/admin/products/excel" className="link-underline font-semibold text-accent-hover">
+          Excel ile toplu ekleyin
+        </Link>
+      </p>
     </div>
   );
 }

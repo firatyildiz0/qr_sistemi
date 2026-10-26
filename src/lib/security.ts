@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ipFromHeaders } from "@/lib/supabase/forwarding";
 
 /**
  * Güvenlik olaylarının kaydı ve hız sınırı.
@@ -41,13 +42,17 @@ export type SecurityEvent = {
 /** İsteğin geldiği yer. Vercel arkasında gerçek IP `x-forwarded-for`'un ilkidir. */
 async function requestContext(): Promise<{ ip: string | null; userAgent: string | null }> {
   const list = await headers();
-  const forwarded = list.get("x-forwarded-for");
 
   return {
-    ip: forwarded?.split(",")[0]?.trim() || list.get("x-real-ip") || null,
+    ip: ipFromHeaders(list),
     // Uzun bir user-agent'ın tabloyu şişirmesine gerek yok.
     userAgent: list.get("user-agent")?.slice(0, 300) ?? null,
   };
+}
+
+/** Ziyaretçinin IP'si; Turnstile doğrulamasına da iletiliyor. */
+export async function clientIp(): Promise<string | null> {
+  return ipFromHeaders(await headers());
 }
 
 /**

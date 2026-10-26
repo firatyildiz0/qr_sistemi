@@ -1,0 +1,6 @@
+{
+  "tip": "guvenlik",
+  "baslik": "Giriş ve üye olma ekranı saldırı altında gerçek kullanıcıları dışarıda bırakmıyor",
+  "aciklama": "Eskiden biri bir satıcının kullanıcı adıyla beş kez yanlış şifre girerse o satıcı 15 dakika giremiyordu; çok adresten gelen bir saldırı da herkesin girişini durdurabiliyordu. Artık sınır aşılınca kilit yerine kısa bir 'robot değilim' doğrulaması çıkıyor, giriş sisteminin sınırı her ziyaretçinin kendi bağlantısına işliyor ve yoğunlukta kullanıcıya 'şifre hatalı' yerine 'birkaç dakika sonra deneyin' yazıyor.",
+  "dikkat": "1) Cloudflare'de Turnstile site anahtarı oluşturup Vercel'e NEXT_PUBLIC_TURNSTILE_SITE_KEY ve TURNSTILE_SECRET_KEY olarak ekle, sonra yeniden deploy et; eklenene kadar eski 15 dakikalık kilit sürer. 2) Supabase panelinde Authentication > Rate Limits > IP Address Forwarding'i aç. 3) Vercel'deki SUPABASE_SERVICE_ROLE_KEY değerinin sb_secret_ ile başladığını kontrol et; eski biçimdeyse IP iletimi devreye girmez (giriş yine çalışır)."
+}

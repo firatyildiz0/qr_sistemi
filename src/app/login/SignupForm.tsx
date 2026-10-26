@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { signUp, type SignupState } from "./actions";
 import { USERNAME_RULE } from "@/lib/username";
 import PasswordField from "@/components/PasswordField";
+import Turnstile from "@/components/Turnstile";
 
 const initialState: SignupState = { error: null, notice: null };
 
@@ -47,6 +48,8 @@ export default function SignupForm() {
       </div>
 
       <PasswordField />
+
+      {state.captcha && <Turnstile action="signup" round={state} />}
 
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
       {state.notice && <p className="text-sm text-ink">{state.notice}</p>}

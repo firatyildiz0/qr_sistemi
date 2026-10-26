@@ -5,19 +5,87 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeNextPath } from "@/lib/redirects";
 import { isValidUsername, normalizeUsername, USERNAME_RULE } from "@/lib/username";
+import { createAuthClient } from "@/lib/supabase/auth";
 import {
   checkLoginRateLimit,
   checkSignupRateLimit,
+  clientIp,
   recordSecurityEvent,
+  type RateLimitResult,
 } from "@/lib/security";
 import { passwordError } from "@/lib/password";
+import {
+  TURNSTILE_FIELD,
+  turnstileEnabled,
+  verifyTurnstile,
+  type TurnstileAction,
+} from "@/lib/turnstile";
 
 // `awaitingApproval`, arayüzün "onay bekleniyor" penceresini açması için:
 // onaysız hesapla giriş denendiğinde doğuyor (bkz. PendingApprovalDialog).
 // Kayıt artık onaylı doğduğu için yalnızca superuser'ın elle geri aldığı
 // hesaplarda görünür.
-export type LoginState = { error: string | null; awaitingApproval: boolean };
-export type SignupState = { error: string | null; notice: string | null };
+//
+// `captcha`, formun "robot değilim" doğrulamasını göstermesi için: hız sınırı
+// aşıldığında ve Turnstile açıkken doğuyor.
+export type LoginState = { error: string | null; awaitingApproval: boolean; captcha?: boolean };
+export type SignupState = { error: string | null; notice: string | null; captcha?: boolean };
+
+/**
+ * Hız sınırı aşıldığında ne olacağı.
+ *
+ * Turnstile kapalıysa eskisi gibi kilit. Açıksa kilit yerine doğrulama: onu
+ * geçen istek devam ediyor. Kilit, kullanıcı adını bilen herkesin o kişiyi
+ * dışarıda tutabilmesi demekti; doğrulama gerçek kişiyi geçirip betiği
+ * durduruyor (bkz. lib/turnstile.ts).
+ *
+ * `null` dönerse istek devam eder.
+ */
+async function passRateLimit(
+  limit: RateLimitResult,
+  formData: FormData,
+  action: TurnstileAction
+): Promise<{ error: string; captcha: boolean } | null> {
+  if (limit.allowed) return null;
+  if (!turnstileEnabled()) return { error: limit.message, captcha: false };
+
+  const token = String(formData.get(TURNSTILE_FIELD) ?? "");  if (!token) {
+    return {
+      error: "Güvenliğiniz için kısa bir doğrulama gerekiyor. Kutucuğu tamamlayıp tekrar deneyin.",
+      captcha: true,
+    };
+  }
+
+  if (await verifyTurnstile(token, action, await clientIp())) return null;
+
+  return {
+    error: "Doğrulama tamamlanamadı. Kutucuğu yeniden işaretleyip tekrar deneyin.",
+    captcha: true,
+  };
+}
+
+/**
+ * Supabase'in kendi hız sınırına takıldık mı.
+ *
+ * Bu, kullanıcının şifresiyle ilgili değil; ona "şifre hatalı" demek onu
+ * tekrar denemeye itip kotayı daha da dolduruyordu. Ayrı mesaj ve kayıt.
+ */
+async function supabaseRateLimited(
+  error: { status?: number; code?: string } | null,
+  identifier: string
+): Promise<boolean> {
+  if (error?.status !== 429 && !error?.code?.startsWith("over_")) return false;
+
+  await recordSecurityEvent({
+    kind: "rate_limited",
+    severity: "critical",
+    identifier,
+    detail: { reason: "supabase_auth", code: error?.code ?? null },
+  });
+  return true;
+}
+
+const BUSY_MESSAGE = "Şu an çok fazla istek var. Lütfen birkaç dakika sonra tekrar deneyin.";
 
 
 /**
@@ -58,9 +126,9 @@ export async function signIn(
   // Şifre denenmeden önce: son 15 dakikadaki başarısız denemeler eşiği aştıysa
   // istek buradan geri döner. Eşik hem kullanıcı adına hem IP'ye bakıyor, ikisi
   // iki ayrı saldırıyı yakalıyor (bkz. lib/security.ts).
-  const limit = await checkLoginRateLimit(identifier);
-  if (!limit.allowed) {
-    return { error: limit.message, awaitingApproval: false };
+  const blocked = await passRateLimit(await checkLoginRateLimit(identifier), formData, "login");
+  if (blocked) {
+    return { ...blocked, awaitingApproval: false };
   }
 
   // Kullanıcı adı da e-posta da kabul edilir: kullanıcı adı zorunlu olalı
@@ -83,8 +151,12 @@ export async function signIn(
     return { error: "Kullanıcı adı veya şifre hatalı.", awaitingApproval: false };
   }
 
-  const supabase = await createClient();
+  const supabase = await createAuthClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (await supabaseRateLimited(error, identifier)) {
+    return { error: BUSY_MESSAGE, awaitingApproval: false };
+  }
 
   if (error || !data.user) {
     await recordSecurityEvent({
@@ -98,7 +170,9 @@ export async function signIn(
 
   // Şifre doğru olsa da hesabın onaylanmış olması gerekiyor. Oturum bu noktada
   // açılmış durumda; onaysızsa hemen kapatılır ki panele hiç uğramasın.
-  const { data: profile } = await supabase
+  // Okuma service role ile ve kimliğe sabitlenmiş: giriş istemcisi gizli
+  // anahtarla kurulmuş olabilir, onunla tabloya gidilmiyor (bkz. supabase/auth.ts).
+  const { data: profile } = await createAdminClient()
     .from("profiles")
     .select("role, status")
     .eq("id", data.user.id)
@@ -175,9 +249,9 @@ export async function signUp(
   // buradan öteye geçen her istek bir hesap açıp formda yazılan adrese
   // doğrulama e-postası gönderiyor, ve o adres saldırganın seçtiği herhangi
   // biri olabilir (bkz. lib/security.ts).
-  const limit = await checkSignupRateLimit();
-  if (!limit.allowed) {
-    return { error: limit.message, notice: null };
+  const blocked = await passRateLimit(await checkSignupRateLimit(), formData, "signup");
+  if (blocked) {
+    return { ...blocked, notice: null };
   }
 
   // Kullanıcı adı `profiles` üzerindeki unique kısıtla korunuyor; buradaki
@@ -194,7 +268,7 @@ export async function signUp(
     return { error: "Bu kullanıcı adı kullanılıyor.", notice: null };
   }
 
-  const supabase = await createClient();
+  const supabase = await createAuthClient();
   // `username` metadata'ya yazılır; `handle_new_user` trigger'ı onu aynı
   // işlemde `profiles` tablosuna taşır.
   const { data, error } = await supabase.auth.signUp({
@@ -202,6 +276,16 @@ export async function signUp(
     password,
     options: { data: { username } },
   });
+
+  if (await supabaseRateLimited(error, username)) {
+    return {
+      error:
+        error?.code === "over_email_send_rate_limit"
+          ? "Doğrulama e-postası şu an gönderilemiyor. Lütfen biraz sonra tekrar deneyin."
+          : BUSY_MESSAGE,
+      notice: null,
+    };
+  }
 
   if (error) {
     if (error.message.toLowerCase().includes("already registered")) {

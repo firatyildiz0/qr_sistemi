@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { signIn, type LoginState } from "./actions";
 import PendingApprovalDialog from "@/components/PendingApprovalDialog";
+import Turnstile from "@/components/Turnstile";
 
 const initialState: LoginState = { error: null, awaitingApproval: false };
 
@@ -51,6 +52,8 @@ export default function LoginForm({ next }: { next: string }) {
           className="input"
         />
       </div>
+
+      {state.captcha && <Turnstile action="login" round={state} />}
 
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
 

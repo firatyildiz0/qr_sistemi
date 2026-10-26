@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { IYZICO_CSP_SOURCES } from "@/lib/iyzico-origins";
+import { authKeyAndHeaders, ipFromHeaders } from "@/lib/supabase/forwarding";
 
 /**
  * Her sayfa isteği için tek kullanımlık bir nonce.
@@ -31,7 +32,12 @@ function makeNonce(): string {
  * kullanıyor, Turbopack sıcak yenilemeyi websocket üzerinden yapıyor ve dev
  * sunucusu stilleri satır içi basıyor. Üçü de üretimde geçerli değil.
  */
-function contentSecurityPolicy(nonce: string, payment: boolean, editor: boolean): string {
+function contentSecurityPolicy(
+  nonce: string,
+  payment: boolean,
+  editor: boolean,
+  auth: boolean
+): string {
   const isDev = process.env.NODE_ENV === "development";
   // Tarayıcı Supabase'e doğrudan gidiyor: oturum yenileme ve ürün görseli
   // yükleme (ImageUploader) istemci tarafında çalışıyor.
@@ -47,6 +53,12 @@ function contentSecurityPolicy(nonce: string, payment: boolean, editor: boolean)
   // üretilen Reels videosu blob: adresinden önizleniyor.
   const pexels = editor ? "https://images.pexels.com" : "";
 
+  // Giriş ekranındaki esneme: hız sınırı aşılınca çıkan "robot değilim"
+  // kutusu (Turnstile) Cloudflare'in çerçevesinde açılıyor. Paketi bizim
+  // kodumuz eklediği için `strict-dynamic` onu zaten kapsıyor; çerçevenin
+  // kendisine ayrıca izin gerekiyor.
+  const turnstile = auth ? "https://challenges.cloudflare.com" : "";
+
   return [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
@@ -61,9 +73,9 @@ function contentSecurityPolicy(nonce: string, payment: boolean, editor: boolean)
     ...(editor ? [`media-src 'self' blob: ${supabase}`] : []),
     `font-src 'self' ${iyzico}`,
     `connect-src 'self' ${supabase}${isDev ? " ws: wss:" : ""} ${iyzico}`,
-    // Ödeme formu bir iframe içinde açılıyor; onun dışında hiçbir yerde
-    // çerçeveye izin yok.
-    `frame-src ${payment ? iyzico : "'none'"}`,
+    // Ödeme formu ve giriş ekranındaki doğrulama kutusu bir iframe içinde
+    // açılıyor; onların dışında hiçbir yerde çerçeveye izin yok.
+    `frame-src ${payment ? iyzico : auth ? turnstile : "'none'"}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     // 3D Secure akışı formu bankanın/iyzico'nun sayfasına gönderiyor. Bu
@@ -99,7 +111,8 @@ export async function proxy(request: NextRequest) {
   const csp = contentSecurityPolicy(
     nonce,
     request.nextUrl.pathname.startsWith("/abonelik"),
-    request.nextUrl.pathname === "/yonetim/post-editoru"
+    request.nextUrl.pathname === "/yonetim/post-editoru",
+    request.nextUrl.pathname === "/login"
   );
 
   // Nonce hem isteğe hem yanıta yazılıyor: Next render sırasında istek
@@ -123,10 +136,17 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request: { headers: requestHeaders } });
 
+  // Oturum yenileme de Supabase'in giriş kotasından düşüyor; ziyaretçinin
+  // IP'si iletilmezse bütün kullanıcılar Vercel'in adresinden tek kotayı
+  // paylaşıyor (bkz. lib/supabase/forwarding.ts). Bu istemci yalnızca
+  // getClaims() için; tabloya gitmiyor.
+  const { key, headers: forwarded } = authKeyAndHeaders(ipFromHeaders(request.headers));
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    key,
     {
+      global: { headers: forwarded },
       cookies: {
         getAll() {
           return request.cookies.getAll();

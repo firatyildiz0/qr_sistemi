@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Sitede blog bölümü açıldı; ilk üç rehber yazısı yayında",
+  "aciklama": "Menüde ve sayfa altında Blog bağlantısı var. Yazılar kiralama işletmelerine yönelik (QR kodlu takip, çift rezervasyonu önleme, QR etiket hazırlama); her yazının başında kısa cevap, sonunda sık sorulan sorular var. Arama motorları ve yapay zekâ asistanlarının sayfaları doğru okuyup kaynak gösterebilmesi için gereken site haritası ve tanımlar da eklendi.",
+  "dikkat": "Vercel'de NEXT_PUBLIC_SITE_URL gerçek alan adını (https://...) göstermeli; site haritası ve yazı adresleri buradan üretiliyor. Yayına aldıktan sonra Google Search Console'a /sitemap.xml adresini bildirin."
+}

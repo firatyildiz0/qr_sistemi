@@ -122,6 +122,7 @@ function TabLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      prefetch={item.onYukle ? true : null}
       className={`tab-press relative flex flex-col items-center justify-center gap-1 ${
         active ? "text-accent" : "text-ink-muted"
       }`}

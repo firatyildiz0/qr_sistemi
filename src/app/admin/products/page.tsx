@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
-import type { Booking } from "@/lib/types";
-import { displayStatus } from "@/lib/bookings";
 import ProductGrid from "@/components/admin/ProductGrid";
 import ProductSearch from "@/components/admin/ProductSearch";
 import { IconPlus, IconUpload } from "@/components/icons";
@@ -48,30 +46,25 @@ export default async function AdminProductsPage({
 
   // Joining through products lets this run alongside the products query instead
   // of waiting on it for a list of ids — one round trip instead of two.
+  //
+  // Only today's rentals are needed, and only which product they belong to:
+  // the same date window `displayStatus` calls "active". Fetching the owner's
+  // whole booking history here grew with every rental and was all discarded.
+  const today = new Date().toISOString().slice(0, 10);
   const bookingsQuery = supabase
     .from("bookings")
-    .select("*, products!inner(owner_id)")
+    .select("product_id, products!inner(owner_id)")
     .eq("products.owner_id", ownerId)
-    .neq("status", "cancelled");
+    .neq("status", "cancelled")
+    .lte("start_date", today)
+    .gte("end_date", today);
 
-  const [{ data: products, error }, { data: ownerBookings }] = await Promise.all([
+  const [{ data: products, error }, { data: activeBookings }] = await Promise.all([
     productsQuery,
     bookingsQuery,
   ]);
 
-  // The bookings query is scoped to the owner, not to the current search, so
-  // narrow it to the products actually on screen before deriving anything.
-  const visibleProductIds = new Set((products ?? []).map((p) => p.id));
-  const bookings = ((ownerBookings ?? []) as Booking[]).filter((b) =>
-    visibleProductIds.has(b.product_id)
-  );
-
-  const bookingsByProduct = new Map<string, Booking[]>();
-  for (const b of bookings ?? []) {
-    const list = bookingsByProduct.get(b.product_id) ?? [];
-    list.push(b);
-    bookingsByProduct.set(b.product_id, list);
-  }
+  const bookedToday = new Set((activeBookings ?? []).map((b) => b.product_id));
 
   return (
     <div className="flex flex-1 flex-col">
@@ -102,18 +95,15 @@ export default async function AdminProductsPage({
 
           {!error && (
             <ProductGrid
-              products={(products ?? []).map((p) => {
-                const productBookings = bookingsByProduct.get(p.id) ?? [];
-                return {
-                  id: p.id,
-                  name: p.name,
-                  description: p.description,
-                  dailyPrice: p.daily_price,
-                  stock: p.stock,
-                  imageUrl: p.images?.[0] ?? null,
-                  bookedToday: productBookings.some((b) => displayStatus(b) === "active"),
-                };
-              })}
+              products={(products ?? []).map((p) => ({
+                id: p.id,
+                name: p.name,
+                description: p.description,
+                dailyPrice: p.daily_price,
+                stock: p.stock,
+                imageUrl: p.images?.[0] ?? null,
+                bookedToday: bookedToday.has(p.id),
+              }))}
               emptyMessage={q ? `"${q}" ile eşleşen ürün yok.` : "Henüz ürün yok."}
               emptyAction={!q ? { href: "/admin/products/new", label: "İlk ürününüzü ekleyin" } : undefined}
             />

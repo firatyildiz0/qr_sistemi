@@ -32,6 +32,7 @@ export default function AdminSidebarNav({ unreadCount }: { unreadCount: number }
           <Link
             key={item.href}
             href={item.href}
+            prefetch={item.onYukle ? true : null}
             // `title` is what names the item once the rail is collapsed and the
             // label is hidden.
             title={item.label}

@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "QR kod artık galerideki bir fotoğraftan da okutulabiliyor",
+  "aciklama": "Tarama ekranına 'Galeriden QR seç' eklendi. Telefonda kayıtlı bir fotoğraf ya da ekran görüntüsü seçildiğinde içindeki QR kod okunuyor ve ürün, kamerayla okutulmuş gibi açılıyor. Görselde kod bulunamazsa ne yapılacağı söyleniyor.",
+  "dikkat": null
+}

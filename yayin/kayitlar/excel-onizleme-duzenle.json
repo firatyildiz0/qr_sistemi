@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Excel ile ürün eklerken önizlemede satır düzenlenip silinebiliyor",
+  "aciklama": "Excel dosyası yüklendikten sonra çıkan listede artık her satırın yanında düzenle ve sil düğmeleri var. Hatalı bir fiyatı ya da etiket numarasını dosyayı yeniden hazırlamadan orada düzeltebilir, eklemek istemediğiniz ürünü listeden çıkarabilirsiniz; eklenen ürünler son halleriyle kaydedilir.",
+  "dikkat": null
+}

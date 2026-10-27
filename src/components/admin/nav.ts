@@ -43,6 +43,15 @@ export type NavItem = {
    * tıklanmaz — ekranı 404 döndüğü için bağlantı boşa giderdi.
    */
   yakinda?: boolean;
+  /**
+   * Sayfanın verisi de bağlantı göründüğü anda önceden çekilsin. Panel
+   * sayfaları dinamik; varsayılan ön yükleme yalnızca iskeleti getiriyor ve
+   * asıl sorgular tıklamadan sonra başlıyor — veritabanı Tokyo'da olduğu için
+   * bu, tıklamayla içerik arasında hissedilen bir bekleme demek. Her ekran
+   * açılışında arkada bir sorgu daha harcadığı için yalnızca en sık gidilen
+   * sayfada açık.
+   */
+  onYukle?: boolean;
 };
 
 /**
@@ -55,7 +64,7 @@ export type NavItem = {
  */
 const TUM_OGELER: NavItem[] = [
   { href: "/admin", label: "Ana sayfa", icon: IconHome, exact: true, primary: true },
-  { href: "/admin/products", label: "Ürünler", icon: IconGrid, primary: true },
+  { href: "/admin/products", label: "Ürünler", icon: IconGrid, primary: true, onYukle: true },
   // Ekran müşteri profilleri değil rezervasyonlar için açılıyor: satıcı buraya
   // "kim bu kişi" diye değil "bu kiralama ne durumda" diye geliyor. Ad ve simge
   // de o yüzden takvime bakıyor.

@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Ana sayfadan Ürünler'e geçiş artık beklemeden açılıyor",
+  "aciklama": "Ürünler sayfasına tıklayınca liste bir süre iskelet olarak bekliyordu. Artık ürünler, menüdeki bağlantı ekranda görünür görünmez arka planda hazırlanıyor; tıklayınca sayfa doğrudan dolu açılıyor.",
+  "dikkat": null
+}

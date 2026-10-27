@@ -5,7 +5,7 @@ import type { Booking } from "@/lib/types";
 import { displayStatus } from "@/lib/bookings";
 import ProductGrid from "@/components/admin/ProductGrid";
 import ProductSearch from "@/components/admin/ProductSearch";
-import { IconPlus } from "@/components/icons";
+import { IconPlus, IconUpload } from "@/components/icons";
 
 /**
  * Ada ya da barkod numarasına göre arama.
@@ -79,10 +79,16 @@ export default async function AdminProductsPage({
         <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Ürünler</h1>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <ProductSearch query={q ?? ""} />
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+          <Link href="/admin/products/excel" className="btn btn-secondary">
+            <IconUpload className="h-4 w-4" />
+            Excel ile ekle
+          </Link>
           <Link href="/admin/products/new" className="btn btn-primary">
             <IconPlus className="h-4 w-4" />
             Ürün ekle
           </Link>
+          </div>
         </div>
       </header>
 

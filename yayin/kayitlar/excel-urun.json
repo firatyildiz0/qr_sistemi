@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Ürünler Excel dosyasıyla toplu olarak eklenebiliyor",
+  "aciklama": "Ürünler ekranındaki 'Excel ile ekle' düğmesiyle hazır şablon indirilip doldurulduktan sonra yükleniyor. Eklemeden önce her satır kontrol edilip hatalı olanlar sebebiyle birlikte gösteriliyor; hatasız satırlar tek tıkla ekleniyor.",
+  "dikkat": null
+}

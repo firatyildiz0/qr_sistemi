@@ -22,15 +22,14 @@ export function VoyoIsaret({ className }: { className?: string }) {
 }
 
 /**
- * İnce, köşeleri hafif yuvarlak bir çerçevenin içinde: solda işaret, yanında
- * iki satırlık ad — üstte aralıklı kalın "VOYOLABS", altta ince "STUDIO".
- * Ölçüler logo dosyasındaki oranlardan: işaret çerçevenin yüksekliğinin %80'i,
- * sağda yazıdan sonra işaretin yarıçapı kadar boşluk kalıyor. Ad görsel değil
- * yazı: her ölçüde net çıkıyor ve ekran okuyucu onu okuyor.
+ * Solda işaret, yanında iki satırlık ad — üstte aralıklı kalın "VOYOLABS",
+ * altta ince "STUDIO". Logo dosyasındaki dikdörtgen çerçeve bilerek yok;
+ * işaretle yazı arasındaki oranlar oradakiyle aynı. Ad görsel değil yazı: her
+ * ölçüde net çıkıyor ve ekran okuyucu onu okuyor.
  */
 export default function VoyoLogo() {
   return (
-    <span className="flex h-14 items-center gap-[7px] rounded-[3px] border border-current pr-[17px] pl-[5px]">
+    <span className="flex items-center gap-[7px]">
       <VoyoIsaret className="h-[45px] w-[45px] shrink-0" />
       <span className="flex flex-col leading-none">
         <span className="text-[15.5px] font-bold tracking-[0.14em]">VOYOLABS</span>

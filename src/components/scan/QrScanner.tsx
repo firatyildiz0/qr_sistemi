@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { resolveScannedCode, type ScanResult } from "@/app/actions";
+import { resolveBarcode, resolveScannedCode, type ScanResult } from "@/app/actions";
 import { IconImage, IconQrCode, IconScan, IconX } from "@/components/icons";
+import { createTextReader, type TextReader } from "@/lib/numara-okuyucu";
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]>;
@@ -15,6 +16,9 @@ type BarcodeDetectorCtor = new (options: {
 }) => BarcodeDetectorLike;
 
 type Phase = "idle" | "starting" | "scanning" | "resolving" | "failed";
+
+/** İki yazı okuması arasındaki ara; okumanın kendisi de bir o kadar sürüyor. */
+const TEXT_INTERVAL_MS = 300;
 
 /**
  * Native detector where it exists (Chrome/Edge/Android), jsQR everywhere else.
@@ -50,6 +54,34 @@ async function createDecoder(invert = false): Promise<
   };
 }
 
+/**
+ * Kameranın görünen karesinin ortası, yazı okumak için. Önizleme kare ve
+ * `object-cover`; çerçeve onun ortasında. Kırpılan alan çerçeveden biraz
+ * geniş ve yatay: numara tek satır, çerçeveye tam oturtulmak zorunda değil.
+ */
+function cropForText(video: HTMLVideoElement) {
+  const side = Math.min(video.videoWidth, video.videoHeight);
+  const width = Math.round(side * 0.8);
+  const height = Math.round(side * 0.5);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas
+    .getContext("2d")!
+    .drawImage(
+      video,
+      (video.videoWidth - width) / 2,
+      (video.videoHeight - height) / 2,
+      width,
+      height,
+      0,
+      0,
+      width,
+      height
+    );
+  return canvas;
+}
+
 /** Seçilen dosyayı tarayıcının çözebildiği bir görsel olarak yükler. */
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -67,6 +99,23 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
+/** Görseli uzun kenarı en fazla `maxSide` olacak şekilde tuvale çizer. */
+function drawScaled(
+  image: HTMLImageElement,
+  maxSide: number,
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D
+) {
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+  canvas.width = Math.round(image.naturalWidth * scale);
+  canvas.height = Math.round(image.naturalHeight * scale);
+  // Beyaz zemin: saydam bir PNG'de kod siyah zemin üstünde kaybolmasın.
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return scale;
+}
+
 /**
  * Galeriden seçilen fotoğraftaki QR kodu okur.
  *
@@ -76,20 +125,13 @@ function loadImage(file: File): Promise<HTMLImageElement> {
  * görüntüsündeki koca bir kod küçük boyda, uzaktan çekilmiş küçük bir kod
  * büyük boyda okunuyor.
  */
-async function decodeImageFile(file: File): Promise<string | null> {
-  const image = await loadImage(file);
+async function decodeImageFile(image: HTMLImageElement): Promise<string | null> {
   const decode = await createDecoder(true);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
 
   for (const maxSide of [1600, 1000, 600]) {
-    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
-    canvas.width = Math.round(image.naturalWidth * scale);
-    canvas.height = Math.round(image.naturalHeight * scale);
-    // Beyaz zemin: saydam bir PNG'de kod siyah zemin üstünde kaybolmasın.
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const scale = drawScaled(image, maxSide, canvas, ctx);
 
     try {
       const value = await decode(canvas, ctx);
@@ -125,6 +167,10 @@ export default function QrScanner({
   const frameRef = useRef<number | null>(null);
   const busyRef = useRef(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const textTimerRef = useRef<number | null>(null);
+  // Yazı okuyucu bir kez kurulup kamera kapanıp açılsa da tutuluyor; dosyaları
+  // ve WebAssembly motoru her seferinde yeniden yüklenmesin.
+  const textReaderRef = useRef<Promise<TextReader> | null>(null);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -134,21 +180,27 @@ export default function QrScanner({
       cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     }
+    if (textTimerRef.current !== null) {
+      clearTimeout(textTimerRef.current);
+      textTimerRef.current = null;
+    }
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  const handleCode = useCallback(
-    async (raw: string) => {
-      if (busyRef.current) return;
-      busyRef.current = true;
+  const textReader = useCallback(() => {
+    textReaderRef.current ??= createTextReader().catch((error: unknown) => {
+      // İndirme yarıda kaldıysa bir sonraki denemede baştan kurulsun.
+      textReaderRef.current = null;
+      throw error;
+    });
+    return textReaderRef.current;
+  }, []);
 
-      stopCamera();
-      setPhase("resolving");
-
-      const scan = await resolveScannedCode(raw);
-
+  /** Bulunan ürüne gider, bulunamadıysa nedenini gösterir. */
+  const finish = useCallback(
+    (scan: ScanResult) => {
       if (scan.ok) {
         if (onProduct) {
           onProduct({ id: scan.productId, name: scan.productName });
@@ -166,7 +218,20 @@ export default function QrScanner({
       setPhase("failed");
       busyRef.current = false;
     },
-    [onProduct, onResolved, router, stopCamera]
+    [onProduct, onResolved, router]
+  );
+
+  const handleCode = useCallback(
+    async (raw: string) => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+
+      stopCamera();
+      setPhase("resolving");
+
+      finish(await resolveScannedCode(raw));
+    },
+    [finish, stopCamera]
   );
 
   const startCamera = useCallback(async () => {
@@ -185,7 +250,13 @@ export default function QrScanner({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
+        // Numaranın yazısı QR'dan daha çok piksel istiyor;
+        // tarayıcıların varsayılanı çoğu zaman 640×480.
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: false,
       });
       streamRef.current = stream;
@@ -230,6 +301,39 @@ export default function QrScanner({
       };
 
       frameRef.current = requestAnimationFrame(() => void tick());
+
+      // Etiketteki numaranın yazısı, QR ile aynı anda. Kare döngüsünden ayrı
+      // ve seyrek: bir okuma yüzlerce milisaniye sürüyor, worker'da
+      // döndüğü için kare döngüsünü bekletmiyor. Okunan sözcükler yalnızca
+      // satıcının kendi numaralarından birine denk gelirse sonuç sayılıyor.
+      const readText = async () => {
+        textTimerRef.current = null;
+        if (!streamRef.current || busyRef.current) return;
+
+        try {
+          const reader = await textReader();
+          if (!streamRef.current || busyRef.current) return;
+          const words = await reader.read(cropForText(video));
+          if (!streamRef.current || busyRef.current) return;
+
+          const scan = words.length > 0 ? await resolveBarcode(words) : null;
+          if (scan && streamRef.current && !busyRef.current) {
+            busyRef.current = true;
+            stopCamera();
+            finish(scan);
+            return;
+          }
+        } catch {
+          // Okuyucu inemediyse QR taraması sürüyor; yazı bu sefer yok.
+          return;
+        }
+
+        if (streamRef.current && !busyRef.current) {
+          textTimerRef.current = window.setTimeout(() => void readText(), TEXT_INTERVAL_MS);
+        }
+      };
+
+      void readText();
     } catch {
       stopCamera();
       setResult({
@@ -238,7 +342,7 @@ export default function QrScanner({
       });
       setPhase("failed");
     }
-  }, [handleCode, stopCamera]);
+  }, [finish, handleCode, stopCamera, textReader]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -246,31 +350,61 @@ export default function QrScanner({
       setResult(null);
       setPhase("resolving");
 
+      let image: HTMLImageElement;
       let value: string | null = null;
       try {
-        value = await decodeImageFile(file);
+        image = await loadImage(file);
+        value = await decodeImageFile(image);
       } catch {
         setResult({ ok: false, error: "Bu dosya açılamadı. Bir fotoğraf ya da ekran görüntüsü seçin." });
         setPhase("failed");
         return;
       }
 
-      if (!value) {
-        setResult({
-          ok: false,
-          error: "Bu görselde QR kod bulunamadı. Kodun net ve tamamen göründüğü bir fotoğraf seçin.",
-        });
-        setPhase("failed");
+      if (value) {
+        busyRef.current = false;
+        await handleCode(value);
         return;
       }
 
-      busyRef.current = false;
-      await handleCode(value);
+      // QR yok: fotoğraftaki numaranın yazısına bakılıyor.
+      let scan: ScanResult | null = null;
+      try {
+        const canvas = document.createElement("canvas");
+        drawScaled(image, 1600, canvas, canvas.getContext("2d")!);
+        const words = await (await textReader()).read(canvas);
+        if (words.length > 0) scan = await resolveBarcode(words);
+      } catch {
+        // Okuyucu inemedi; aşağıdaki "bulunamadı" mesajı yeterli.
+      }
+
+      if (scan) {
+        busyRef.current = true;
+        finish(scan);
+        return;
+      }
+
+      setResult({
+        ok: false,
+        error:
+          "Bu görselde QR kod ya da ürün numarası bulunamadı. Etiketin net ve tamamen göründüğü bir fotoğraf seçin.",
+      });
+      setPhase("failed");
     },
-    [handleCode, stopCamera]
+    [finish, handleCode, stopCamera, textReader]
   );
 
   useEffect(() => stopCamera, [stopCamera]);
+
+  // Okuyucunun worker'ı tarayıcı kapanınca serbest kalsın.
+  useEffect(
+    () => () => {
+      const reader = textReaderRef.current;
+      textReaderRef.current = null;
+      void reader?.then((r) => r.terminate()).catch(() => {});
+    },
+    []
+  );
 
   // Only ever fires on mount: `startCamera` is re-created on every state change,
   // so without the ref the effect would restart the camera mid-scan.
@@ -299,6 +433,9 @@ export default function QrScanner({
             <div className="scanner-container relative h-56 w-56 rounded-xl border-2 border-accent">
               <div className="scan-line absolute left-0 top-0 h-0.5 w-full bg-accent shadow-[0_0_10px_var(--color-accent)]" />
             </div>
+            <p className="absolute inset-x-0 bottom-3 text-center text-xs font-medium text-on-deep/80">
+              QR kodu ya da numarayı çerçeveye getirin
+            </p>
           </div>
         )}
 
@@ -317,7 +454,7 @@ export default function QrScanner({
                   strokeWidth={1.2}
                 />
                 <p className="relative max-w-xs text-sm text-on-deep/70">
-                  Ürünün üzerindeki QR kodu kameraya gösterin.
+                  Etiketteki QR kodu ya da altındaki numarayı kameraya gösterin.
                 </p>
                 <button
                   type="button"
@@ -325,7 +462,7 @@ export default function QrScanner({
                   className="btn btn-primary relative"
                 >
                   <IconScan className="h-4 w-4" />
-                  QR okut
+                  Okut
                 </button>
               </>
             )}
@@ -366,7 +503,7 @@ export default function QrScanner({
           className="btn btn-secondary -mt-2 self-center"
         >
           <IconImage className="h-4 w-4" />
-          Galeriden QR seç
+          Galeriden seç
         </button>
       )}
 

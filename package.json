@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/ocr-dosyalari.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/ocr-dosyalari.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -19,6 +21,7 @@
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "@tensorflow/tfjs-core": "^4.22.0",
     "@tensorflow/tfjs-layers": "^4.22.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "date-fns": "^4.4.0",
     "exceljs": "^4.4.0",
     "jsqr": "^1.4.0",
@@ -26,7 +29,8 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-day-picker": "^10.0.1",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

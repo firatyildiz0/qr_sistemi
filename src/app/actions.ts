@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { isProductImageUrl } from "@/lib/storage";
 import { isImageSignature, type ImageSignature } from "@/lib/vision";
+import { BARCODE_PATTERN } from "@/lib/barkod";
 
 export type ScanResult =
   | { ok: true; productId: string; productName: string; href: string }
@@ -77,6 +78,45 @@ export async function resolveScannedCode(raw: string): Promise<ScanResult> {
     productId: owned.id,
     productName: owned.name,
     href: `/admin/products/${owned.id}`,
+  };
+}
+
+/**
+ * Etiket numaralarından birine sahip ürünü bulur; hiçbiri tutmazsa `null`.
+ *
+ * Kamera numarayı yazıdan okurken tek karede birkaç aday çıkarabiliyor
+ * (numara, yanındaki başka bir yazı, yanlış okunmuş bir hane); hepsi tek
+ * sorguda soruluyor. Numaralar satıcı başına tekil (bkz. 0022), yani arama da
+ * yalnızca oturumdaki satıcının ürünlerinde — başkasının etiketindeki numara
+ * burada hiçbir şeye denk gelmez. Birden çok aday tutarsa okuma belirsiz
+ * sayılıyor: yanlış ürüne gitmektense bir kare daha okumak iyi.
+ */
+export async function resolveBarcode(candidates: string[]): Promise<ScanResult | null> {
+  const codes = [...new Set(candidates.map((c) => c.trim()))]
+    .filter((c) => BARCODE_PATTERN.test(c))
+    .slice(0, 12);
+  if (codes.length === 0) return null;
+
+  const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
+  if (!user) {
+    return { ok: false, error: "Numarayla ürün bulmak için giriş yapmalısınız." };
+  }
+
+  const { data } = await supabase
+    .from("products")
+    .select("id, name")
+    .eq("owner_id", user.id)
+    .in("barcode", codes)
+    .limit(2);
+
+  if (data?.length !== 1) return null;
+  const [product] = data;
+
+  return {
+    ok: true,
+    productId: product.id,
+    productName: product.name,
+    href: `/admin/products/${product.id}`,
   };
 }
 

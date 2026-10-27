@@ -20,6 +20,9 @@
 # production
 /build
 
+# yazı tanıma dosyaları, her dev/build öncesi node_modules'ten kopyalanıyor
+/public/ocr/
+
 # misc
 .DS_Store
 *.pem

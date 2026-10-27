@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { IconDownload } from "@/components/icons";
+import { code128, QUIET_ZONE } from "@/lib/barkod";
 
 const CANVAS_WIDTH = 720;
 const QR_SIZE = 640;
@@ -15,6 +16,11 @@ const NAME_GAP = 24;
 const BARCODE_FONT_SIZE = 44;
 const BARCODE_GAP = 14;
 const BARCODE_LINE_HEIGHT = 54;
+// Numaranın altındaki çizgi: kamera bunu yazıdan çok daha hızlı ve kesin okuyor.
+// Modül 6 pikselden kalın olmuyor; uzun numaralarda etikete sığacak kadar inceliyor.
+const BARS_GAP = 12;
+const BARS_HEIGHT = 110;
+const MAX_MODULE = 6;
 
 const nameFont = (size = NAME_FONT_SIZE) =>
   `bold ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
@@ -94,11 +100,12 @@ export default function QrDownloadButtons({
       const nameTop = PADDING + QR_SIZE + NAME_GAP;
       const barcodeTop = nameTop + lines.length * LINE_HEIGHT + BARCODE_GAP;
 
+      const barsTop = barcodeTop + BARCODE_LINE_HEIGHT + BARS_GAP;
+
       const canvas = document.createElement("canvas");
       canvas.width = CANVAS_WIDTH;
       canvas.height =
-        (barcode ? barcodeTop + BARCODE_LINE_HEIGHT : nameTop + lines.length * LINE_HEIGHT) +
-        PADDING;
+        (barcode ? barsTop + BARS_HEIGHT : nameTop + lines.length * LINE_HEIGHT) + PADDING;
       const ctx = canvas.getContext("2d")!;
 
       ctx.fillStyle = "#ffffff";
@@ -127,6 +134,18 @@ export default function QrDownloadButtons({
           );
         }
         ctx.fillText(barcode, CANVAS_WIDTH / 2, barcodeTop);
+
+        // Tam piksel modül: kesirli genişlikte çubuk kenarları griye döner ve
+        // okuyucu ince çubukla kalını ayırt edemez.
+        const { bars, modules } = code128(barcode);
+        const moduleWidth = Math.max(
+          1,
+          Math.min(MAX_MODULE, Math.floor(CANVAS_WIDTH / (modules + QUIET_ZONE * 2)))
+        );
+        const left = Math.round((CANVAS_WIDTH - modules * moduleWidth) / 2);
+        for (const bar of bars) {
+          ctx.fillRect(left + bar.x * moduleWidth, barsTop, bar.width * moduleWidth, BARS_HEIGHT);
+        }
       }
 
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));

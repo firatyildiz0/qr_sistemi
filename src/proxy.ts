@@ -266,11 +266,14 @@ export const config = {
   matcher: [
     // CSP her HTML yanıtında olmalı, o yüzden matcher artık bütün sayfaları
     // kapsıyor. Dışarıda bırakılanlar başlığa ihtiyaç duymayan istekler:
-    // API uçları, Next'in statik dosyaları, görsel iyileştirici ve favicon.
+    // API uçları, Next'in statik dosyaları, görsel iyileştirici, favicon ve
+    // yazı tanımanın dosyaları (`/ocr/`). Sonuncusu bilinçli: tanıma bir
+    // worker içinde WebAssembly çalıştırıyor ve worker'ın politikası kendi
+    // yanıt başlığından geliyor; CSP orada `wasm-unsafe-eval` isterdi.
     // `next/link` ön yüklemeleri de elenmiş — onlar için sayfa render
     // edilmiyor, dolayısıyla nonce da harcanmasın.
     {
-      source: "/((?!api|_next/static|_next/image|favicon.ico|monitoring).*)",
+      source: "/((?!api|_next/static|_next/image|favicon.ico|monitoring|ocr/).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

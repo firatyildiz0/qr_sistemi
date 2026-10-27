@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -49,7 +49,18 @@ export default function TalepFormu({
   const kapali = unavailableDays(availability, stock);
 
   return (
-    <form action={formAction} className="space-y-5">
+    // `action={formAction}` yerine `onSubmit`: React, `action`'a verilen
+    // formu gönderimden sonra sıfırlıyor. Hata dönünce müşterinin yazdıkları
+    // silinir, kontrollü il ve teslim seçimleri de ekranda başka, durumda
+    // başka değer gösterirdi. Başarıda sunucu zaten takip sayfasına yönlendiriyor.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const veri = new FormData(e.currentTarget);
+        startTransition(() => formAction(veri));
+      }}
+      className="space-y-5"
+    >
       <input type="hidden" name="start_date" value={baslangic} />
       <input type="hidden" name="end_date" value={bitis} />
 

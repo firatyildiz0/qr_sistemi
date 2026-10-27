@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Ürünler ekranından birden çok ürünün QR etiketi tek seferde indirilebiliyor",
+  "aciklama": "Ürünler listesinde 'Toplu QR indir' ile ürünler seçilip tek PDF alınıyor. Her A4 sayfaya kesim çizgileriyle ayrılmış 12 etiket (QR, ürün adı, etiket numarası) basılıyor; artık her ürünün etiketini tek tek indirmek gerekmiyor.",
+  "dikkat": null
+}

@@ -69,32 +69,27 @@ function estimateWidth(text: string, fontSize: number) {
 }
 
 /** İsim tek satıra sığmıyorsa kısaltır. */
-function fitName(name: string, maxWidth: number) {
+function fitName(name: string, maxWidth: number, fontSize = NAME_FONT_SIZE) {
   let text = name.trim();
-  if (estimateWidth(text, NAME_FONT_SIZE) <= maxWidth) return text;
-  while (text.length > 1 && estimateWidth(`${text}...`, NAME_FONT_SIZE) > maxWidth) {
+  if (estimateWidth(text, fontSize) <= maxWidth) return text;
+  while (text.length > 1 && estimateWidth(`${text}...`, fontSize) > maxWidth) {
     text = text.slice(0, -1).trimEnd();
   }
   return `${text}...`;
 }
 
 /**
- * QR kodu ve altında ürün adını — varsa onun da altında etiket numarasını —
- * içeren, vektörel tek sayfalık A4 PDF üretir.
+ * Ürünün QR kodunu, sol alt köşesi (`left`, `bottom`) olan `box` boyutunda
+ * bir kareye çizen PDF komutları. Kenar boşluğu karenin içinde kalıyor.
  */
-export async function productQrPdf(
-  productId: string,
-  productName: string,
-  productBarcode: string | null = null
-) {
+function qrRects(productId: string, left: number, bottom: number, box: number) {
   const { modules } = QRCode.create(productUrl(productId), {
     errorCorrectionLevel: "M",
   });
   const size = modules.size;
-  const scale = QR_BOX / (size + QR_MARGIN_MODULES * 2);
-  const boxBottom = (A4_HEIGHT - QR_BOX) / 2;
-  const originX = (A4_WIDTH - QR_BOX) / 2 + QR_MARGIN_MODULES * scale;
-  const originY = boxBottom + QR_MARGIN_MODULES * scale;
+  const scale = box / (size + QR_MARGIN_MODULES * 2);
+  const originX = left + QR_MARGIN_MODULES * scale;
+  const originY = bottom + QR_MARGIN_MODULES * scale;
 
   const rects: string[] = [];
   for (let row = 0; row < size; row++) {
@@ -106,32 +101,32 @@ export async function productQrPdf(
       rects.push(`${x.toFixed(2)} ${y.toFixed(2)} ${scale.toFixed(2)} ${scale.toFixed(2)} re`);
     }
   }
+  return `0 0 0 rg\n${rects.join("\n")}\nf\n`;
+}
 
-  const name = fitName(productName, QR_BOX + 60);
-  const nameX = (A4_WIDTH - estimateWidth(name, NAME_FONT_SIZE)) / 2;
-  const nameY = boxBottom - NAME_GAP;
-  const nameBlock = name
-    ? `BT\n/F1 ${NAME_FONT_SIZE} Tf\n${nameX.toFixed(2)} ${nameY.toFixed(2)} Td\n(${pdfString(name)}) Tj\nET\n`
-    : "";
+/** `centerX` etrafında ortalanmış tek satır metin; metin boşsa hiçbir şey. */
+function centeredText(text: string, centerX: number, y: number, fontSize: number) {
+  if (!text) return "";
+  const x = centerX - estimateWidth(text, fontSize) / 2;
+  return `BT\n/F1 ${fontSize} Tf\n${x.toFixed(2)} ${y.toFixed(2)} Td\n(${pdfString(text)}) Tj\nET\n`;
+}
 
-  // Numara kısaltılmıyor: yarısı basılmış bir etiket numarası hiç basılmamış
-  // gibidir. Zaten en fazla 32 karakter (bkz. 0022) ve sayfaya rahat sığıyor.
-  const barcode = productBarcode?.trim() ?? "";
-  const barcodeX = (A4_WIDTH - estimateWidth(barcode, BARCODE_FONT_SIZE)) / 2;
-  const barcodeY = nameY - BARCODE_GAP;
-  const barcodeBlock = barcode
-    ? `BT\n/F1 ${BARCODE_FONT_SIZE} Tf\n${barcodeX.toFixed(2)} ${barcodeY.toFixed(2)} Td\n(${pdfString(barcode)}) Tj\nET\n`
-    : "";
-
-  const content = `0 0 0 rg\n${rects.join("\n")}\nf\n${nameBlock}${barcodeBlock}`;
-
+/** Her biri bir sayfanın içerik akışı olan A4 sayfalarından PDF dosyası kurar. */
+function buildPdf(pages: string[]) {
+  // 1: katalog, 2: sayfa ağacı, 3: yazı tipi; ardından her sayfa için önce
+  // sayfa, sonra içerik nesnesi.
+  const pageRef = (index: number) => 4 + index * 2;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${A4_WIDTH} ${A4_HEIGHT}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>`,
-    `<< /Length ${Buffer.byteLength(content, "latin1")} >>\nstream\n${content}endstream`,
+    `<< /Type /Pages /Kids [${pages.map((_, i) => `${pageRef(i)} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding << /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [${FONT_DIFFERENCES}] >> >>`,
   ];
+  pages.forEach((content, i) => {
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${A4_WIDTH} ${A4_HEIGHT}] /Contents ${pageRef(i) + 1} 0 R /Resources << /Font << /F1 3 0 R >> >> >>`,
+      `<< /Length ${Buffer.byteLength(content, "latin1")} >>\nstream\n${content}endstream`
+    );
+  });
 
   let pdf = "%PDF-1.4\n";
   const offsets: number[] = [];
@@ -148,4 +143,106 @@ export async function productQrPdf(
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
 
   return Buffer.from(pdf, "latin1");
+}
+
+/**
+ * QR kodu ve altında ürün adını — varsa onun da altında etiket numarasını —
+ * içeren, vektörel tek sayfalık A4 PDF üretir.
+ */
+export async function productQrPdf(
+  productId: string,
+  productName: string,
+  productBarcode: string | null = null
+) {
+  const boxBottom = (A4_HEIGHT - QR_BOX) / 2;
+  const centerX = A4_WIDTH / 2;
+  const nameY = boxBottom - NAME_GAP;
+
+  // Numara kısaltılmıyor: yarısı basılmış bir etiket numarası hiç basılmamış
+  // gibidir. Zaten en fazla 32 karakter (bkz. 0022) ve sayfaya rahat sığıyor.
+  const content =
+    qrRects(productId, (A4_WIDTH - QR_BOX) / 2, boxBottom, QR_BOX) +
+    centeredText(fitName(productName, QR_BOX + 60), centerX, nameY, NAME_FONT_SIZE) +
+    centeredText(productBarcode?.trim() ?? "", centerX, nameY - BARCODE_GAP, BARCODE_FONT_SIZE);
+
+  return buildPdf([content]);
+}
+
+export type QrLabel = { id: string; name: string; barcode: string | null };
+
+// Toplu etiket sayfası: A4'e 3 × 4 = 12 etiket. Hücreler kesim çizgileriyle
+// ayrılıyor; makasla ya da giyotinle kesilip ürünün üstüne yapıştırılıyor.
+const SHEET_COLS = 3;
+const SHEET_ROWS = 4;
+const SHEET_MARGIN = 24;
+const SHEET_QR_BOX = 132;
+const SHEET_NAME_FONT_SIZE = 10;
+const SHEET_NAME_GAP = 14;
+const SHEET_BARCODE_FONT_SIZE = 13;
+const SHEET_BARCODE_GAP = 16;
+export const LABELS_PER_SHEET = SHEET_COLS * SHEET_ROWS;
+
+/** Kesim çizgileri: açık gri, kesikli; etiketin kendisinden ayırt edilsin diye. */
+function cutLines(cellWidth: number, cellHeight: number) {
+  const lines: string[] = [];
+  for (let c = 0; c <= SHEET_COLS; c++) {
+    const x = (SHEET_MARGIN + c * cellWidth).toFixed(2);
+    lines.push(`${x} ${SHEET_MARGIN} m ${x} ${(A4_HEIGHT - SHEET_MARGIN).toFixed(2)} l S`);
+  }
+  for (let r = 0; r <= SHEET_ROWS; r++) {
+    const y = (SHEET_MARGIN + r * cellHeight).toFixed(2);
+    lines.push(`${SHEET_MARGIN} ${y} m ${(A4_WIDTH - SHEET_MARGIN).toFixed(2)} ${y} l S`);
+  }
+  return `q\n0.78 G\n0.5 w\n[3 3] 0 d\n${lines.join("\n")}\nQ\n`;
+}
+
+/**
+ * Seçilen ürünlerin etiketlerini A4 sayfalarına ızgara halinde dizer: her
+ * hücrede QR, altında ad, varsa onun altında etiket numarası. Sıra verilen
+ * sırayla aynı, soldan sağa ve yukarıdan aşağı.
+ */
+export async function productQrSheetPdf(labels: QrLabel[]) {
+  const cellWidth = (A4_WIDTH - SHEET_MARGIN * 2) / SHEET_COLS;
+  const cellHeight = (A4_HEIGHT - SHEET_MARGIN * 2) / SHEET_ROWS;
+  // QR, ad ve numaradan oluşan blok hücrenin dikeyde ortasında; numarası
+  // olmayan etiket de aynı yerde dursun diye blok yüksekliği sabit.
+  const blockHeight =
+    SHEET_QR_BOX + SHEET_NAME_GAP + SHEET_BARCODE_GAP + SHEET_BARCODE_FONT_SIZE / 2;
+  const pages: string[] = [];
+
+  for (let start = 0; start < labels.length; start += LABELS_PER_SHEET) {
+    let content = cutLines(cellWidth, cellHeight);
+
+    labels.slice(start, start + LABELS_PER_SHEET).forEach((label, i) => {
+      const col = i % SHEET_COLS;
+      const row = Math.floor(i / SHEET_COLS);
+      const left = SHEET_MARGIN + col * cellWidth;
+      const top = A4_HEIGHT - SHEET_MARGIN - row * cellHeight;
+      const centerX = left + cellWidth / 2;
+      const qrBottom = top - (cellHeight - blockHeight) / 2 - SHEET_QR_BOX;
+      const nameY = qrBottom - SHEET_NAME_GAP;
+
+      // Numara burada da kısaltılmıyor (bkz. productQrPdf); hücreye sığmayan
+      // uzun numaranın yazısı küçülüyor.
+      const barcode = label.barcode?.trim() ?? "";
+      const barcodeSize = Math.min(
+        SHEET_BARCODE_FONT_SIZE,
+        (cellWidth - 12) / Math.max(estimateWidth(barcode, 1), 1)
+      );
+
+      content +=
+        qrRects(label.id, centerX - SHEET_QR_BOX / 2, qrBottom, SHEET_QR_BOX) +
+        centeredText(
+          fitName(label.name, cellWidth - 20, SHEET_NAME_FONT_SIZE),
+          centerX,
+          nameY,
+          SHEET_NAME_FONT_SIZE
+        ) +
+        centeredText(barcode, centerX, nameY - SHEET_BARCODE_GAP, barcodeSize);
+    });
+
+    pages.push(content);
+  }
+
+  return buildPdf(pages);
 }

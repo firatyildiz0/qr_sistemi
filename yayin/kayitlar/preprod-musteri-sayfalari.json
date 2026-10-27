@@ -1,0 +1,6 @@
+{
+  "tip": "hata",
+  "baslik": "Test ortamında QR okutan müşteri giriş sayfasına düşüyordu",
+  "aciklama": "Test ortamında telefonla ürün QR'ı okutunca ürün yerine giriş ekranı açılıyordu. Artık ürün sayfası, talep takip sayfası ve gizlilik metni girişsiz açılıyor; yönetim paneli ve diğer sayfalar yine yalnızca yöneticilere açık. Canlı site bu değişiklikten etkilenmiyor.",
+  "dikkat": null
+}

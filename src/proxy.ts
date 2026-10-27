@@ -94,10 +94,11 @@ function contentSecurityPolicy(
 /**
  * Preprod ve iş önizlemeleri: Vercel'in Preview ortamında `PREPROD_KILIDI=1`.
  *
- * Kilitliyken site yalnızca onaylı superuser hesaplarına açık. Giriş sayfası
- * ve onun ihtiyaç duyduğu simgeler dışında her sayfa bu kapıdan geçiyor;
- * herkese açık anasayfa ve ürün sayfaları da. Arama motorlarına da hiç
- * gösterilmiyor.
+ * Kilitliyken site yalnızca onaylı superuser hesaplarına açık. Kapının
+ * dışında kalanlar giriş sayfası ile müşterinin QR'dan geçtiği yol: ürün
+ * sayfası, talep takip sayfası ve talep formunun bağlandığı gizlilik metni;
+ * telefonla QR okutup müşteri gibi denenebilsin diye. Anasayfa ve geri kalan
+ * her şey kapalı. Arama motorlarına hiçbiri gösterilmiyor.
  *
  * API uçları matcher dışında, yani bu kapıdan geçmiyor; her biri kendi oturum
  * kontrolünü yapıyor ve arkalarındaki veritabanı zaten preprod'un kendi test
@@ -105,9 +106,15 @@ function contentSecurityPolicy(
  */
 const PREPROD_KILITLI = process.env.PREPROD_KILIDI === "1";
 
-/** Kilitliyken de açık kalanlar: giriş ekranı ve sayfanın simgeleri. */
+/** Kilitliyken de açık kalanlar: giriş ekranı, müşterinin QR yolu ve simgeler. */
 function preprodaAcik(pathname: string): boolean {
-  return pathname === "/login" || /\.(png|jpe?g|svg|ico|webp|webmanifest)$/.test(pathname);
+  return (
+    pathname === "/login" ||
+    pathname.startsWith("/product/") ||
+    pathname.startsWith("/talep/") ||
+    pathname === "/gizlilik" ||
+    /\.(png|jpe?g|svg|ico|webp|webmanifest)$/.test(pathname)
+  );
 }
 
 /** Oturumu olup superuser olmayan biri için: neden giremediğini söyleyen düz bir sayfa. */

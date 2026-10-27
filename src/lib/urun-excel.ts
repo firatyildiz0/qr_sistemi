@@ -31,8 +31,22 @@ type ColumnKey = (typeof COLUMNS)[number]["key"];
 
 const BARCODE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,31}$/;
 
-export type ImportRow = {
+/**
+ * Satırın hücrelerde yazdığı haliyle değerleri. Önizlemede satıcı satırı
+ * bunun üzerinde düzenliyor; doğrulama her seferinde buradan yeniden yapılıyor.
+ */
+export type RawRow = {
   /** Excel'deki satır numarası; hata mesajında satıcı satırı buradan bulur. */
+  row: number;
+  name: string;
+  /** Sayı hücresi sayı olarak kalıyor, gerisi metin. */
+  price: number | string;
+  stock: string;
+  barcode: string;
+  features: string;
+};
+
+export type ImportRow = {
   row: number;
   name: string;
   dailyPrice: number | null;
@@ -40,6 +54,7 @@ export type ImportRow = {
   barcode: string | null;
   features: string[];
   errors: string[];
+  raw: RawRow;
 };
 
 export type ParsedWorkbook =
@@ -103,10 +118,10 @@ function normalizeHeader(text: string) {
     .trim();
 }
 
-function readPrice(value: ExcelJS.CellValue): number | null | undefined {
+function readPrice(value: number | string): number | null | undefined {
   // Sayı hücresi olduğu gibi; metin hücresi "1.250,50 ₺" gibi yazılmış olabilir.
   if (typeof value === "number") return value >= 0 ? value : undefined;
-  const text = cellText(value).replace(/[₺\s]|TL$/gi, "");
+  const text = value.trim().replace(/[₺\s]|TL$/gi, "");
   if (!text) return null;
   if (text.startsWith("-")) return undefined;
   // Virgül yoksa tek nokta ve ardından en fazla iki hane ondalıktır ("1250.50");
@@ -116,12 +131,90 @@ function readPrice(value: ExcelJS.CellValue): number | null | undefined {
   return readPriceField(parsePriceInput(text) || "-");
 }
 
-function readStock(value: ExcelJS.CellValue): number | null {
-  const text = cellText(value);
+function readStock(value: string): number | null {
+  const text = value.trim();
   if (!text) return 1;
   const stock = Number(text.replace(",", "."));
   if (!Number.isFinite(stock) || stock < 0 || !Number.isInteger(stock)) return null;
   return stock;
+}
+
+/**
+ * Satırları doğrular. Hem dosya okunurken hem de satıcı önizlemede bir
+ * satırı düzenleyip sildikçe çalışıyor; "Etiket no 3. satırda da var" gibi
+ * hatalar satırlar birlikte değerlendirildiği için tek tek değil hep birden.
+ */
+export function validateRows(rawRows: RawRow[]): ImportRow[] {
+  const seenBarcodes = new Map<string, number>();
+
+  return rawRows.map((raw) => {
+    const name = raw.name.trim();
+    const errors: string[] = [];
+    if (!name) errors.push("Ürün adı boş.");
+    else if (name.length > 200) errors.push("Ürün adı 200 karakterden uzun.");
+
+    const price = readPrice(raw.price);
+    if (price === null) errors.push("Günlük fiyat boş.");
+    else if (price === undefined) errors.push("Günlük fiyat 0 ya da daha büyük bir sayı olmalı.");
+
+    const stock = readStock(raw.stock);
+    if (stock === null) errors.push("Stok 0 ya da daha büyük bir tam sayı olmalı.");
+
+    const barcode = raw.barcode.trim() || null;
+    if (barcode && !BARCODE_PATTERN.test(barcode)) {
+      errors.push("Etiket no harf ya da rakamla başlamalı; yalnızca harf, rakam, - _ . / içerebilir (en fazla 32 karakter).");
+    } else if (barcode) {
+      const first = seenBarcodes.get(barcode);
+      if (first) errors.push(`Etiket no ${first}. satırda da var.`);
+      else seenBarcodes.set(barcode, raw.row);
+    }
+
+    return {
+      row: raw.row,
+      name,
+      dailyPrice: price ?? null,
+      stock,
+      barcode,
+      features: raw.features
+        .split(/[\n,]/)
+        .map((f) => f.trim())
+        .filter(Boolean),
+      errors,
+      raw,
+    };
+  });
+}
+
+/** Bir metin alanının tarayıcıdan gelebilecek en uzun hali. */
+const MAX_FIELD_LENGTH = 2000;
+
+/**
+ * Önizlemeden geri gelen satırları okur. Tarayıcıdan geldikleri için
+ * şekillerine güvenilmiyor: beklenmeyen bir şey varsa hepsi reddediliyor.
+ */
+export function readRawRows(input: unknown): RawRow[] | null {
+  if (!Array.isArray(input) || input.length > MAX_IMPORT_ROWS) return null;
+  const text = (v: unknown) => (typeof v === "string" ? v.slice(0, MAX_FIELD_LENGTH) : null);
+
+  const rows: RawRow[] = [];
+  for (const item of input) {
+    if (typeof item !== "object" || item === null) return null;
+    const r = item as Record<string, unknown>;
+    const price = typeof r.price === "number" && Number.isFinite(r.price) ? r.price : text(r.price);
+    const [name, stock, barcode, features] = [r.name, r.stock, r.barcode, r.features].map(text);
+    if (
+      !Number.isInteger(r.row) ||
+      price === null ||
+      name === null ||
+      stock === null ||
+      barcode === null ||
+      features === null
+    ) {
+      return null;
+    }
+    rows.push({ row: r.row as number, name, price, stock, barcode, features });
+  }
+  return rows;
 }
 
 /**
@@ -162,66 +255,37 @@ export async function parseWorkbook(data: ArrayBuffer): Promise<ParsedWorkbook> 
     return col ? row.getCell(col).value : null;
   };
 
-  const rows: ImportRow[] = [];
-  const seenBarcodes = new Map<string, number>();
+  const rawRows: RawRow[] = [];
 
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
-    const name = cellText(read(row, "name"));
     const priceCell = read(row, "daily_price");
-    const stockCell = read(row, "stock");
-    const barcodeRaw = cellText(read(row, "barcode"));
-    const featuresRaw = cellText(read(row, "features"));
+    const raw: RawRow = {
+      row: r,
+      name: cellText(read(row, "name")),
+      price: typeof priceCell === "number" ? priceCell : cellText(priceCell),
+      stock: cellText(read(row, "stock")),
+      barcode: cellText(read(row, "barcode")),
+      features: cellText(read(row, "features")),
+    };
 
-    if (!name && !cellText(priceCell) && !cellText(stockCell) && !barcodeRaw && !featuresRaw) {
+    if (!raw.name && raw.price === "" && !raw.stock && !raw.barcode && !raw.features) {
       continue;
     }
-    if (name.startsWith("Örnek:")) continue;
+    if (raw.name.startsWith("Örnek:")) continue;
 
-    if (rows.length === MAX_IMPORT_ROWS) {
+    if (rawRows.length === MAX_IMPORT_ROWS) {
       return {
         ok: false,
         error: `Bir dosyada en fazla ${MAX_IMPORT_ROWS} ürün olabilir. Dosyayı bölüp parça parça yükleyin.`,
       };
     }
-
-    const errors: string[] = [];
-    if (!name) errors.push("Ürün adı boş.");
-    else if (name.length > 200) errors.push("Ürün adı 200 karakterden uzun.");
-
-    const price = readPrice(priceCell);
-    if (price === null) errors.push("Günlük fiyat boş.");
-    else if (price === undefined) errors.push("Günlük fiyat 0 ya da daha büyük bir sayı olmalı.");
-
-    const stock = readStock(stockCell);
-    if (stock === null) errors.push("Stok 0 ya da daha büyük bir tam sayı olmalı.");
-
-    const barcode = barcodeRaw || null;
-    if (barcode && !BARCODE_PATTERN.test(barcode)) {
-      errors.push("Etiket no harf ya da rakamla başlamalı; yalnızca harf, rakam, - _ . / içerebilir (en fazla 32 karakter).");
-    } else if (barcode) {
-      const first = seenBarcodes.get(barcode);
-      if (first) errors.push(`Etiket no ${first}. satırda da var.`);
-      else seenBarcodes.set(barcode, r);
-    }
-
-    rows.push({
-      row: r,
-      name,
-      dailyPrice: price ?? null,
-      stock,
-      barcode,
-      features: featuresRaw
-        .split(/[\n,]/)
-        .map((f) => f.trim())
-        .filter(Boolean),
-      errors,
-    });
+    rawRows.push(raw);
   }
 
-  if (rows.length === 0) {
+  if (rawRows.length === 0) {
     return { ok: false, error: "Dosyada eklenecek ürün bulunamadı." };
   }
 
-  return { ok: true, rows };
+  return { ok: true, rows: validateRows(rawRows) };
 }

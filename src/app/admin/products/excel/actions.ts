@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { parseWorkbook, type ImportRow } from "@/lib/urun-excel";
+import {
+  parseWorkbook,
+  readRawRows,
+  validateRows,
+  type ImportRow,
+  type RawRow,
+} from "@/lib/urun-excel";
 
 export type ImportState =
   | { status: "idle" }
@@ -20,26 +26,13 @@ const MAX_FILE_BYTES = 900 * 1024;
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /**
- * Yüklenen dosyayı okur, satırları doğrular ve satıcının mevcut ürünlerinde
- * zaten kullanılan etiket numaralarını satırlara hata olarak yazar.
+ * Satırları doğrular ve satıcının mevcut ürünlerinde zaten kullanılan etiket
+ * numaralarını satırlara hata olarak yazar.
  */
-async function readUpload(
-  supabase: Supabase,
-  ownerId: string,
-  formData: FormData
-): Promise<{ error: string } | { rows: ImportRow[] }> {
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Bir Excel dosyası seçin." };
-  }
-  if (file.size > MAX_FILE_BYTES) {
-    return { error: "Dosya çok büyük. Satırları birkaç dosyaya bölüp yükleyin." };
-  }
+async function checkRows(supabase: Supabase, ownerId: string, rawRows: RawRow[]): Promise<ImportRow[]> {
+  const rows = validateRows(rawRows);
 
-  const parsed = await parseWorkbook(await file.arrayBuffer());
-  if (!parsed.ok) return { error: parsed.error };
-
-  const barcodes = parsed.rows.flatMap((r) => (r.barcode ? [r.barcode] : []));
+  const barcodes = rows.flatMap((r) => (r.barcode ? [r.barcode] : []));
   if (barcodes.length > 0) {
     const { data: taken } = await supabase
       .from("products")
@@ -47,14 +40,14 @@ async function readUpload(
       .eq("owner_id", ownerId)
       .in("barcode", barcodes);
     const takenSet = new Set((taken ?? []).map((p) => p.barcode as string));
-    for (const row of parsed.rows) {
+    for (const row of rows) {
       if (row.barcode && takenSet.has(row.barcode)) {
         row.errors.push("Bu etiket no başka bir ürününüzde kullanılıyor.");
       }
     }
   }
 
-  return { rows: parsed.rows };
+  return rows;
 }
 
 export async function previewProductImport(
@@ -67,32 +60,56 @@ export async function previewProductImport(
   } = await supabase.auth.getUser();
   if (!user) return { status: "error", error: "Giriş yapmalısınız." };
 
-  const result = await readUpload(supabase, user.id, formData);
-  if ("error" in result) return { status: "error", error: result.error };
-  return { status: "preview", rows: result.rows };
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", error: "Bir Excel dosyası seçin." };
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    return { status: "error", error: "Dosya çok büyük. Satırları birkaç dosyaya bölüp yükleyin." };
+  }
+
+  const parsed = await parseWorkbook(await file.arrayBuffer());
+  if (!parsed.ok) return { status: "error", error: parsed.error };
+  const rows = await checkRows(
+    supabase,
+    user.id,
+    parsed.rows.map((r) => r.raw)
+  );
+  return { status: "preview", rows };
 }
 
-/**
- * Hatasız satırları tek seferde ekler; hatalı satırlar atlanır. Dosya
- * yeniden okunup yeniden doğrulanıyor: önizlemede gösterilen satırlar
- * tarayıcıdan geri alınsaydı, araya giren biri doğrulanmamış ürün ekleyebilirdi.
- */
-export async function saveProductImport(
-  _prev: ImportState,
-  formData: FormData
-): Promise<ImportState> {
+/** Önizlemede bir satır düzenlenince ya da silinince satırları yeniden doğrular. */
+export async function recheckProductImport(input: unknown): Promise<ImportState> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { status: "error", error: "Giriş yapmalısınız." };
 
-  const result = await readUpload(supabase, user.id, formData);
-  if ("error" in result) return { status: "error", error: result.error };
+  const rawRows = readRawRows(input);
+  if (!rawRows) return { status: "error", error: "Satırlar okunamadı. Dosyayı yeniden seçin." };
+  return { status: "preview", rows: await checkRows(supabase, user.id, rawRows) };
+}
 
-  const valid = result.rows.filter((r) => r.errors.length === 0);
+/**
+ * Hatasız satırları tek seferde ekler; hatalı satırlar atlanır. Satırlar
+ * önizlemede düzenlenebildiği için tarayıcıdan geliyor, ama önizlemenin
+ * sonucuna güvenilmiyor: hepsi burada baştan doğrulanıyor.
+ */
+export async function saveProductImport(input: unknown): Promise<ImportState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "error", error: "Giriş yapmalısınız." };
+
+  const rawRows = readRawRows(input);
+  if (!rawRows) return { status: "error", error: "Satırlar okunamadı. Dosyayı yeniden seçin." };
+  const rows = await checkRows(supabase, user.id, rawRows);
+
+  const valid = rows.filter((r) => r.errors.length === 0);
   if (valid.length === 0) {
-    return { status: "error", error: "Eklenebilecek hatasız satır yok. Dosyayı düzeltip yeniden yükleyin." };
+    return { status: "error", error: "Eklenebilecek hatasız satır yok. Hatalı satırları düzeltin ya da silin." };
   }
 
   // Numarası boş satırlarda alan null gidiyor; veritabanındaki trigger null
@@ -123,5 +140,5 @@ export async function saveProductImport(
 
   revalidatePath("/admin/products");
   revalidatePath("/admin");
-  return { status: "saved", created: valid.length, skipped: result.rows.length - valid.length };
+  return { status: "saved", created: valid.length, skipped: rows.length - valid.length };
 }

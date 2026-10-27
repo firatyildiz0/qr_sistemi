@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { signIn, type LoginState } from "./actions";
 import PendingApprovalDialog from "@/components/PendingApprovalDialog";
 import Turnstile from "@/components/Turnstile";
@@ -15,7 +15,16 @@ export default function LoginForm({ next }: { next: string }) {
   const [dismissed, setDismissed] = useState<LoginState | null>(null);
 
   return (
-    <form action={formAction} className="space-y-4">
+    // `action={formAction}` yerine `onSubmit`: React, `action`'a verilen formu
+    // gönderimden sonra sıfırlıyor; hata dönünce kullanıcı adı silinirdi.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const veri = new FormData(e.currentTarget);
+        startTransition(() => formAction(veri));
+      }}
+      className="space-y-4"
+    >
       <input type="hidden" name="next" value={next} />
 
       <div>

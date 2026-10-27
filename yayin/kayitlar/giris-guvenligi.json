@@ -1,0 +1,6 @@
+{
+  "tip": "guvenlik",
+  "baslik": "Giriş ve üye olma ekranları daha güvenli",
+  "aciklama": "Giriş bağlantısına eklenen özel bir işaretle kullanıcı, giriş yaptıktan sonra başka bir siteye yönlendirilebiliyordu; bu kapatıldı. Giriş ya da üyelik hata verdiğinde yazılanlar artık silinmiyor. Üye olma formuna kişisel verilerin nasıl işlendiğini anlatan Gizlilik Sözleşmesi bağlantısı eklendi.",
+  "dikkat": null
+}

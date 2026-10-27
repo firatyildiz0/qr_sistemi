@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import Link from "next/link";
+import { startTransition, useActionState } from "react";
 import { signUp, type SignupState } from "./actions";
 import { USERNAME_RULE } from "@/lib/username";
 import PasswordField from "@/components/PasswordField";
@@ -12,7 +13,16 @@ export default function SignupForm() {
   const [state, formAction, pending] = useActionState(signUp, initialState);
 
   return (
-    <form action={formAction} className="space-y-4">
+    // `action={formAction}` yerine `onSubmit`: React, `action`'a verilen formu
+    // gönderimden sonra sıfırlıyor; hata dönünce e-posta ve kullanıcı adı silinir, şifre kutusu ise ekranda boş görünürken içeride eski değeri tutardı.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const veri = new FormData(e.currentTarget);
+        startTransition(() => formAction(veri));
+      }}
+      className="space-y-4"
+    >
       <div>
         <label htmlFor="signup-email" className="field-label">
           E-posta
@@ -57,6 +67,16 @@ export default function SignupForm() {
       <button type="submit" disabled={pending} className="btn btn-primary w-full">
         {pending ? "Hesap oluşturuluyor…" : "Üye ol"}
       </button>
+
+      {/* KVKK m.10: aydınlatma veri alınmadan önce yapılmalı. Onay kutusu
+          değil, bilgi: işleme sözleşmeye dayanıyor, açık rızaya değil. */}
+      <p className="text-center text-xs text-ink-muted">
+        Üye olurken verdiğiniz bilgilerin nasıl işlendiği{" "}
+        <Link href="/gizlilik" target="_blank" className="link-underline text-accent">
+          Gizlilik Sözleşmesi
+        </Link>
+        &apos;nde anlatılır.
+      </p>
     </form>
   );
 }

@@ -18,13 +18,11 @@ export default function AddressFields({
   defaultCity = "",
   defaultDistrict = "",
   defaultAddress = "",
-  showLabels = true,
   onCityChange,
 }: {
   defaultCity?: string | null;
   defaultDistrict?: string | null;
   defaultAddress?: string | null;
-  showLabels?: boolean;
   onCityChange?: (city: string) => void;
 }) {
   const id = useId();
@@ -36,11 +34,9 @@ export default function AddressFields({
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          {showLabels && (
-            <label htmlFor={`${id}-city`} className="field-label">
-              İl
-            </label>
-          )}
+          <label htmlFor={`${id}-city`} className="field-label">
+            İl
+          </label>
           <select
             id={`${id}-city`}
             name="customer_city"
@@ -64,11 +60,9 @@ export default function AddressFields({
         </div>
 
         <div>
-          {showLabels && (
-            <label htmlFor={`${id}-district`} className="field-label">
-              İlçe
-            </label>
-          )}
+          <label htmlFor={`${id}-district`} className="field-label">
+            İlçe
+          </label>
           <select
             id={`${id}-district`}
             name="customer_district"
@@ -90,11 +84,9 @@ export default function AddressFields({
       </div>
 
       <div>
-        {showLabels && (
-          <label htmlFor={`${id}-address`} className="field-label">
-            Açık adres (opsiyonel)
-          </label>
-        )}
+        <label htmlFor={`${id}-address`} className="field-label">
+          Açık adres (opsiyonel)
+        </label>
         <textarea
           id={`${id}-address`}
           name="customer_address"

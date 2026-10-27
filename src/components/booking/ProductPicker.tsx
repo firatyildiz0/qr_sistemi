@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { CatalogProduct } from "@/lib/catalog";
 import {
   formatDateRange,
@@ -181,7 +182,7 @@ export default function ProductPicker({
       </div>
 
       {items.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border bg-card px-3 py-4 text-center text-xs text-ink-muted">
+        <p className="rounded-md border border-dashed border-border bg-card px-3 py-4 text-center text-sm text-ink-muted sm:text-xs">
           {emptyHint}
         </p>
       ) : (
@@ -195,10 +196,10 @@ export default function ProductPicker({
             return (
               <li
                 key={item.productId}
-                className="flex items-center justify-between gap-3 rounded-md border border-border bg-card py-1.5 pl-2.5 pr-1.5"
+                className="flex flex-col gap-1.5 rounded-md border border-border bg-card p-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:py-1.5 sm:pl-2.5 sm:pr-1.5"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-medium text-ink">
+                <div className="min-w-0 sm:flex-1">
+                  <p className="truncate text-sm font-medium text-ink sm:text-xs">
                     {product?.name ?? "Bilinmeyen ürün"}
                     {item.productId === anchorId && (
                       <span className="ml-1.5 font-normal text-ink-muted">
@@ -206,7 +207,7 @@ export default function ProductPicker({
                       </span>
                     )}
                   </p>
-                  <p className={`text-[11px] ${short ? "text-danger" : "text-ink-muted"}`}>
+                  <p className={`text-xs sm:text-[11px] ${short ? "text-danger" : "text-ink-muted"}`}>
                     {product
                       ? span
                         ? `bu tarihlerde ${left} / ${product.stock} adet müsait`
@@ -215,16 +216,19 @@ export default function ProductPicker({
                   </p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-0.5">
+                {/* Telefonda adet satırı kalemin altında tam genişlikte:
+                    ürün adının yanına sıkışan 28px'lik düğmeler hem
+                    ıskalanıyor hem uzun adları kırpıyordu. */}
+                <div className="flex shrink-0 items-center gap-1 sm:gap-0.5">
                   <StepButton
                     label="Bir adet azalt"
                     disabled={item.quantity <= 1}
                     onClick={() => setQuantity(item.productId, item.quantity - 1)}
                   >
-                    <IconMinus className="h-3.5 w-3.5" />
+                    <IconMinus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                   </StepButton>
 
-                  <span className="w-8 text-center text-xs font-semibold tabular-nums text-ink">
+                  <span className="flex-1 text-center text-sm font-semibold tabular-nums text-ink sm:w-8 sm:flex-none sm:text-xs">
                     {item.quantity}
                   </span>
 
@@ -233,7 +237,7 @@ export default function ProductPicker({
                     disabled={item.quantity >= limit}
                     onClick={() => setQuantity(item.productId, item.quantity + 1)}
                   >
-                    <IconPlus className="h-3.5 w-3.5" />
+                    <IconPlus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                   </StepButton>
 
                   {item.productId !== anchorId && (
@@ -242,7 +246,7 @@ export default function ProductPicker({
                       onClick={() => remove(item.productId)}
                       tone="danger"
                     >
-                      <IconTrash className="h-3.5 w-3.5" />
+                      <IconTrash className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                     </StepButton>
                   )}
                 </div>
@@ -252,14 +256,14 @@ export default function ProductPicker({
         </ul>
       )}
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex gap-2">
         <button
           type="button"
           onClick={() => {
             setBrowsing((open) => !open);
             setNotice(null);
           }}
-          className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs"
+          className="btn btn-secondary flex-1 px-3 text-xs sm:min-h-0 sm:flex-none sm:py-1.5"
         >
           <IconPlus className="h-3.5 w-3.5" />
           Farklı ürün ekle
@@ -273,30 +277,34 @@ export default function ProductPicker({
           }}
           title="Kamerayla ürün ekle"
           aria-label="Kamerayla ürün ekle"
-          className="btn btn-secondary min-h-0 px-3 py-1.5 text-xs"
+          className="btn btn-secondary flex-1 px-3 text-xs sm:min-h-0 sm:flex-none sm:py-1.5"
         >
           <IconScan className="h-3.5 w-3.5" />
           Kamerayla ekle
         </button>
       </div>
 
-      {notice && <p className="mt-2 text-xs text-ink-muted">{notice}</p>}
+      {notice && (
+        <p className="mt-2 text-xs text-ink-muted" role="status">
+          {notice}
+        </p>
+      )}
 
       {browsing && (
         <div className="mt-2 rounded-md border border-border bg-card p-2">
           <div className="relative">
-            <IconSearch className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted" />
+            <IconSearch className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted sm:h-3.5 sm:w-3.5" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Ürün ara"
               aria-label="Ürün ara"
-              className="input min-h-0 py-1.5 pl-8 text-xs"
+              className="input py-2 pl-8 sm:min-h-0 sm:py-1.5 sm:text-xs"
             />
           </div>
 
-          <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+          <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto sm:max-h-56">
             {matches.length === 0 && (
               <li className="px-1 py-3 text-center text-xs text-ink-muted">
                 {chosen.size === products.length
@@ -314,13 +322,13 @@ export default function ProductPicker({
                     type="button"
                     onClick={() => add(product.id)}
                     disabled={left <= 0}
-                    className="flex w-full items-center justify-between gap-3 rounded-md border border-border bg-surface px-2.5 py-2 text-left transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex min-h-12 w-full items-center justify-between gap-3 rounded-md border border-border bg-surface px-2.5 py-2 text-left transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-xs font-medium text-ink">
+                      <span className="block truncate text-sm font-medium text-ink sm:text-xs">
                         {product.name}
                       </span>
-                      <span className="block text-[11px] text-ink-muted">
+                      <span className="block text-xs text-ink-muted sm:text-[11px]">
                         {span
                           ? left > 0
                             ? `${formatDateRange(span.start_date, span.end_date)} arası ${left} adet müsait`
@@ -337,46 +345,53 @@ export default function ProductPicker({
         </div>
       )}
 
-      {scanning && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Kamerayla ürün ekle"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        >
+      {/* Katman `document.body`ye taşınıyor. Rezervasyon kartının açılış
+          animasyonu bittikten sonra bile bir `transform` bırakıyor; bu da
+          `position: fixed` için yeni bir referans kutusu yaratıp okuyucuyu
+          ekranın değil kartın içine hapsediyordu. */}
+      {scanning &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="absolute inset-0 bg-(--app-backdrop)"
-            onClick={() => setScanning(false)}
-            aria-hidden="true"
-          />
-          <div className="card relative z-10 w-full max-w-md">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-ink">Ürün okut</h2>
-              <button
-                type="button"
-                onClick={() => setScanning(false)}
-                aria-label="Kapat"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-ink-muted transition hover:bg-surface hover:text-ink"
-              >
-                <IconX className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="mb-3 text-sm text-ink-muted">
-              Okutulan ürün rezervasyona eklenir; sayfadan ayrılmazsınız.
-            </p>
-            {/* `onProduct` verildiği için bulunan ürün kendi sayfasına
-                götürmüyor, sepete düşüyor: satıcı formu doldururken sayfadan
-                ayrılırsa girdiği her şey kaybolurdu. */}
-            <ScanPanel
-              autoStart
-              onProduct={(product) => {
-                add(product.id);
-                setScanning(false);
-              }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Kamerayla ürün ekle"
+            className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
+          >
+            <div
+              className="absolute inset-0 bg-(--app-backdrop)"
+              onClick={() => setScanning(false)}
+              aria-hidden="true"
             />
-          </div>
-        </div>
-      )}
+            <div className="card relative z-10 max-h-[85vh] w-full max-w-md overflow-y-auto">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-ink">Ürün okut</h2>
+                <button
+                  type="button"
+                  onClick={() => setScanning(false)}
+                  aria-label="Kapat"
+                  className="flex h-10 w-10 items-center justify-center rounded-md text-ink-muted transition hover:bg-surface hover:text-ink"
+                >
+                  <IconX className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="mb-3 text-sm text-ink-muted">
+                Okutulan ürün rezervasyona eklenir; sayfadan ayrılmazsınız.
+              </p>
+              {/* `onProduct` verildiği için bulunan ürün kendi sayfasına
+                  götürmüyor, sepete düşüyor: satıcı formu doldururken sayfadan
+                  ayrılırsa girdiği her şey kaybolurdu. */}
+              <ScanPanel
+                autoStart
+                onProduct={(product) => {
+                  add(product.id);
+                  setScanning(false);
+                }}
+              />
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -401,7 +416,7 @@ function StepButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={`flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
+      className={`tab-press flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface transition-colors disabled:cursor-not-allowed disabled:opacity-35 sm:h-7 sm:w-7 ${
         tone === "danger"
           ? "text-danger hover:border-danger/40"
           : "text-ink-muted hover:border-border-strong hover:text-ink"

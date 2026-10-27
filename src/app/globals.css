@@ -521,18 +521,32 @@ summary,
     outline-offset: 3px;
   }
 
-  /* Düğmeler düz renk: parlama, renkli gölge ya da üstüne gelince kalkma yok.
-     Üstüne gelindiğini yalnızca ton değişimi söylüyor. */
+  /* Düğmeler düz renk, parlama yok. Üstüne gelince tonu koyulaşıyor ve iki
+     piksel kalkıyor; altına düşen gölge renkli değil nötr, yani düğme
+     parlamıyor, yalnızca yüzeyden ayrılıyor. Hayalet düğme kalkmıyor: zemini
+     olmayan bir şeyin altında gölge havada asılı kalırdı. */
+  .btn {
+    --btn-golge: 0 6px 14px -8px var(--app-shadow);
+  }
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .btn-danger-ghost:hover,
+  .btn-danger:hover {
+    transform: translateY(-2px);
+  }
+
   .btn-primary {
     background: var(--color-accent);
     color: #ffffff;
   }
   .btn-primary:hover {
     background: var(--color-accent-hover);
+    box-shadow: var(--btn-golge);
   }
   .btn-primary:disabled {
     opacity: 0.6;
     transform: none;
+    box-shadow: none;
     cursor: not-allowed;
   }
 
@@ -543,7 +557,7 @@ summary,
   }
   .btn-secondary:hover {
     color: var(--color-accent-hover);
-    box-shadow: inset 0 0 0 1.5px var(--color-accent);
+    box-shadow: inset 0 0 0 1.5px var(--color-accent), var(--btn-golge);
   }
 
   .btn-ghost {
@@ -562,7 +576,7 @@ summary,
   }
   .btn-danger-ghost:hover {
     background: var(--color-danger-soft);
-    box-shadow: inset 0 0 0 1.5px var(--color-danger);
+    box-shadow: inset 0 0 0 1.5px var(--color-danger), var(--btn-golge);
   }
 
   .btn-danger {
@@ -571,10 +585,12 @@ summary,
   }
   .btn-danger:hover {
     background: color-mix(in oklab, var(--color-danger) 82%, #000000);
+    box-shadow: var(--btn-golge);
   }
   .btn-danger:disabled {
     opacity: 0.6;
     transform: none;
+    box-shadow: none;
     cursor: not-allowed;
   }
 

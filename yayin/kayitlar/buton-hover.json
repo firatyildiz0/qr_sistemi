@@ -1,0 +1,6 @@
+{
+  "tip": "iyilestirme",
+  "baslik": "Butonlar üzerine gelince hafifçe yükseliyor",
+  "aciklama": "Butonların üzerine gelindiğinde fark neredeyse hissedilmiyordu. Artık buton rengi koyulaşırken hafifçe yukarı kalkıyor ve altında yumuşak, renksiz bir gölge beliriyor; parlama yok.",
+  "dikkat": null
+}

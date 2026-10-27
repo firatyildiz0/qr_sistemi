@@ -74,6 +74,9 @@ export default function VitrinMenu({
         <div className="flex items-center gap-5 text-[15px] font-bold">
           {/* Telefonda menüde görünen tek şey: diğerleri altta. */}
           <TemaDugmesi className="-mr-2 md:mr-0" />
+          <Link href="/blog" className="hidden text-ink transition-colors hover:text-accent md:block">
+            Blog
+          </Link>
           {girisGoster && (
             <Link href="/login" className="hidden text-ink transition-colors hover:text-accent md:block">
               Giriş yap

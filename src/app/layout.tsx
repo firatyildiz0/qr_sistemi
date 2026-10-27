@@ -5,6 +5,9 @@ import { DEFAULT_PREFERENCES, PREFERENCES_SCRIPT } from "@/lib/preferences";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Sayfaların `canonical` ve Open Graph adresleri göreli yazılıyor; tam
+  // adrese bu kökle çevriliyor.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "RentQR",
   description: "Herhangi bir fiziksel ürünü tek bir taramayla kiralanabilir hale getirin.",
   applicationName: "RentQR",

@@ -35,17 +35,6 @@ export async function resolveScannedCode(raw: string): Promise<ScanResult> {
   const productId = extractProductId(raw);
 
   if (!productId) {
-    // Etiketteki numaranın çizgisi (Code 128) ürün bağlantısını değil
-    // numaranın kendisini taşıyor.
-    const code = raw.trim();
-    if (BARCODE_PATTERN.test(code)) {
-      return (
-        (await resolveBarcode([code])) ?? {
-          ok: false,
-          error: `"${code}" numaralı bir ürününüz bulunamadı.`,
-        }
-      );
-    }
     return { ok: false, error: "Bu QR kodu bir RentQR ürün etiketi değil." };
   }
 

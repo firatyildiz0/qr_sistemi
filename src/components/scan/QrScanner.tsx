@@ -5,31 +5,23 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { resolveBarcode, resolveScannedCode, type ScanResult } from "@/app/actions";
 import { IconImage, IconQrCode, IconScan, IconX } from "@/components/icons";
-import { createCode128Decoder, createTextReader, type TextReader } from "@/lib/numara-okuyucu";
+import { createTextReader, type TextReader } from "@/lib/numara-okuyucu";
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]>;
 };
 
-type BarcodeDetectorCtor = (new (options: { formats: string[] }) => BarcodeDetectorLike) & {
-  getSupportedFormats?: () => Promise<string[]>;
-};
+type BarcodeDetectorCtor = new (options: {
+  formats: string[];
+}) => BarcodeDetectorLike;
 
 type Phase = "idle" | "starting" | "scanning" | "resolving" | "failed";
 
-/**
- * Kamera açıldıktan ne kadar sonra numara yazısı da aranmaya başlansın. QR ya
- * da çizgi çoğu zaman ilk saniyede okunuyor; yazı okuyucunun dosyaları ancak
- * onlar bulunamazsa insin.
- */
-const TEXT_DELAY_MS = 1200;
 /** İki yazı okuması arasındaki ara; okumanın kendisi de bir o kadar sürüyor. */
 const TEXT_INTERVAL_MS = 300;
 
 /**
- * Looks for the label's QR code and the Code 128 bars under its number.
- * Native detector where it exists (Chrome/Edge/Android), jsQR + zxing
- * everywhere else — and zxing for the bars when the native one only knows QR.
+ * Native detector where it exists (Chrome/Edge/Android), jsQR everywhere else.
  *
  * `invert`: also look for light-on-dark codes. Too slow to do on every camera
  * frame, but a single photo from the gallery can afford it.
@@ -42,29 +34,23 @@ async function createDecoder(invert = false): Promise<
 
   if (Ctor) {
     try {
-      const supported = (await Ctor.getSupportedFormats?.()) ?? ["qr_code"];
-      const formats = ["qr_code", "code_128"].filter((f) => supported.includes(f));
-      const detector = new Ctor({ formats });
-      const bars = formats.includes("code_128") ? null : await createCode128Decoder();
-      return async (canvas, ctx) => {
+      const detector = new Ctor({ formats: ["qr_code"] });
+      return async (canvas) => {
         const found = await detector.detect(canvas);
-        return found[0]?.rawValue ?? bars?.(canvas, ctx) ?? null;
+        return found[0]?.rawValue ?? null;
       };
     } catch {
       // Falls through to jsQR when the format is unsupported.
     }
   }
 
-  const [{ default: jsQR }, bars] = await Promise.all([
-    import("jsqr"),
-    createCode128Decoder(),
-  ]);
+  const { default: jsQR } = await import("jsqr");
   return async (canvas, ctx) => {
     const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const result = jsQR(image.data, image.width, image.height, {
       inversionAttempts: invert ? "attemptBoth" : "dontInvert",
     });
-    return result?.data ?? bars(canvas, ctx);
+    return result?.data ?? null;
   };
 }
 
@@ -131,7 +117,7 @@ function drawScaled(
 }
 
 /**
- * Galeriden seçilen fotoğraftaki QR kodu ya da numara çizgisini okur.
+ * Galeriden seçilen fotoğraftaki QR kodu okur.
  *
  * Telefon fotoğrafları kamera karesinden çok daha büyük; jsQR tam boyda hem
  * yavaş hem, kod küçük kaldığında, daha başarısız. Önce makul bir boya
@@ -264,7 +250,7 @@ export default function QrScanner({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        // Numaranın yazısı ve ince çubukları QR'dan daha çok piksel istiyor;
+        // Numaranın yazısı QR'dan daha çok piksel istiyor;
         // tarayıcıların varsayılanı çoğu zaman 640×480.
         video: {
           facingMode: { ideal: "environment" },
@@ -316,8 +302,8 @@ export default function QrScanner({
 
       frameRef.current = requestAnimationFrame(() => void tick());
 
-      // Çizgisi olmayan eski etiketler için numaranın yazısı. Kare döngüsünden
-      // ayrı ve seyrek: bir okuma yüzlerce milisaniye sürüyor, worker'da
+      // Etiketteki numaranın yazısı, QR ile aynı anda. Kare döngüsünden ayrı
+      // ve seyrek: bir okuma yüzlerce milisaniye sürüyor, worker'da
       // döndüğü için kare döngüsünü bekletmiyor. Okunan sözcükler yalnızca
       // satıcının kendi numaralarından birine denk gelirse sonuç sayılıyor.
       const readText = async () => {
@@ -338,7 +324,7 @@ export default function QrScanner({
             return;
           }
         } catch {
-          // Okuyucu inemediyse QR ve çizgi taraması sürüyor; yazı bu sefer yok.
+          // Okuyucu inemediyse QR taraması sürüyor; yazı bu sefer yok.
           return;
         }
 
@@ -347,7 +333,7 @@ export default function QrScanner({
         }
       };
 
-      textTimerRef.current = window.setTimeout(() => void readText(), TEXT_DELAY_MS);
+      void readText();
     } catch {
       stopCamera();
       setResult({
@@ -381,7 +367,7 @@ export default function QrScanner({
         return;
       }
 
-      // Ne QR ne çizgi: fotoğraftaki numaranın yazısına bakılıyor.
+      // QR yok: fotoğraftaki numaranın yazısına bakılıyor.
       let scan: ScanResult | null = null;
       try {
         const canvas = document.createElement("canvas");

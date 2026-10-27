@@ -1,45 +1,11 @@
 import { BARCODE_PATTERN } from "@/lib/barkod";
 
 /**
- * Etiketteki numaranın iki okuyucusu: çizgi (Code 128) ve yazı.
- *
- * Çizgi yeni basılan etiketlerde var ve okunuşu QR kadar hızlı, kesin. Yazı
- * okuma, çizgisi olmayan eski etiketler için: tesseract.js'in WebAssembly
- * motoru. Motor ve dil verisi ~7 MB olduğu için kendi sunucumuzdan
- * (`public/ocr/`, bkz. `scripts/ocr-dosyalari.mjs`) ve ancak gerektiğinde
- * iniyor; tarayıcı bir kez indirdikten sonra önbellekten açıyor.
+ * Etiketteki numaranın yazısını okur: tesseract.js'in WebAssembly motoru.
+ * Motor ve dil verisi ~7 MB olduğu için kendi sunucumuzdan (`public/ocr/`,
+ * bkz. `scripts/ocr-dosyalari.mjs`) ve ancak gerektiğinde iniyor; tarayıcı
+ * bir kez indirdikten sonra önbellekten açıyor.
  */
-
-type Decode = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => string | null;
-
-/**
- * Çizgiyi zxing ile okur; tarayıcının kendi `BarcodeDetector`ı Code 128'i
- * tanımıyorsa (iOS Safari, Windows'taki Chrome) devreye giren yedek.
- */
-export async function createCode128Decoder(): Promise<Decode> {
-  const { BinaryBitmap, Code128Reader, HybridBinarizer, RGBLuminanceSource } = await import(
-    "@zxing/library"
-  );
-  const reader = new Code128Reader();
-
-  return (canvas, ctx) => {
-    const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    // zxing tek kanallı parlaklık istiyor; Uint8ClampedArray'i öyle kabul ediyor.
-    const luminance = new Uint8ClampedArray(width * height);
-    for (let i = 0, p = 0; i < luminance.length; i++, p += 4) {
-      luminance[i] = (data[p] * 299 + data[p + 1] * 587 + data[p + 2] * 114) / 1000;
-    }
-    const bitmap = new BinaryBitmap(
-      new HybridBinarizer(new RGBLuminanceSource(luminance, width, height))
-    );
-    try {
-      return reader.decode(bitmap, new Map()).getText();
-    } catch {
-      // Karede çizgi yok: zxing bunu istisnayla söylüyor.
-      return null;
-    }
-  };
-}
 
 const WHITELIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._/-";
 

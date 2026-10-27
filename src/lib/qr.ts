@@ -1,5 +1,4 @@
 import QRCode from "qrcode";
-import { code128, QUIET_ZONE } from "@/lib/barkod";
 
 export function productUrl(productId: string) {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -23,11 +22,6 @@ const NAME_GAP = 44;
 // numara. PNG etiketiyle aynı sıralama (bkz. QrDownloadButtons).
 const BARCODE_FONT_SIZE = 26;
 const BARCODE_GAP = 34;
-// Numaranın altındaki Code 128 çizgisi; kamera numarayı yazıdan değil bundan
-// okuyor. Boşluk numaranın taban çizgisinden çubukların üst kenarına kadar.
-const BARS_GAP = 12;
-const BARS_HEIGHT = 70;
-const BARS_MAX_MODULE = 3;
 
 // Helvetica'nın WinAnsi kodlamasında Türkçe'ye özgü harfler yok; kullanılmayan
 // kodları /Differences ile bu glifllere bağlıyoruz.
@@ -117,31 +111,6 @@ function centeredText(text: string, centerX: number, y: number, fontSize: number
   return `BT\n/F1 ${fontSize} Tf\n${x.toFixed(2)} ${y.toFixed(2)} Td\n(${pdfString(text)}) Tj\nET\n`;
 }
 
-/**
- * Numaranın Code 128 çubukları: `centerX` etrafında ortalı, üst kenarı `top`.
- * Modül `maxModule`'den kalın olmuyor; numara uzunsa sessiz alanlarıyla
- * birlikte `maxWidth`'e sığacak kadar inceliyor. Numara boşsa hiçbir şey.
- */
-function barRects(
-  text: string,
-  centerX: number,
-  top: number,
-  maxWidth: number,
-  maxModule: number,
-  height: number
-) {
-  if (!text) return "";
-  const { bars, modules } = code128(text);
-  const moduleWidth = Math.min(maxModule, maxWidth / (modules + QUIET_ZONE * 2));
-  const left = centerX - (modules * moduleWidth) / 2;
-  const bottom = top - height;
-  const rects = bars.map(
-    (bar) =>
-      `${(left + bar.x * moduleWidth).toFixed(3)} ${bottom.toFixed(2)} ${(bar.width * moduleWidth).toFixed(3)} ${height.toFixed(2)} re`
-  );
-  return `0 0 0 rg\n${rects.join("\n")}\nf\n`;
-}
-
 /** Her biri bir sayfanın içerik akışı olan A4 sayfalarından PDF dosyası kurar. */
 function buildPdf(pages: string[]) {
   // 1: katalog, 2: sayfa ağacı, 3: yazı tipi; ardından her sayfa için önce
@@ -177,8 +146,8 @@ function buildPdf(pages: string[]) {
 }
 
 /**
- * QR kodu ve altında ürün adını — varsa onun da altında etiket numarasını ve
- * numaranın çizgisini — içeren, vektörel tek sayfalık A4 PDF üretir.
+ * QR kodu ve altında ürün adını — varsa onun da altında etiket numarasını —
+ * içeren, vektörel tek sayfalık A4 PDF üretir.
  */
 export async function productQrPdf(
   productId: string,
@@ -188,16 +157,13 @@ export async function productQrPdf(
   const boxBottom = (A4_HEIGHT - QR_BOX) / 2;
   const centerX = A4_WIDTH / 2;
   const nameY = boxBottom - NAME_GAP;
-  const barcodeY = nameY - BARCODE_GAP;
-  const barcode = productBarcode?.trim() ?? "";
 
   // Numara kısaltılmıyor: yarısı basılmış bir etiket numarası hiç basılmamış
   // gibidir. Zaten en fazla 32 karakter (bkz. 0022) ve sayfaya rahat sığıyor.
   const content =
     qrRects(productId, (A4_WIDTH - QR_BOX) / 2, boxBottom, QR_BOX) +
     centeredText(fitName(productName, QR_BOX + 60), centerX, nameY, NAME_FONT_SIZE) +
-    centeredText(barcode, centerX, barcodeY, BARCODE_FONT_SIZE) +
-    barRects(barcode, centerX, barcodeY - BARS_GAP, QR_BOX, BARS_MAX_MODULE, BARS_HEIGHT);
+    centeredText(productBarcode?.trim() ?? "", centerX, nameY - BARCODE_GAP, BARCODE_FONT_SIZE);
 
   return buildPdf([content]);
 }
@@ -209,16 +175,11 @@ export type QrLabel = { id: string; name: string; barcode: string | null };
 const SHEET_COLS = 3;
 const SHEET_ROWS = 4;
 const SHEET_MARGIN = 24;
-// QR 132'den 116'ya indi: numaranın altına çizgi girince blok hücreye sığmıyordu.
-// 116 pt (~4 cm) kamera için hâlâ bol.
-const SHEET_QR_BOX = 116;
+const SHEET_QR_BOX = 132;
 const SHEET_NAME_FONT_SIZE = 10;
 const SHEET_NAME_GAP = 14;
 const SHEET_BARCODE_FONT_SIZE = 13;
 const SHEET_BARCODE_GAP = 16;
-const SHEET_BARS_GAP = 6;
-const SHEET_BARS_HEIGHT = 26;
-const SHEET_BARS_MAX_MODULE = 1.6;
 export const LABELS_PER_SHEET = SHEET_COLS * SHEET_ROWS;
 
 /** Kesim çizgileri: açık gri, kesikli; etiketin kendisinden ayırt edilsin diye. */
@@ -237,16 +198,16 @@ function cutLines(cellWidth: number, cellHeight: number) {
 
 /**
  * Seçilen ürünlerin etiketlerini A4 sayfalarına ızgara halinde dizer: her
- * hücrede QR, altında ad, varsa onun altında etiket numarası ve çizgisi. Sıra verilen
+ * hücrede QR, altında ad, varsa onun altında etiket numarası. Sıra verilen
  * sırayla aynı, soldan sağa ve yukarıdan aşağı.
  */
 export async function productQrSheetPdf(labels: QrLabel[]) {
   const cellWidth = (A4_WIDTH - SHEET_MARGIN * 2) / SHEET_COLS;
   const cellHeight = (A4_HEIGHT - SHEET_MARGIN * 2) / SHEET_ROWS;
-  // QR, ad, numara ve çizgiden oluşan blok hücrenin dikeyde ortasında;
-  // numarası olmayan etiket de aynı yerde dursun diye blok yüksekliği sabit.
+  // QR, ad ve numaradan oluşan blok hücrenin dikeyde ortasında; numarası
+  // olmayan etiket de aynı yerde dursun diye blok yüksekliği sabit.
   const blockHeight =
-    SHEET_QR_BOX + SHEET_NAME_GAP + SHEET_BARCODE_GAP + SHEET_BARS_GAP + SHEET_BARS_HEIGHT;
+    SHEET_QR_BOX + SHEET_NAME_GAP + SHEET_BARCODE_GAP + SHEET_BARCODE_FONT_SIZE / 2;
   const pages: string[] = [];
 
   for (let start = 0; start < labels.length; start += LABELS_PER_SHEET) {
@@ -260,7 +221,6 @@ export async function productQrSheetPdf(labels: QrLabel[]) {
       const centerX = left + cellWidth / 2;
       const qrBottom = top - (cellHeight - blockHeight) / 2 - SHEET_QR_BOX;
       const nameY = qrBottom - SHEET_NAME_GAP;
-      const barcodeY = nameY - SHEET_BARCODE_GAP;
 
       // Numara burada da kısaltılmıyor (bkz. productQrPdf); hücreye sığmayan
       // uzun numaranın yazısı küçülüyor.
@@ -278,15 +238,7 @@ export async function productQrSheetPdf(labels: QrLabel[]) {
           nameY,
           SHEET_NAME_FONT_SIZE
         ) +
-        centeredText(barcode, centerX, barcodeY, barcodeSize) +
-        barRects(
-          barcode,
-          centerX,
-          barcodeY - SHEET_BARS_GAP,
-          cellWidth - 12,
-          SHEET_BARS_MAX_MODULE,
-          SHEET_BARS_HEIGHT
-        );
+        centeredText(barcode, centerX, nameY - SHEET_BARCODE_GAP, barcodeSize);
     });
 
     pages.push(content);

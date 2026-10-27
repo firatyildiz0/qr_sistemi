@@ -1,6 +1,6 @@
 {
   "tip": "ozellik",
   "baslik": "Ürünü etiketteki numarayı kameraya göstererek bulabilirsiniz",
-  "aciklama": "Ürün bul ekranındaki kamera artık QR kodun yanında etiketin altındaki numarayı da okuyor; eski etiketlerde yazılı numara da yeter. Yeni indirilen PNG ve PDF etiketlerde numaranın altına daha hızlı okunan bir barkod çizgisi ekleniyor, toplu etiket sayfasında QR biraz küçüldü.",
+  "aciklama": "Ürün bul ekranındaki kamera artık QR kodun yanında etiketin altındaki numarayı da okuyor; QR kod görünmese de numarayı kameraya göstermek ürünü açmaya yetiyor. Galeriden seçilen fotoğraflarda da numara okunuyor.",
   "dikkat": null
 }

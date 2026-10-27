@@ -62,7 +62,7 @@ export async function talepGonder(
   if (ad.length > MAX_AD_UZUNLUGU) return { hata: `Ad en fazla ${MAX_AD_UZUNLUGU} karakter olabilir.` };
   if (!telefon) return { hata: "Geçerli bir telefon numarası yazın, örneğin 0532 123 45 67." };
   if (formData.get("onay") !== "on") {
-    return { hata: "Bilgilerinizin işletmeyle paylaşılmasını onaylamanız gerekiyor." };
+    return { hata: "Gizlilik Sözleşmesi’ni okuduğunuzu işaretleyin." };
   }
 
   const tarihHatasi = validateDates(baslangic, bitis);

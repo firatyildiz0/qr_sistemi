@@ -120,10 +120,11 @@ export default function FikirFormu() {
       <label className="flex items-start gap-2.5 text-sm text-ink-muted">
         <input type="checkbox" name="onay" defaultChecked={d.onay === "on"} required className="mt-0.5 accent-[var(--color-accent)]" />
         <span>
-          Adımın ve iletişim bilgilerimin bana dönüş yapılması için kullanılmasını kabul ediyorum.{" "}
+          Bilgilerimin bana dönüş yapmak için nasıl işleneceğini anlatan{" "}
           <Link href="/gizlilik" className="link-underline text-accent" target="_blank">
             Gizlilik Sözleşmesi
           </Link>
+          ’ni okudum ve anladım.
         </span>
       </label>
 

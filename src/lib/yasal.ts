@@ -47,4 +47,6 @@ export const YASAL_SAYFALAR = [
   { href: "/mesafeli-satis-sozlesmesi", ad: "Mesafeli Satış Sözleşmesi" },
   { href: "/teslimat-ve-iade", ad: "Teslimat ve İade Şartları" },
   { href: "/gizlilik", ad: "Gizlilik Sözleşmesi" },
+  { href: "/cerez-politikasi", ad: "Çerez Politikası" },
+  { href: "/islem-rehberi", ad: "İşlem Rehberi" },
 ] as const;

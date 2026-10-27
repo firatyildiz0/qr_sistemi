@@ -146,10 +146,11 @@ export default function TalepFormu({
       <label className="flex items-start gap-2.5 text-sm text-ink-muted">
         <input type="checkbox" name="onay" required className="mt-0.5 accent-[var(--color-accent)]" />
         <span>
-          Adımın, telefonumun ve adresimin rezervasyon için bu işletmeyle paylaşılmasını kabul ediyorum.{" "}
+          Adımın, telefonumun ve adresimin rezervasyon için bu işletmeye iletileceğini anlatan{" "}
           <Link href="/gizlilik" className="link-underline text-accent" target="_blank">
             Gizlilik Sözleşmesi
           </Link>
+          ’ni okudum ve anladım.
         </span>
       </label>
 

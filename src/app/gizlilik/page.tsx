@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   Bolum,
   EpostaLink,
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
     "RentQR'ın hangi verileri topladığı, neden topladığı, ne kadar sakladığı ve nasıl sildirebileceğiniz.",
 };
 
-const GUNCELLEME = "7 Ekim 2026";
+const GUNCELLEME = "22 Ekim 2026";
 const EPOSTA = SATICI.eposta;
 
 export default function GizlilikPage() {
@@ -60,10 +61,15 @@ export default function GizlilikPage() {
               </>,
               <>
                 <strong className="font-semibold text-ink">Müşteri:</strong> bir ürünü kiralayan
-                kişi. Müşterinin panelde hesabı yoktur; bilgilerini satıcı girer.
+                kişi. Müşterinin panelde hesabı yoktur. Bilgilerini ya ürünün QR etiketini okutup
+                talep bırakırken kendisi yazar ya da satıcı panelden girer.
               </>,
             ]}
           />
+          <p className="text-ink-muted">
+            Müşteri bilgileri bakımından veri sorumlusu, kiralama yapılan işletmedir; {SATICI.marka}{" "}
+            bu bilgileri yalnızca işletme adına ve onun kiralama işi için saklar.
+          </p>
           <p className="text-ink-muted">
             Bir satıcı yalnızca kendi ürünlerini, kendi rezervasyonlarını ve kendi müşterilerini
             görebilir. Bu, arayüzde saklamakla değil, veritabanı düzeyindeki erişim kurallarıyla
@@ -75,6 +81,7 @@ export default function GizlilikPage() {
           <Liste
             maddeler={[
               "Hesap bilgileri: e-posta adresi, kullanıcı adı ve şifre. Şifre bize hiçbir zaman okunabilir hâlde ulaşmaz; kimlik doğrulama sağlayıcımızda özetlenerek saklanır.",
+              "Profil bilgileri (girilmişse): ad soyad, sektör ve profil fotoğrafı.",
               "Katalog: ürün adı, açıklaması, özellikleri, günlük fiyatı, stok adedi, görselleri ve etiket numarası.",
               "İşletme ayarları: kargo ve hazırlık süreleri gibi kiralama takvimini etkileyen tercihler.",
             ]}
@@ -83,16 +90,21 @@ export default function GizlilikPage() {
 
         <Bolum baslik="Müşteriden toplananlar">
           <p className="text-ink-muted">
-            Bir rezervasyon oluşturulduğunda şunlar kaydedilir:
+            Bir rezervasyon ya da rezervasyon talebi oluşturulduğunda şunlar kaydedilir:
           </p>
           <Liste
             maddeler={[
               "Ad soyad",
-              "Telefon numarası (isteğe bağlı)",
+              "Telefon numarası (QR etiketten talep bırakılırken zorunlu, satıcı girerken isteğe bağlı)",
               "İl, ilçe ve — girilmişse — açık adres",
-              "Kiralama tarihleri ve varsa alınan teminat tutarı",
+              "Kiralama tarihleri, teslim şekli (elden ya da kargo) ve varsa alınan teminat tutarı",
             ]}
           />
+          <p className="text-ink-muted">
+            QR etiketten talep bırakan müşteriye, talebinin durumunu görebileceği tahmin edilemez
+            bir takip bağlantısı verilir. Bu bağlantıyı açan kişi talebin durumunu ve tarihlerini
+            görür; telefon ve adresi göremez.
+          </p>
           <p className="text-ink-muted">
             Bu bilgiler yalnızca kiralamanın yürütülmesi için kullanılır: ürünün teslim edilmesi,
             takvimde doğru günlerin kapatılması ve iade takibi. Pazarlama amacıyla kullanılmaz,
@@ -132,12 +144,49 @@ export default function GizlilikPage() {
           </p>
         </Bolum>
 
+        <Bolum baslik="Öneri formu">
+          <p className="text-ink-muted">
+            Anasayfadaki “Fikriniz mi var?” formundan yazdığınızda adınız, varsa işletmenizin adı,
+            bıraktığınız e-posta ya da telefon ve mesajınız kaydedilir. Bunlar yalnızca size dönüş
+            yapmak ve önerinizi değerlendirmek için kullanılır; yalnızca site yöneticisi görür.
+          </p>
+        </Bolum>
+
         <Bolum baslik="Güvenlik kayıtları">
           <p className="text-ink-muted">
             Başarısız giriş denemeleri, hız sınırına takılan istekler ve yetkisiz erişim denemeleri
             kaydedilir. Bu kayıtta denenen kullanıcı adı, IP adresi ve tarayıcı bilgisi bulunur —
             şifre <em>asla</em> kaydedilmez. Amaç yalnızca hesapları saldırıya karşı korumak ve bir
             olayın geriye dönük incelenebilmesidir. Müşteri bilgileri bu kayda hiç girmez.
+          </p>
+        </Bolum>
+
+        <Bolum baslik="Nasıl toplanıyor ve hangi hukuki sebebe dayanıyor?">
+          <p className="text-ink-muted">
+            Veriler bu sitedeki formlar ve panel aracılığıyla elektronik ortamda, sizin ya da
+            satıcının yazmasıyla; güvenlik kayıtları ve çerezler ise siteyi kullanırken otomatik
+            olarak toplanır. 6698 sayılı Kanun’un 5. maddesindeki şu sebeplere dayanır:
+          </p>
+          <Liste
+            maddeler={[
+              <>
+                <strong className="font-semibold text-ink">Sözleşmenin kurulması ve ifası</strong>{" "}
+                (m.5/2-c): satıcının hesabı, kataloğu ve aboneliği; müşterinin rezervasyonu ve
+                rezervasyon talebi.
+              </>,
+              <>
+                <strong className="font-semibold text-ink">Hukuki yükümlülük</strong> (m.5/2-ç):
+                fatura bilgileri ve vergi mevzuatının istediği kayıtlar.
+              </>,
+              <>
+                <strong className="font-semibold text-ink">Meşru menfaat</strong> (m.5/2-f):
+                güvenlik kayıtları, QR okutma sayacı ve öneri formuna dönüş yapılması.
+              </>,
+            ]}
+          />
+          <p className="text-ink-muted">
+            Bu işlemelerin hiçbiri açık rızanıza dayanmaz; bu yüzden sizden ayrıca açık rıza
+            istenmez.
           </p>
         </Bolum>
 
@@ -164,6 +213,10 @@ export default function GizlilikPage() {
                 barındırılması.
               </>,
               <>
+                <strong className="font-semibold text-ink">Sentry</strong> — uygulamada oluşan
+                hataların kaydı. Ekran kaydı (oturum tekrarı) kapalıdır.
+              </>,
+              <>
                 <strong className="font-semibold text-ink">iyzico Ödeme Hizmetleri A.Ş.</strong> —
                 abonelik ödemelerinin alınması. Kart bilgileri yalnızca iyzico’da işlenir.
               </>,
@@ -175,11 +228,32 @@ export default function GizlilikPage() {
           </p>
         </Bolum>
 
+        <Bolum id="yurt-disi" baslik="Yurt dışına aktarım">
+          <p className="text-ink-muted">
+            Yukarıdaki sağlayıcılardan bazılarının sunucuları Türkiye dışındadır. Bu nedenle
+            verileriniz, 6698 sayılı Kanun’un 9. maddesi kapsamında şu ülkelere aktarılır:
+          </p>
+          <Liste
+            maddeler={[
+              "Japonya (Tokyo): veritabanı, kimlik doğrulama ve ürün görselleri (Supabase).",
+              "Amerika Birleşik Devletleri: uygulamanın çalıştığı sunucular (Vercel) ve hata kayıtları (Sentry).",
+            ]}
+          />
+          <p className="text-ink-muted">
+            Aktarımın amacı yalnızca hizmetin çalışmasıdır; veriler bu sağlayıcılar tarafından
+            başka bir amaçla kullanılmaz. Ödeme bilgileri iyzico tarafından Türkiye’de işlenir.
+          </p>
+        </Bolum>
+
         <Bolum baslik="Çerezler">
           <p className="text-ink-muted">
             Reklam veya izleme çerezi kullanılmıyor. Yalnızca oturumun açık kalması için gereken
             kimlik doğrulama çerezleri ve tema/görünüm tercihiniz gibi ayarlar tarayıcınızda
-            tutulur.
+            tutulur. Tam liste{" "}
+            <Link href="/cerez-politikasi" className="link-underline font-medium text-accent">
+              Çerez Politikası
+            </Link>
+            ’ndadır.
           </p>
         </Bolum>
 
@@ -213,15 +287,14 @@ export default function GizlilikPage() {
 
         <Bolum baslik="Haklarınız">
           <p className="text-ink-muted">
-            6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında; hakkınızda veri işlenip
-            işlenmediğini öğrenme, işlenmişse buna ilişkin bilgi talep etme, amacına uygun
-            kullanılıp kullanılmadığını öğrenme, eksik veya yanlış işlenmişse düzeltilmesini,
-            şartları oluştuğunda silinmesini isteme ve işlemeye itiraz etme haklarına sahipsiniz.
-            Bu talepler için{" "}
+            6698 sayılı Kanun’un 11. maddesindeki haklarınızı (verilerinizin işlenip
+            işlenmediğini öğrenme, bilgi isteme, düzeltme ve silme isteme, aktarıldığı kişileri
+            öğrenme, itiraz etme ve zararın giderilmesini isteme) kullanmak için{" "}
             <a href={`mailto:${EPOSTA}`} className="link-underline font-medium text-accent">
               {EPOSTA}
             </a>{" "}
-            adresine yazabilirsiniz.
+            adresine sistemde kayıtlı e-posta adresinizden yazabilir ya da yukarıdaki adrese yazılı
+            olarak başvurabilirsiniz. Başvurular en geç 30 gün içinde ücretsiz sonuçlandırılır.
           </p>
         </Bolum>
 

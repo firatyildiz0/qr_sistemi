@@ -48,7 +48,7 @@ export default function LoginForm({ next }: { next: string }) {
           <label htmlFor="password" className="field-label">
             Şifre
           </label>
-          <a href="#" className="link-underline mb-1.5 text-xs font-medium text-ink-muted">
+          <a href="/sifremi-unuttum" className="link-underline mb-1.5 text-xs font-medium text-ink-muted">
             Şifremi unuttum
           </a>
         </div>

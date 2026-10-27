@@ -1,0 +1,6 @@
+{
+  "tip": "ozellik",
+  "baslik": "Şifresini unutan satıcı e-postayla yeni şifre belirleyebiliyor",
+  "aciklama": "Giriş ekranındaki 'Şifremi unuttum' bağlantısı daha önce hiçbir yere gitmiyordu. Artık satıcı kullanıcı adını ya da e-postasını yazıyor, kayıtlı adresine gelen bağlantıyla yeni şifre belirliyor; diğer cihazlardaki oturumları kapanıyor.",
+  "dikkat": "Canlıya almadan ÖNCE Supabase panelinde: (1) Authentication > Emails > SMTP Settings'e bir e-posta servisi bağlayın (ör. Resend, Brevo). Bağlanmazsa Supabase yalnızca ekip üyelerine ve saatte 2 e-posta gönderir, satıcılara sıfırlama e-postası gitmez. (2) Authentication > URL Configuration: Site URL https://voyolabs.com olsun, Redirect URLs'e https://voyolabs.com/auth/confirm ekleyin. (3) Önerilir: Emails > Reset Password şablonundaki bağlantıyı {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/sifre-yenile yapın; böylece bağlantı başka cihazda açılsa da çalışır."
+}

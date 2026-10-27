@@ -22,6 +22,10 @@ export type SecurityEventKind =
   | "qr_talep"
   /** Ziyaretçi anasayfadaki "Fikriniz mi var?" formundan öneri gönderdi. */
   | "fikir"
+  /** Şifre sıfırlama bağlantısı istendi. */
+  | "sifre_sifirlama"
+  /** Sıfırlama bağlantısıyla yeni şifre belirlendi. */
+  | "sifre_degisti"
   | "rate_limited"
   | "unauthorized"
   | "cron_unauthorized"
@@ -119,6 +123,9 @@ const LIMITS = {
   signupPerIp: { max: 5, windowMinutes: 60 },
   /** Aynı IP: bir saatte 5 QR rezervasyon talebi (aşağıdaki gerekçe). */
   qrTalepPerIp: { max: 5, windowMinutes: 60 },
+  /** Aynı hesap: bir saatte 3 sıfırlama e-postası. Aynı IP: bir saatte 5. */
+  sifirlamaPerIdentifier: { max: 3, windowMinutes: 60 },
+  sifirlamaPerIp: { max: 5, windowMinutes: 60 },
   /** Aynı IP: bir saatte 3 öneri. Gerçek biri bir saatte üçten fazla yazmaz. */
   fikirPerIp: { max: 3, windowMinutes: 60 },
 };
@@ -279,6 +286,40 @@ export async function checkFikirRateLimit(): Promise<RateLimitResult> {
     return { allowed: false, message: FIKIR_BLOCKED_MESSAGE };
   } catch (error) {
     console.error("[security] öneri hız sınırı okunamadı:", error);
+    return { allowed: true };
+  }
+}
+
+const SIFIRLAMA_BLOCKED_MESSAGE =
+  "Kısa sürede çok fazla sıfırlama isteği gönderildi. Bir saat sonra tekrar deneyin.";
+
+/**
+ * Şifre sıfırlama eşiği. Her istek bir e-posta gönderiyor: sınır olmasa form
+ * birinin kutusunu doldurmaya ya da projenin e-posta kotasını tüketmeye
+ * kullanılabilirdi. Hesap ve IP ayrı sayılıyor, gerekçesi girişteki gibi.
+ */
+export async function checkSifirlamaRateLimit(identifier: string): Promise<RateLimitResult> {
+  try {
+    const { ip } = await requestContext();
+    const [byIdentifier, byIp] = await Promise.all([
+      countRecent("identifier", identifier, "sifre_sifirlama", LIMITS.sifirlamaPerIdentifier.windowMinutes),
+      ip ? countRecent("ip", ip, "sifre_sifirlama", LIMITS.sifirlamaPerIp.windowMinutes) : Promise.resolve(0),
+    ]);
+
+    if (byIdentifier < LIMITS.sifirlamaPerIdentifier.max && byIp < LIMITS.sifirlamaPerIp.max) {
+      return { allowed: true };
+    }
+
+    await recordSecurityEvent({
+      kind: "rate_limited",
+      severity: "warning",
+      identifier,
+      detail: { sifirlamaForIdentifier: byIdentifier, sifirlamaForIp: byIp, reason: "sifre_sifirlama" },
+    });
+
+    return { allowed: false, message: SIFIRLAMA_BLOCKED_MESSAGE };
+  } catch (error) {
+    console.error("[security] şifre sıfırlama sınırı okunamadı:", error);
     return { allowed: true };
   }
 }

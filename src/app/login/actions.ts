@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeNextPath } from "@/lib/redirects";
+import { emailForUsername } from "@/lib/kullanici-eposta";
 import { isValidUsername, normalizeUsername, USERNAME_RULE } from "@/lib/username";
 import { createAuthClient } from "@/lib/supabase/auth";
 import {
@@ -87,29 +88,6 @@ async function supabaseRateLimited(
 
 const BUSY_MESSAGE = "Şu an çok fazla istek var. Lütfen birkaç dakika sonra tekrar deneyin.";
 
-
-/**
- * Kullanıcı adı → hesabın e-postası.
- *
- * Supabase Auth kullanıcı adıyla oturum açamaz, o yüzden asıl `signInWithPassword`
- * çağrısından önce eşlemeyi burada yapıyoruz. `profiles` tablosu anon anahtara
- * tamamen kapalı olduğundan okuma service role ile yapılır; e-posta yalnızca
- * bu sunucu fonksiyonunun içinde kalır, istemciye hiç dönmez.
- */
-async function emailForUsername(username: string): Promise<string | null> {
-  const admin = createAdminClient();
-
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("username", username)
-    .maybeSingle();
-
-  if (!profile) return null;
-
-  const { data } = await admin.auth.admin.getUserById(profile.id);
-  return data?.user?.email ?? null;
-}
 
 export async function signIn(
   _prevState: LoginState,
